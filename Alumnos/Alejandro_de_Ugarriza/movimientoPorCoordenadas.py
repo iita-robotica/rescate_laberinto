@@ -1,5 +1,4 @@
-# descomentar esto:
-# from controller import Robot
+from controller import Robot
 import math
 
 """
