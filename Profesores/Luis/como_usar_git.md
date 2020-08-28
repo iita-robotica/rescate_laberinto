@@ -1,11 +1,14 @@
-[TOC]
+- [Como usar git en visual code](#como-usar-git-en-visual-code)
+- [Instalar visual code](#instalar-visual-code)
+  * [Visual Code](#visual-code)
+- [Instalar git](#instalar-git)
+- [Como descargar nuestro repositorio desde Visual Code](#como-descargar-nuestro-repositorio-desde-visual-code)
+- [Como subir nuestros archivos al repositorio](#como-subir-nuestros-archivos-al-repositorio)
 
 # Como usar git en visual code
  
-# Instalar visual code
- 
-## Visual Code
- 
+## Instalar visual code
+  
 Es un editor de código fuente, desarrollado por Microsoft para Windows , Linux y macOS. Incluye soporte para la depuración, control integrado de Git, resaltado de sintaxis, finalización inteligente de código, fragmentos y refactorización de código. También es personalizable, por lo que los usuarios pueden cambiar el tema del editor, los atajos de teclado y las preferencias. Es gratuito y de código abierto.
  
 * Link para descargarlo [haz click aqui](https://code.visualstudio.com/Download).
@@ -14,7 +17,7 @@ Es un editor de código fuente, desarrollado por Microsoft para Windows , Linux 
  
 Una vez instalado visual code vamos a instalar git, para poder acceder a nuestro repositorio mediante visual code.
  
-# Instalar git
+## Instalar git
  
 Para poder utilizar git en Visual Code debemos instalar Git. Para eso vamos al sitio oficial.
  
@@ -22,7 +25,9 @@ Para poder utilizar git en Visual Code debemos instalar Git. Para eso vamos al s
  
 * En [este video]https://www.youtube.com/watch?v=ES2xtLyI-B8 se explica detalladamente todos los pasos a seguir para instalarlo.
  
-# Como descargar nuestro repositorio desde Visual Code
+# Utilizar git en Visual Code
+
+## Como descargar nuestro repositorio desde Visual Code
  
 Una vez que tenemos Visual Code y Git instalado podemos descargar nuestro repositorio utilizando Visual Code, para ello hacemos lo siguiente:
  
@@ -37,7 +42,7 @@ Una vez que tenemos Visual Code y Git instalado podemos descargar nuestro reposi
     y nos pide la ruta del repositorio que queremos clonar. Este va a ser nuestro repositorio cuya url es:
     *https://github.com/iita-robotica/rescate_laberinto.git*
     
-         ![git clone](img/clonar_desde_github.png)
+    ![git clone](img/clonar_desde_github.png)
  
     Presionamos enter. La url se obtiene de:
  
@@ -48,7 +53,7 @@ Una vez que tenemos Visual Code y Git instalado podemos descargar nuestro reposi
     
     ![Ver el repositorio clonado](img/abrir_repositorio_cloando.png)
  
-# Como subir nuestros archivos al repositorio
+## Como subir nuestros archivos al repositorio
  
 1. Primero vamos a crear nuestra carpeta donde vamos a estar subiendo nuestro archivos, para ello vamos a Alumnos y hacemos click derecho en "Nueva Carpeta" donde pondremos nuestro nombre. En este ejemplo voy a usar el nombre "Testing"
  
