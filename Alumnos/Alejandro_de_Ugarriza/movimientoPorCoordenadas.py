@@ -3,7 +3,7 @@ import math
 
 """
 Con este codigo se pueden crear sequencias de movimientos por coordenadas. Al especificar una coordenada el robot girara
-y se movera par llegar a ella, con presicion ajustable (Linea 170)
+y se movera par llegar a ella, con presicion ajustable(Linea 170).
 
 """
 
