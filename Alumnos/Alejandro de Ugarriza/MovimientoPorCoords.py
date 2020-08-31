@@ -4,41 +4,29 @@ import math
 """
 Con este codigo se pueden crear sequencias de movimientos por coordenadas. Al especificar una coordenada el robot girara
 y se movera par llegar a ella, con presicion ajustable (Linea 170).
-
 """
-
 # -- VARIABLES PARA EL CONTROLADOR --
 
 #Define el timestep (Puede ser 32)
 timeStep = 16
-
 #Velocidad maxima
 max_velocity = 6.28
-
-
 # Instanciacion de robot
 robot = Robot()
-
 # Ruedas
 wheel_left = robot.getMotor("left wheel motor")
 wheel_right = robot.getMotor("right wheel motor")
-
 # gps
 gps = robot.getGPS("gps")
 gps.enable(timeStep)
-
 # gyro
 gyro = robot.getGyro("gyro")
 gyro.enable(timeStep)
-
 #        [Velocidad de rueda izquierda, Velocidad de rueda derecha]
 speeds = [0.0, 0.0]
-
 wheel_left.setPosition(float("inf"))
 wheel_right.setPosition(float("inf"))
-
 # Tiempo de inicio del programa
-
 program_start = robot.getTime()
 
 # -- VARIABLES NECESARIAS PARA EL MOVIMIENTO POR COORDENADAS --
@@ -47,13 +35,9 @@ movesDone = 0
 globalRot = 0
 globalPos = [0, 0]
 
-#tamano de nodo y de baldosa
-
-
 # convierte un rango de valores a otro
 def mapVals(val, in_min, in_max, out_min, out_max):
     return (val - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-
 
 # Obtiene la distancia a unas coordenadas (Intruducir array con dos valores. por ej. [-0.12, 1,45])
 def getDistance(position):
@@ -66,7 +50,6 @@ def stop():
     # set right wheel speed
     speeds[1] = 0
 
-
 # cambia la velocidad de las ruedas teniendo en cuenta un fraccion de la velocidad. (Poner valores de 0 a 1, donde 1 es
 # igual a la velocidad maxima )
 def move(fraction1, fraction2):
@@ -75,30 +58,20 @@ def move(fraction1, fraction2):
     # set right wheel speed
     speeds[1] = fraction2 * max_velocity
 
-
-
 # Devuelve la rotacion global del robot teniendo en cuenta el gyroscopo
 oldRotTime = robot.getTime()
 def getRotationByVelocity(globalRotation):
     global oldRotTime
 
     result = globalRotation
-
     newRotTime = robot.getTime()
     timeElapsed = newRotTime - oldRotTime  # tiempo que paso en cada timeStep
     radsInTimestep = (gyro.getValues())[0] * timeElapsed
     degsInTimestep = radsInTimestep * 180 / math.pi
-
     # print("rads: " + str(radsInTimestep) + " | degs: " + str(degsInTimestep))
 
     result += degsInTimestep
-
-    # Si se pasa de 360 grados se ajusta la rotacion empezando desde 0 grados
-    result = result % 360
-
-    # Si es mas bajo que 0 grados, le resta ese valor a 360
-    if result < 0:
-        result += 360
+    result = normalizeAngle(result)
 
     # print("global rotation: " + str(globalRotation))
     # print("tiempo: " + str(timeElapsed))
@@ -110,7 +83,6 @@ def getRotationByVelocity(globalRotation):
 # Corrige el angulo introducido por si se pasa de 360 o es mas bajo que 0
 def normalizeAngle(ang):
     ang = ang % 360
-
     # Si es mas bajo que 0 grados, le resta ese valor a 360
     if ang < 0:
         ang += 360
@@ -121,8 +93,9 @@ def normalizeAngle(ang):
 def turnToAngle(x):
     global globalRot
 
+    # diferencia entre el angulo deseado y el actual
     diff = globalRot - x
-
+    # distancia entre el angulo deseado y el actual
     moveDiff = max(globalRot, x) - min(globalRot, x)
 
     #print(diff)
