@@ -1,0 +1,45 @@
+"""import numpy as np
+import cv2 as cv
+im = cv.imread('testH.jpg')
+imgray = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
+ret, thresh = cv.threshold(imgray, 127, 255, 0)
+contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+cv.drawContours(im, contours, -1, (0,255,0), 3)
+cv.imshow("image", im)
+cv.waitKey(0)
+cv.destroyAllWindows"""
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+img = cv.imread('Searching.jpg',0)          #HERE WE PUT THE FULL IMAGE(In the robot its a lot of image of a video)
+img2 = img.copy()
+template = cv.imread('testH.jpg',0)        #and here the victim image (h)
+w, h = template.shape[::-1]
+#  the TM_CCOEFF for comparison in a list
+methods = ['cv.TM_CCOEFF']
+for meth in methods:
+    img = img2.copy()
+    method = eval(meth)
+    # Apply template Matching
+    res = cv.matchTemplate(img,template,method)
+    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(res)
+    # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
+    if method in [cv.TM_SQDIFF, cv.TM_SQDIFF_NORMED]:
+        top_left = min_loc
+    else:
+        top_left = max_loc
+    bottom_right = (top_left[0] + w, top_left[1] + h)
+    cv.rectangle(img,top_left, bottom_right, 255, 2)
+    plt.subplot(121),plt.imshow(res,cmap = 'gray')
+    plt.title('Matching Result'), plt.xticks([]), plt.yticks([])
+    plt.subplot(122),plt.imshow(img,cmap = 'gray')
+    plt.title('Detected Point'), plt.xticks([]), plt.yticks([])
+    plt.suptitle(meth)
+    plt.show()
+
+cv.waitKey(1) == ord("q")
+print ("\n\nend of the program\n\n")
+cv.destroyAllWindows
+
+#nota para el team, voy a subir una nueva version mejorada y comentada.
