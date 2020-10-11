@@ -1,0 +1,66 @@
+loop:
+    Obtiene los valores del gps, del gyro
+    obtengo tiempo
+
+    Modo onStart:
+        Calibra la rotación y offsets para la grilla
+        pasa a mainLoop
+
+    tipo de casilla = Obtengo el tipo de casilla (undefined, normal, trap, swamp or checkpoint)
+    Actualizando los valores de distancia
+    cámaraVíctimaDetectada = detectCameraVictim ( Las tres cámaras)
+    victimaDeCalor = DetectHeatVictim
+    Mapeo de paredes y obstáculos
+
+    Modo detectVictimInCamera:
+        Obtiene posición de víctima en imagen
+        Obtiene coordenadas de vícitima
+        Documenta las coordenadas en la grilla
+
+    Modo mainLoop:
+        Alejandro:
+            1. si  hay trampa:
+                paro
+            2. si no:
+                si hay víctima visual cerca o si hay víctima de calor
+                    paro 3 segundos
+                    aviso al controlador
+
+            3. si hay algo nuevo en grilla o lleggue a destino previo:
+                 recalculo navegacion:
+                    veo bfs
+                    comparo tiempo
+                    Decido si uso casilla de bfs o la de inicio
+                    Saco camino de Astar
+                 sigo nuevo camino
+
+
+        Maximo Cansino:
+            1.¿hay victima?
+            si--> documento
+            no-->nada
+            2.me muevo a la siguiente (preguntando al sensor de abajo si no hay una trampa mientras me muevo)
+
+
+        Maximo Rivero:
+
+            1- ver si hay trampa
+            2-si hay me muevo
+            2- si no reviso el entorno con sensor de distancia y guardo ubicación
+            3- reviso si hay victima y en caso de que haya voy verificando el piso a la vez
+
+
+        Nico:
+            1. verificar si hay trampa u obstaculos
+            2. si ni hay algo me muevo hacia otra casilla y vuelvo a verificar y documento
+            _si no verifico si hay victima
+            _si hay documento
+            3. actualizo valores y posición global del robot
+            4. me muevo a la siguiente casilla
+
+
+
+
+
+
+
