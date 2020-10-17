@@ -5,6 +5,8 @@ import random
 import numpy as np
 import cv2 as cv
 
+#### HOLA 
+
 globalRot = 0
 globalPos = [0, 0]
 #tamano de nodo y de baldosa
