@@ -694,44 +694,49 @@ def say(situation):
     print("Robot0: " + "- " + choice(phrases[situation]) + " - ")
 
 
-# Instantiates node grid
-nodeGrid = NodeGrid(40, 40)
-
-# Main loop variables
-masterOffset = [0, 0]
-
-oldNode = [0, 0]
-end = [0, 0]
-posNumber = 1
-movementsDone = 1
-turn = 0
-finalPath = []
-victims = []
-notMoving = True
-inPossibleTiles = False
-did360 = False
-ending = False
-moved = True
-heatAlreadyDetected = False
-
-# Detecting victim variables
-movedForwardAfterVictim = False
-MFAVFirstTime = True
-waiting = False
-
-# At start variables
-movedForward = False
-movedBack = False
-moving = False
-firstTime = True
-
-# All modes variables
-overWrite = False
-mode = "onStart"
-startOfDelay = 0
-stopDelay = 0
+mode = "init"
 
 while robot.step(timeStep) != -1:
+    if mode == "init":
+        # Instantiates node grid
+        nodeGrid = NodeGrid(40, 40)
+
+        # Main loop variables
+        masterOffset = [0, 0]
+
+        oldNode = [0, 0]
+        end = [0, 0]
+        posNumber = 1
+        movementsDone = 1
+        turn = 0
+        finalPath = []
+        victims = []
+        notMoving = True
+        inPossibleTiles = False
+        did360 = False
+        ending = False
+        moved = True
+        heatAlreadyDetected = False
+
+        # Detecting victim variables
+        movedForwardAfterVictim = False
+        MFAVFirstTime = True
+        waiting = False
+
+        # At start variables
+        movedForward = False
+        movedBack = False
+        moving = False
+        firstTime = True
+
+        # All modes variables
+        overWrite = False
+        oldGlobalPos = gps.getValues()
+        oldGlobalPos = [oldGlobalPos[0], oldGlobalPos[2]]
+        startOfDelay = 0
+        stopDelay = 0
+        mode = "onStart"
+
     globalPos = gps.getValues()
     globalPos = [globalPos[0], globalPos[2]]
     globalRot = getRotationByVelocity(globalRot)
@@ -746,6 +751,12 @@ while robot.step(timeStep) != -1:
     colourSensorPos = [(colourSensorPos[0] * -1 + globalPos[0]), (colourSensorPos[1] * -1 + globalPos[1])]
     colourTile = getTile(colourSensorPos, [tileSize / 2 + masterOffset[0], tileSize / 2 + masterOffset[1]])
 
+    diffInPos = [int(oldGlobalPos[0] * 100) - int(globalPos[0] * 100), int(oldGlobalPos[1] * 100) - int(globalPos[1] * 100)]
+    diffInPosDist = getDistance(diffInPos)
+
+    if diffInPosDist > 5 or diffInPosDist < -5:
+        mode = "init"
+        continue
 
     if mode == "onStart":
         startTile = robotTile
@@ -1011,6 +1022,6 @@ while robot.step(timeStep) != -1:
             else:
                 move(0.4, 0.4)
 
-
+    oldGlobalPos = globalPos
     updateWheels()
     cv.waitKey(1)
