@@ -508,7 +508,7 @@ def getSensorGlobalDetection(robotRot, robotPos):
 
 def get1SensorGlobalDetecion(index, robotRot, robotPos):
     sensorVal = sensors[index].getValue()
-    offset = 0.01
+    offset = -0.01
 
     if sensorVal < 0.8:
         dist = mapVals(sensorVal, 0.00, 0.8, 0, tileSize * 2.4 - 0.01)
@@ -772,6 +772,8 @@ while robot.step(timeStep) != -1:
 
     if nodeGrid.getValue(robotTile) not in (200, 255, 70, 120):
         nodeGrid.changeValue(robotTile, 50)
+
+    print(nodeGrid.getValue(robotTile))
     cv.imshow("map", cv.resize(nodeGrid.getMap(), (400, 400), interpolation=cv.INTER_AREA))
     if onStart:
         print("----- Program started ----")
@@ -828,7 +830,24 @@ while robot.step(timeStep) != -1:
             stop()
             stopDelay = 0.5
             nodeGrid.changeValue(rightVictimTile, 200)
+    # print(sensors[7].getValue())
 
+
+    if robotTile != 120:
+        if leftDetected and sensors[7].getValue() < 0.12:
+            stop()
+            stopDelay = 3.2
+            sendVictimMessage("H")
+            messageSent = False
+            print("---- Victim documented ----")
+            nodeGrid.changeValue(robotTile, 120)
+        if rightDetected and sensors[0].getValue() < 0.12:
+            stop()
+            stopDelay = 3.2
+            print("---- Victim documented ----")
+            sendVictimMessage("H")
+            messageSent = False
+            nodeGrid.changeValue(robotTile, 120)
     if (leftDetected or rightDetected) and nodeGrid.getValue(robotTile) == 120:
         did360 = True
         #did180 = False
@@ -876,6 +895,9 @@ while robot.step(timeStep) != -1:
                         print("ending")
                 finalPath = getAstar(start, end)
 
+    if did360 and nodeGrid.getValue(robotTile) != 120:
+        nodeGrid.changeValue(robotTile, 50)
+
     if stopDelay:
         if not waiting:
             waiting = True
@@ -891,65 +913,23 @@ while robot.step(timeStep) != -1:
 
 
         if done:
+            possibleEnds, victims = bfs(maze, start, [0, 100], 200)
+            if robot.getTime() > 7.5 * 60:
+                end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
+                end = startTile
+                ending = True
 
-            if left_heat_sensor.getValue() > 30 or right_heat_sensor.getValue() > 30:
-                print("heat detecting")
-                stop()
-                stopDelay = 3.2
-                sendVictimMessage('T')
-                messageSent = False
+            elif len(victims):
+                end = victims[0]
+            elif end not in possibleEnds:
 
-            if centreDetected and sensors[0].getValue() < 0.12 and sensors[7].getValue() < 0.12:
-                stop()
-                stopDelay = 3.2
-                sendVictimMessage("H")
-                messageSent = False
-                print("---- Victim documented ----")
-                nodeGrid.changeValue(robotTile, 120)
-            # print(done)
-            if nodeGrid.getValue(robotTile) == 200:
-                #print(sensors[7].getValue())
-
-                if leftDetected and sensors[7].getValue() < 0.12:
-                    stop()
-                    stopDelay = 3.2
-                    sendVictimMessage("H")
-                    messageSent = False
-                    print("---- Victim documented ----")
-                    nodeGrid.changeValue(robotTile, 120)
-                if rightDetected and sensors[0].getValue() < 0.12:
-                    stop()
-                    stopDelay = 3.2
-                    print("---- Victim documented ----")
-                    sendVictimMessage("H")
-                    messageSent = False
-                    nodeGrid.changeValue(robotTile, 120)
-
-
-                elif do360(0.3):
-
-                    nodeGrid.changeValue(robotTile, 50)
-
-
-            else:
-
-                possibleEnds, victims = bfs(maze, start, [0, 100], 200)
-                if robot.getTime() > 7.5 * 60:
-                    end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
+                if len(possibleEnds):
+                    end = possibleEnds[0]
+                else:
                     end = startTile
+                    end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
                     ending = True
-
-                elif len(victims):
-                    end = victims[0]
-                elif end not in possibleEnds:
-
-                    if len(possibleEnds):
-                        end = possibleEnds[0]
-                    else:
-                        end = startTile
-                        end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
-                        ending = True
-                finalPath = getAstar(start, end)
+            finalPath = getAstar(start, end)
         oldNode = robotTile
         oldPath = path
 
