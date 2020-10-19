@@ -1,17 +1,25 @@
 import time
 
+# Clase de capa de obstarccion
+# Abstraction layer class
 class AbstractionLayer:
     def __init__(self, initialState=""):
         self.state = initialState
         self.startTime = time.time()
         self.actualTime = time.time()
     
+    # Cambia el estado
+    # Changes the state
     def changeState(self, newState):
         self.state = newState
 
+    # Poner al inicio del loop principal
+    # Put at the start of the main loop
     def update(self):
         self.actualTime = time.time()
 
+# Instanciacion de capa de abstracción
+# Abstraction layer instantiation
 r = AbstractionLayer("start")
 
 while True:
