@@ -3,50 +3,47 @@ import numpy as np
 import cv2 as cv
 import math
 import struct
+from random import choice
 
-tileSize = 0.12
+# Show map variable. Turn True to see the visual representation of the map done by the robot
+showMap = True
 
+# Constants
 timeStep = 32 // 2
 max_velocity = 6.28
+robotDiameter = 0.071
+tileSize = 0.12
 
-startTime = 0
-duration = 0
-
-globalRotation = 0
-
-
-
+# Robot instantiation and enabling
 robot = Robot()
-
+# Wheels
 wheel_left = robot.getMotor("left wheel motor")
 wheel_right = robot.getMotor("right wheel motor")
-
+# Cameras
 centreCamera = robot.getCamera("camera_centre")
 centreCamera.enable(timeStep)
 rightCamera = robot.getCamera("camera_right")
 rightCamera.enable(timeStep)
 leftCamera = robot.getCamera("camera_left")
 leftCamera.enable(timeStep)
-
+# Colour sensor
 colour_camera = robot.getCamera("colour_sensor")
 colour_camera.enable(timeStep)
-
+# Emitter
 emitter = robot.getEmitter("emitter")
-
+# Gps
 gps = robot.getGPS("gps")
 gps.enable(timeStep)
-
+# Heat sensors
 left_heat_sensor = robot.getLightSensor("left_heat_sensor")
 right_heat_sensor = robot.getLightSensor("right_heat_sensor")
-
 left_heat_sensor.enable(timeStep)
 right_heat_sensor.enable(timeStep)
-
+# Gyro
 gyro = robot.getGyro("gyro")
 gyro.enable(timeStep)
-
+# Distance sensors
 sensors = []
-
 sensors.append(robot.getDistanceSensor("ps0"))
 sensors[0].enable(timeStep)
 sensors.append(robot.getDistanceSensor("ps1"))
@@ -63,22 +60,19 @@ sensors.append(robot.getDistanceSensor("ps6"))
 sensors[6].enable(timeStep)
 sensors.append(robot.getDistanceSensor("ps7"))
 sensors[7].enable(timeStep)
-
 #        [left wheel speed, right wheel speed]
 speeds = [0.0, 0.0]
-
 wheel_left.setPosition(float("inf"))
 wheel_right.setPosition(float("inf"))
 
-program_start = robot.getTime()
-
-robotDiameter = 0.071
-
+# Initiate global position and rotation
 globalRot = 0
 globalPos = [0, 0]
 
 
+# Node grid class for mapping
 class NodeGrid:
+    # Creates grid and prepares it
     def __init__(self, x, y):
         self.grid = np.zeros((x, y), dtype=np.uint8)
         self.center = (self.grid.shape[0] // 2, self.grid.shape[1] // 2)
@@ -89,6 +83,7 @@ class NodeGrid:
                     if j % 2 != 0:
                         self.grid[i][j] = 255
 
+        # Empty walls
         for i in range(0, len(self.grid)):
             if (i + 1) % 2 != 0:
                 for j in range(0, len(self.grid[i])):
@@ -100,12 +95,15 @@ class NodeGrid:
                     if (j + 1) % 2 != 0:
                         self.grid[i][j] = 20
 
+    # Prints the grid in the console
     def printMap(self):
         print(self.grid)
 
+    # Returns the grid
     def getMap(self):
         return self.grid
 
+    # Changes the value of a given node in the grid
     def changeValue(self, pos, val):
         # print(pos)
         try:
@@ -116,6 +114,7 @@ class NodeGrid:
         except IndexError:
             return "undefined"
 
+    # Gets the value of a given node of the grid
     def getValue(self, pos):
         try:
             finalIndex = [pos[0] + self.center[0], pos[1] + self.center[1]]
@@ -128,8 +127,8 @@ class NodeGrid:
             return "undefined"
 
 
+# Node class for A* pathfinding (Not to be confused with the node grid)
 class Node():
-    """A node class for A* Pathfinding"""
 
     def __init__(self, parent=None, position=None):
         self.parent = parent
@@ -143,29 +142,21 @@ class Node():
         return self.position == other.position
 
 
+# A Star algorithm
+# Returns a list of tuples as a path from the given start to the given end in the given maze
 def astar(maze, start, end):
-    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
-
-    # print("initating A star")
-
     # Create start and end node
     start_node = Node(None, start)
     start_node.g = start_node.h = start_node.f = 0
     end_node = Node(None, end)
     end_node.g = end_node.h = end_node.f = 0
-
-    # Initialize both open and closed list
+    # Initialize open and closed list
     open_list = []
     closed_list = []
-
     # Add the start node
     open_list.append(start_node)
-
-    # print("Initiating While loop")
-
-    # Loop until you find the end
+    # Loop until end
     while len(open_list) > 0:
-        # print("start of while loop")
         # Get the current node
         current_node = open_list[0]
         current_index = 0
@@ -173,12 +164,10 @@ def astar(maze, start, end):
             if item.f < current_node.f:
                 current_node = item
                 current_index = index
-
         # Pop current off open list, add to closed list
         open_list.pop(current_index)
         closed_list.append(current_node)
-
-        # Found the goal
+        # If found the goal
         if current_node == end_node:
             path = []
             current = current_node
@@ -186,61 +175,51 @@ def astar(maze, start, end):
                 path.append(current.position)
                 current = current.parent
             return path[::-1]  # Return reversed path
-
         # Generate children
         children = []
         for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:  # Adjacent squares
-
             # Get node position
             node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
             # Make sure within range
             if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (
                     len(maze[len(maze) - 1]) - 1) or node_position[1] < 0:
                 continue
-
             # Make sure walkable terrain
             if maze[node_position[0]][node_position[1]] == 255:
                 continue
-
             # Create new node
             new_node = Node(current_node, node_position)
-
             # Append
             children.append(new_node)
-
         # Loop through children
         for child in children:
             continueLoop = False
-
             # Child is on the closed list
             for closed_child in closed_list:
                 if child == closed_child:
                     continueLoop = True
                     break
-
             # Create the f, g, and h values
             child.g = current_node.g + 1
             child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
                         (child.position[1] - end_node.position[1]) ** 2)
             child.f = child.g + child.h
-
             # Child is already in the open list
             for open_node in open_list:
                 if child == open_node and child.g > open_node.g:
                     continueLoop = True
                     break
-
             if continueLoop:
                 continue
-
             # Add the child to the open list
             open_list.append(child)
 
 
+# Breath First Search algorithm
+# Returns the tiles with the color given in objectives in order and with the distance of each one
 def bfs(grid, node, objectives, victimColor):
-    visited = []  # List to keep track of visited nodes.
-    queue = []  # Initialize a queue
+    visited = []
+    queue = []
     found = []
     victims = []
     node = [node[0], node[1], 0]
@@ -268,17 +247,15 @@ def bfs(grid, node, objectives, victimColor):
                     neighbour[1] < 0:
                 continue
             # Make sure walkable terrain
+            # I used 240 instead of 255  because of some discrepancies from 255
             if grid[neighbour[0]][neighbour[1]] > 240:
                 continue
             visited.append(neighbour)
             queue.append(neighbour)
     return found, victims
 
-
-messageSent = False
-
-
 # Sends a message to the game controller
+messageSent = False
 def sendMessage(v1, v2, victimType):
     message = struct.pack('i i c', v1, v2, victimType.encode())
     emitter.send(message)
@@ -288,7 +265,6 @@ def sendMessage(v1, v2, victimType):
 def sendVictimMessage(victimType='N'):
     global messageSent
     position = gps.getValues()
-
     if not messageSent:
         # robot type, position x cm, position z cm, victim type
         # The victim type is hardcoded as "H", but this should be changed to different victims for your program
@@ -300,21 +276,15 @@ def sendVictimMessage(victimType='N'):
         messageSent = True
 
 
-# Gira al angulo especificado
+# Turns to given global angle
 def turnToAngle(x):
     global globalRot
-
     diff = globalRot - x
-
     moveDiff = max(globalRot, x) - min(globalRot, x)
-
-    # print(diff)
     speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), 0.7)
     if -1 < diff < 1:
         stop()
-        # print("end")
         return True
-
     elif 0 < diff < 180:
         move(speedFract, speedFract * -1)
     elif diff < -180:
@@ -326,57 +296,40 @@ def turnToAngle(x):
     return False
 
 
-# convierte un rango de valores a otro
+# Converts a number from a range of value to another
 def mapVals(val, in_min, in_max, out_min, out_max):
     return (val - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 
-# Obtiene la distancia a unas coordenadas (Intruducir array con dos valores. por ej. [-0.12, 1,45])
+# Gets the distance to given coordinates
 def getDistance(position):
     return math.sqrt((position[0] ** 2) + (position[1] ** 2))
 
 
-# para las dos ruedas
+# Stops both wheels
 def stop():
-    # set left wheel speed
     speeds[0] = 0
-    # set right wheel speed
     speeds[1] = 0
 
 
-# cambia la velocidad de las ruedas teniendo en cuenta un fraccion de la velocidad. (Poner valores de 0 a 1, donde 1 es
-# igual a la velocidad maxima )
+# Changes the wheel velocity given a ratio of the max velocity (Enter values from 0 to 1,  1 = max speed )
 def move(fraction1, fraction2):
-    # set left wheel speed
     speeds[0] = fraction1 * max_velocity
-    # set right wheel speed
     speeds[1] = fraction2 * max_velocity
 
 
-# Poner esta funcion antes de hacer una secuencia de movimientos
-def startSequence():
-    global moveOrderNumber
-    global movesDone
-    moveOrderNumber = 0
-    movesDone = 0
-
-
-# Mueve el robot a las coordenadas especificadas
+# Moves the robot to given global coordinates
 turned = False
-
-
 def moveToCoords(targetPos):
     global turned
     global globalPos
     global globalRot
-    # Nivel de presicion. Se puede hacer mas chico o mas grande, pero puede ser que si es demasiado chico el robot nunca
-    # llegue a su destino. Segun mis pruevas funciona bastante bien con este valor
+    # level of precision. It can be modified, but if it is too small, the robot will never get to the position.
     errorMargin = 0.01
     diffX = targetPos[0] - globalPos[0]
     diffY = targetPos[1] - globalPos[1]
     dist = math.sqrt(diffX ** 2 + diffY ** 2)
     if errorMargin * -1 < dist < errorMargin:
-        print("done")
         stop()
         turned = False
         return True
@@ -385,11 +338,9 @@ def moveToCoords(targetPos):
         ang = rad * 180 / math.pi
         ang += 180
         ang = normalizeAngle(ang)
-        # print(ang)
         if not turned:
             turned = turnToAngle(ang)
         if turned:
-            # print(dist)
             ratio = min(mapVals(dist, 0, 0.1, 0.1, 1), 0.8)
             ratio = max(ratio, 0.2)
             diff = globalRot - ang
@@ -399,16 +350,15 @@ def moveToCoords(targetPos):
             if -1 < diff < 1:
                 move(ratio, ratio)
             else:
-                # print("turning to angle")
                 turnToAngle(ang)
 
+
+# Returns the robot global rotation by measuring the changes in its position
 oldPos = [0, 0]
-#Returns the robot global rotation
 def getRotationByPos():
     global oldPos
     global gps
     newPos = [gps.getValues()[0] * 100 // 1, gps.getValues()[2] * 100 // 1]
-
     if newPos[0] == oldPos[0] and newPos[1] == oldPos[1]:
         return -1
     else:
@@ -420,46 +370,36 @@ def getRotationByPos():
         return degs
 
 
-# Devuelve la rotacion global del robot teniendo en cuenta el gyroscopo
+# Retuns the robot global rotation measuring the gyro
 oldRotTime = robot.getTime()
-
-
 def getRotationByVelocity(globalRotation):
     global oldRotTime
     result = globalRotation
     newRotTime = robot.getTime()
-    timeElapsed = newRotTime - oldRotTime  # tiempo que paso en cada timeStep
+    timeElapsed = newRotTime - oldRotTime  # Time passed in time step
     radsInTimestep = (gyro.getValues())[0] * timeElapsed
     degsInTimestep = radsInTimestep * 180 / math.pi
-    # print("rads: " + str(radsInTimestep) + " | degs: " + str(degsInTimestep))
     result += degsInTimestep
-    # Si se pasa de 360 grados se ajusta la rotacion empezando desde 0 grados
-    result = result % 360
-
-    # Si es mas bajo que 0 grados, le resta ese valor a 360
-    if result < 0:
-        result += 360
-    # print("global rotation: " + str(globalRotation))
-    # print("tiempo: " + str(timeElapsed))
-    # Actualiza el tiempo de rotacion
+    result = normalizeAngle(result)
     oldRotTime = newRotTime
     return result
 
 
-# Corrige el angulo introducido por si se pasa de 360 o es mas bajo que 0
+# Corrects the given angle to be in a range from 0 to 360
 def normalizeAngle(ang):
     ang = ang % 360
-    # Si es mas bajo que 0 grados, le resta ese valor a 360
     if ang < 0:
         ang += 360
     return ang
 
 
+# Updates the wheel speeds
 def updateWheels():
     wheel_left.setVelocity(speeds[0])
     wheel_right.setVelocity(speeds[1])
 
 
+# Gets x, y coordinates from a given angle and distance
 def getCoords(angle, distance):
     # print(distance)
     rad = angle * math.pi / 180
@@ -468,18 +408,20 @@ def getCoords(angle, distance):
     return [x, y]
 
 
+# Gets the tile of the position in the actual maze
 def getDetectTile(position, offsets):
     global tileSize
     node = [int((position[0] + offsets[0]) // tileSize), int((position[1] + offsets[1]) // tileSize)]
     return node
 
-
+# gets the tile of the position in the node grid
 def getTile(robotGlobalPos, offsets):
     global tileSize
     node = [(robotGlobalPos[1] + offsets[1]) // tileSize * 2, (robotGlobalPos[0] + offsets[0]) // tileSize * 2]
     return node
 
 
+# Gets the global postion of all the sensor detections
 def getSensorGlobalDetection(robotRot, robotPos):
     finalGlobalPoses = []
     sensorVals = [sensors[0].getValue(), sensors[1].getValue(), sensors[2].getValue(), sensors[3].getValue(),
@@ -523,13 +465,12 @@ def getSensorGlobalDetection(robotRot, robotPos):
     return finalGlobalPoses
 
 
+# Gets the global position of the detection of the given distance sensor
 def get1SensorGlobalDetecion(index, robotRot, robotPos):
     sensorVal = sensors[index].getValue()
     offset = 0.01
-
     if sensorVal < 0.8:
         dist = mapVals(sensorVal, 0.00, 0.8, 0, tileSize * 2.4 - 0.01)
-
         dist += robotDiameter / 2
         dist += offset
         if index == 0:
@@ -563,20 +504,19 @@ def get1SensorGlobalDetecion(index, robotRot, robotPos):
     return pos
 
 
+# Gets the walls and obstacles given the global positions
 def getWalls(positions):
     global tileSize
+    global masterOffset
     finalTiles = []
     finalOrientations = []
-    orientation = ""
     sideClearance = 0.036
-    centreClearance = 0.036
+    centreClearance = 0.04
     thicknessClearance = 0.004
-
     for pos in positions:
-        posTile = getDetectTile(pos, [0, 0])
+        posTile = getDetectTile(pos, [0.06 - masterOffset[1], 0.06 - masterOffset[1]])
         tilePos = [posTile[0] * tileSize, posTile[1] * tileSize]
-        posInTile = [pos[0] + tilePos[0] * -1 + 0, pos[1] + tilePos[1] * -1 + 0]
-
+        posInTile = [pos[0] + tilePos[0] * -1 + (0.06 - masterOffset[0]), pos[1] + tilePos[1] * -1 + (0.06 - masterOffset[1])]
         if sideClearance < posInTile[1] < 0.12 - sideClearance and posInTile[0] > tileSize - thicknessClearance:
             orientation = "Left"
             finalTiles.append(posTile)
@@ -598,20 +538,18 @@ def getWalls(positions):
             orientation = "centre"
             finalTiles.append(posTile)
             finalOrientations.append(orientation)
-
     return finalTiles, finalOrientations
 
 
+# Makes the robot follow a series of global position
 def followPath(path):
     global movementsDone
     global recalculate
     global robotTile
     global nodeGrid
     global tileSize
-
     if movementsDone < len(path):
         coords = [path[movementsDone][0], path[movementsDone][1]]
-        startSequence()
         if moveToCoords(coords):
             movementsDone += 1
             return False, True
@@ -621,8 +559,10 @@ def followPath(path):
         return True, True
 
 
+# Gets the A* path and process it to meake it more usefull
 def getAstar(start, end):
     global movementsDone
+    global masterOffset
     if nodeGrid.getValue([end[0] - nodeGrid.center[0], end[1] - nodeGrid.center[1]]) != 200:
         nodeGrid.changeValue([end[0] - nodeGrid.center[0], end[1] - nodeGrid.center[1]], 100)
     path = astar(maze, start, (end[0], end[1]))
@@ -630,18 +570,18 @@ def getAstar(start, end):
     movementsDone = 2
     for pos in path:
         finalPos = [(pos[1] - nodeGrid.center[0]) // 2, (pos[0] - nodeGrid.center[1]) // 2]
-        finalPos = [(finalPos[0] * tileSize) - 0.06, (finalPos[1] * tileSize) - 0.06]
+        finalPos = [(finalPos[0] * tileSize) - masterOffset[0], (finalPos[1] * tileSize) - masterOffset[1]]
         finalPath.append(finalPos)
     return finalPath
 
 
+# Gets the type of tile with the color sensor data
 def typeOfFloor():
     colour = colour_camera.getImage()
     r = colour[0]
     g = colour[1]
     b = colour[2]
-    floorType = "undefined"  # 0=normal 1=swamp 2=trap 3=exit
-    # print(str(r) + " - " + str(g) + " - " + str(b))
+    floorType = "undefined"
     if r == 252 and g == 252:
         floorType = "normal"
     elif (57 < r < 61 and 57 < g < 61) or (r == 111 and g == 111):
@@ -653,60 +593,54 @@ def typeOfFloor():
     return floorType
 
 
-def doCalibration():
-    global masterOffset
-
-
+# Returns the position of a victim in the image
 def getVictimImagePos(image_data, camera):
     img = np.array(np.frombuffer(image_data, np.uint8).reshape((camera.getHeight(), camera.getWidth(), 4)))
     img[:, :, 2] = np.zeros([img.shape[0], img.shape[1]])
-    # print(img.shape)
-    cv.imshow("ventana", img)
-
-    # convert from BGR to HSV color space
+    # Convert from BGR to Gray scale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-
-    # apply threshold
+    # Apply threshold
     thresh = cv.threshold(gray, 140, 255, cv.THRESH_BINARY)[1]
-
-    # draw all contours in green and accepted ones in red
+    # Apply Canny
+    canny = cv.Canny(thresh, 0, 100)
+    # Gets the lines in the image
+    rho = 1
+    theta = np.pi / 180
+    threshold = 20
+    min_line_length = 2
+    max_line_gap = 10
+    lines = cv.HoughLinesP(canny, rho, theta, threshold, np.array([]), min_line_length, max_line_gap)
+    if lines is not None:
+        lineCount = len(lines)
+    else:
+        lineCount = 0
     contours, h = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
     finalPoses = []
-
     for c in contours:
+        # mGets the center of the contours
         M = cv.moments(c)
-
         if M['m00'] != 0:
             cx = int(M['m10'] / M['m00'])
             cy = int(M['m01'] / M['m00'])
-
             finalPoses.append([cx, cy])
-    return finalPoses
+    return finalPoses, lineCount
 
 
+# Does a 360 degree turn given the maximum velocity it can reach during that from 0 to 1
 did180 = False
-
 putObjective = False
 objective = 0
-
-
 def do360(maxratio):
     global globalRot
     global did180
     global objective
     global putObjective
-
     if not putObjective:
         objective = globalRot + 180
         objective = normalizeAngle(objective)
         putObjective = True
-
     diff = globalRot - objective
-
     moveDiff = max(globalRot, objective) - min(globalRot, objective)
-
-    # print(diff)
     speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), maxratio)
     if -1 < diff < 1:
         stop()
@@ -722,29 +656,25 @@ def do360(maxratio):
     return False
 
 
-
+# Returns the victim tile and if it is in the centre of the camera given its position in the image, a clearance and the
+# sensor used to detect distance
 def getVictimTile(victimPoses, clearance, sensor=None):
     global globalPos
     global globalRot
-
+    global masterOffset
     if len(victimPoses):
         victimTiles =[]
         for i in victimPoses:
             X = i[0]
-
             if (128 // 2) - clearance < X < (128 // 2) + clearance:
-                #print("victim in centre")
-
                 if sensor is None:
                     return victimTiles, True
                 else:
-
                     detect = get1SensorGlobalDetecion(sensor, globalRot, globalPos)
                     if detect is not None:
                         victimCoords = detect
                         victimCoords = [victimCoords[0] * -1, victimCoords[1] * -1]
-                        victimTile = getTile(victimCoords, [tileSize, tileSize])
-                        #print(nodeGrid.getValue(victimTile))
+                        victimTile = getTile(victimCoords, [tileSize / 2 + masterOffset[0], tileSize / 2 + masterOffset[1]])
                         victimTiles.append(victimTile)
         if len(victimTiles):
             return victimTiles, True
@@ -753,55 +683,81 @@ def getVictimTile(victimPoses, clearance, sensor=None):
     else:
         return [], False
 
+phrases = {
+    "victim": ["Found a victim!", "Yup, victim right here", "Yess, victim", "I Think I see a victim here", "Good, victim!", "I really hope this is a victim"],
+    "trap": ["Ups, go back!", "Nope, trap here", "Uff, almost fell", "Not this time trap"],
+    "obstacle": ["Obstacle round there", "Found u obstacle", "Oh, obstacle, I see you there", "i´ll have to go around that obstacle"],
+    "exit": ["I think I´ve seen everything, I better exit", ]
+}
+def say(situation):
+
+    print("Robot0: " + "- " + choice(phrases[situation]) + " - ")
+
+
+# Instantiates node grid
 nodeGrid = NodeGrid(40, 40)
 
+# Main loop variables
 masterOffset = [0, 0]
-oldPath = []
+
 oldNode = [0, 0]
 end = [0, 0]
 posNumber = 1
 movementsDone = 1
-path = []
+turn = 0
 finalPath = []
-finalNewPath = []
+victims = []
 notMoving = True
 inPossibleTiles = False
 did360 = False
-turn = 0
-stopDelay = 0
-waiting = False
-startOfDelay = 0
-victims = []
-onStart = True
 ending = False
-overWrite = False
 moved = True
+heatAlreadyDetected = False
 
-# AT START
+# Detecting victim variables
+movedForwardAfterVictim = False
+MFAVFirstTime = True
+waiting = False
+
+# At start variables
 movedForward = False
 movedBack = False
 moving = False
+firstTime = True
 
+# All modes variables
+overWrite = False
+mode = "onStart"
+startOfDelay = 0
+stopDelay = 0
 
 while robot.step(timeStep) != -1:
-
-
-
     globalPos = gps.getValues()
     globalPos = [globalPos[0], globalPos[2]]
     globalRot = getRotationByVelocity(globalRot)
-    robotTile = getTile(globalPos, [tileSize, tileSize])
-
-    if nodeGrid.getValue(robotTile) not in (200, 255, 70, 120):
+    robotTile = getTile(globalPos, [tileSize / 2 + masterOffset[0], tileSize / 2 + masterOffset[1]])
+    if nodeGrid.getValue(robotTile) not in (200, 255, 70, 120, 30):
         nodeGrid.changeValue(robotTile, 50)
-    cv.imshow("map", cv.resize(nodeGrid.getMap(), (400, 400), interpolation=cv.INTER_AREA))
-    if onStart:
-        print("----- Program started ----")
+
+    if showMap:
+        cv.imshow("map", cv.resize(nodeGrid.getMap(), (800, 800), interpolation=cv.INTER_AREA))
+    colour = typeOfFloor()
+    colourSensorPos = getCoords(globalRot, robotDiameter / 2 + 0.01)
+    colourSensorPos = [(colourSensorPos[0] * -1 + globalPos[0]), (colourSensorPos[1] * -1 + globalPos[1])]
+    colourTile = getTile(colourSensorPos, [tileSize / 2 + masterOffset[0], tileSize / 2 + masterOffset[1]])
+
+
+    if mode == "onStart":
         startTile = robotTile
-        #stop()
-        #updateWheels()
-        #print("Robot position in tile: ")
-        #print(globalPos[0] % tileSize, globalPos[1] % tileSize)
+        if firstTime:
+            print("----- Program started ----")
+            print("Robot position in tile: ")
+            programStartTime = robot.getTime()
+            masterOffset = [round(globalPos[0] * 100) / 100, round(globalPos[1] * 100) / 100]
+            masterOffset = [masterOffset[0] % tileSize, masterOffset[1] % tileSize]
+            robotTile = getTile(globalPos, [tileSize / 2 + masterOffset[0], tileSize / 2 + masterOffset[1]])
+            firstTime = False
+            print(masterOffset)
         if not movedForward:
             if not moving:
                 FMStarting = robot.getTime()
@@ -810,13 +766,10 @@ while robot.step(timeStep) != -1:
                 FMTimeElapsed = robot.getTime() - FMStarting
                 move(0.8, 0.8)
                 updateWheels()
-
                 if FMTimeElapsed < 0.5:
-
                     val = getRotationByPos()
                     if val != -1:
                         globalRot = val
-                    print(globalRot)
                 if FMTimeElapsed > 1:
                     stop()
                     updateWheels()
@@ -835,47 +788,37 @@ while robot.step(timeStep) != -1:
                     updateWheels()
                     globalRot += 180
                     globalRot = normalizeAngle(globalRot)
-                    onStart = False
+                    mode = "mainLoop"
 
 
-        #onStart = False
-
-
-    else:
+    elif mode == "mainLoop":
         globalDetects = getSensorGlobalDetection(globalRot, globalPos)
         maze = nodeGrid.getMap()
-
         end = robotTile
 
-        colour = typeOfFloor()
-        colourSensorPos = getCoords(globalRot, robotDiameter / 2 + 0.01)
-        colourSensorPos = [(colourSensorPos[0] * -1 + globalPos[0]), (colourSensorPos[1] * -1 + globalPos[1])]
-        # print(colourSensorPos)
-        colourTile = getTile(colourSensorPos, [tileSize, tileSize])
-
         leftImage = leftCamera.getImage()
-        victimPosesInLeftImage = getVictimImagePos(leftImage, leftCamera)
-
+        victimPosesInLeftImage, leftLineCount = getVictimImagePos(leftImage, leftCamera)
         rightImage = rightCamera.getImage()
-        victimPosesInRightImage = getVictimImagePos(rightImage, rightCamera)
-
+        victimPosesInRightImage, rightLineCount = getVictimImagePos(rightImage, rightCamera)
         centreImage = centreCamera.getImage()
-        victimPosesInCentreImage = getVictimImagePos(centreImage, centreCamera)
+        victimPosesInCentreImage, centreLineCount = getVictimImagePos(centreImage, centreCamera)
 
-        if len(victims):
+        if 4 in (leftLineCount, rightLineCount, centreLineCount) or 5 in (leftLineCount, rightLineCount, centreLineCount)\
+                or 6 in (leftLineCount, rightLineCount, centreLineCount):
+            victimInSight = "U"
+        elif 8 in (leftLineCount, rightLineCount, centreLineCount) or 9 in (leftLineCount, rightLineCount, centreLineCount):
+            victimInSight = "H"
+        elif leftLineCount != 0 or rightLineCount != 0 or centreLineCount != 0:
+            victimInSight = "S"
+        else:
+            victimInSight = "N"
+
+        if len(victims) and victims[0][2] < 20:
             end = victims[0]
 
-        _, centreDetected = getVictimTile(victimPosesInCentreImage, 2)
+        _, centreDetected = getVictimTile(victimPosesInCentreImage, 20)
 
-        if centreDetected and sensors[0].getValue() < 0.12 and sensors[7].getValue() < 0.12 and nodeGrid.getValue(robotTile) != 120:
-            stop()
-            stopDelay = 3.2
-            sendVictimMessage("H")
-            messageSent = False
-            print("---- Victim documented ----")
-            nodeGrid.changeValue(robotTile, 120)
-
-
+        rightVictimTiles, rightDetected = getVictimTile(victimPosesInLeftImage, 2, 0)
         leftVictimTiles, leftDetected = getVictimTile(victimPosesInLeftImage, 2, 7)
         if leftDetected:
             leftVictimTile = leftVictimTiles[0]
@@ -884,7 +827,6 @@ while robot.step(timeStep) != -1:
                 stopDelay = 0.5
                 nodeGrid.changeValue(leftVictimTile, 200)
 
-        rightVictimTiles, rightDetected = getVictimTile(victimPosesInLeftImage, 2, 0)
         if rightDetected:
             rightVictimTile = rightVictimTiles[0]
             if nodeGrid.getValue(rightVictimTile) == 0:
@@ -894,39 +836,31 @@ while robot.step(timeStep) != -1:
 
         if (leftDetected or rightDetected) and nodeGrid.getValue(robotTile) == 120:
             did360 = True
-            #did180 = False
-
         if nodeGrid.getValue(robotTile) != 120:
-            # print(sensors[7].getValue())
-
-            if leftDetected and sensors[7].getValue() < 0.1:
-                stop()
-                stopDelay = 3.2
-                sendVictimMessage("H")
-                messageSent = False
-                print("---- Victim documented ----")
-                nodeGrid.changeValue(robotTile, 120)
-            if rightDetected and sensors[0].getValue() < 0.1:
-                stop()
-                stopDelay = 3.2
-                print("---- Victim documented ----")
-                sendVictimMessage("H")
-                messageSent = False
-                nodeGrid.changeValue(robotTile, 120)
-
-        if left_heat_sensor.getValue() > 32 or right_heat_sensor.getValue() > 32:
-            print("heat detecting")
+            if (leftDetected or leftLineCount != 0) and sensors[7].getValue() < 0.1:
+                if not overWrite:
+                    mode = "detectingVictim"
+            if (rightDetected or rightLineCount != 0) and sensors[0].getValue() < 0.1:
+                if not overWrite:
+                    mode = "detectingVictim"
+            if (centreDetected or centreLineCount != 0) and sensors[0].getValue() < 0.15 and sensors[7].getValue() < 0.15:
+                if not overWrite:
+                    mode = "detectingVictim"
+        if left_heat_sensor.getValue() > 35 or right_heat_sensor.getValue() > 35:
+            if not heatAlreadyDetected:
+                say("victim")
+                heatAlreadyDetected = True
             stop()
             stopDelay = 3.2
             sendVictimMessage('T')
             messageSent = False
 
-        # print(colour)
+        else:
+            heatAlreadyDetected = False
 
         start = (int(robotTile[0] + nodeGrid.center[0]), int(robotTile[1] + nodeGrid.center[1]))
         end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
         wallTiles, wallDirections = getWalls(globalDetects)
-        # possibleWalls = []
         for wallTile, wallDirection in zip(wallTiles, wallDirections):
             finalWallTile = [wallTile[1] * -2, wallTile[0] * -2]
             if wallDirection == "Right":
@@ -937,24 +871,29 @@ while robot.step(timeStep) != -1:
                 finalWallTile[0] -= 1
             elif wallDirection == "Down":
                 finalWallTile[0] += 1
-            if (nodeGrid.getValue(finalWallTile)) != 255:
+            if nodeGrid.getValue(finalWallTile) not in (255, 30):
+                if wallDirection == "centre":
+                    for pos in ([0,1], [1,0], [0,-1], [-1,0]):
+                        nodeGrid.changeValue([finalWallTile[0] + pos[0], finalWallTile[1] + pos[1]], 30)
+                    say("obstacle")
                 nodeGrid.changeValue([finalWallTile[0], finalWallTile[1]], 255)
                 if did360:
                     possibleEnds, victims = bfs(maze, start, [0, 100], 200)
-                    if robot.getTime() > 7.5 * 60:
+                    if robot.getTime() - programStartTime > 7.5 * 60:
+                        say("exit")
                         end = startTile
                         end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
                         ending = True
-                    elif len(victims) and victims[0][2] < 25:
-                            end = victims[0]
+                    elif len(victims) and victims[0][2] < 20:
+                        end = victims[0]
                     elif end not in possibleEnds:
                         if len(possibleEnds):
                             end = possibleEnds[0]
                         else:
+                            say("exit")
                             end = startTile
                             end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
                             ending = True
-                            print("ending")
                     finalPath = getAstar(start, end)
 
         if stopDelay:
@@ -970,96 +909,108 @@ while robot.step(timeStep) != -1:
         elif did360:
             done, moved = followPath(finalPath)
 
+            if moved and nodeGrid.getValue(robotTile) != 120:
+                nodeGrid.changeValue(robotTile, 30)
 
             if done:
-
-                if left_heat_sensor.getValue() > 32 or right_heat_sensor.getValue() > 32:
-                    print("heat detecting")
-                    stop()
-                    stopDelay = 3.2
-                    sendVictimMessage('T')
-                    messageSent = False
-
-                if centreDetected and sensors[0].getValue() < 0.12 and sensors[7].getValue() < 0.12:
-                    stop()
-                    stopDelay = 3.2
-                    sendVictimMessage("H")
-                    messageSent = False
-                    print("---- Victim documented ----")
-                    nodeGrid.changeValue(robotTile, 120)
-                # print(done)
                 if nodeGrid.getValue(robotTile) == 200:
-                    #print(sensors[7].getValue())
-
                     if leftDetected and sensors[7].getValue() < 0.1:
-                        stop()
-                        stopDelay = 3.2
-                        sendVictimMessage("H")
-                        messageSent = False
-                        print("---- Victim documented ----")
-                        nodeGrid.changeValue(robotTile, 120)
+                        if not overWrite:
+                            mode = "detectingVictim"
                     if rightDetected and sensors[0].getValue() < 0.1:
-                        stop()
-                        stopDelay = 3.2
-                        print("---- Victim documented ----")
-                        sendVictimMessage("H")
-                        messageSent = False
-                        nodeGrid.changeValue(robotTile, 120)
-
+                        if not overWrite:
+                            mode = "detectingVictim"
+                    if (centreDetected or centreLineCount != 0) and sensors[0].getValue() < 0.15 and sensors[
+                        7].getValue() < 0.15:
+                        if not overWrite:
+                            mode = "detectingVictim"
 
                     elif do360(0.3):
-
                         nodeGrid.changeValue(robotTile, 50)
-
-
                 else:
-
                     possibleEnds, victims = bfs(maze, start, [0, 100], 200)
-                    if robot.getTime() > 7.5 * 60:
-                        end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
+                    if robot.getTime() - programStartTime > 7.5 * 60:
+                        say("exit")
                         end = startTile
+                        end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
                         ending = True
-
-                    elif len(victims) and victims[0][2] < 25:
+                    elif len(victims) and victims[0][2] < 20:
                         end = victims[0]
                     elif end not in possibleEnds:
-
                         if len(possibleEnds):
                             end = possibleEnds[0]
                         else:
+                            say("exit")
                             end = startTile
                             end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
                             ending = True
                     finalPath = getAstar(start, end)
             oldNode = robotTile
-            oldPath = path
-
             if colour == "trap":
-                nodeGrid.changeValue(colourTile, 255)
-                possibleEnds, victims = bfs(maze, start, [0, 100], 200)
-
                 overWrite = True
+                if nodeGrid.getValue(colourTile) != 255:
+                    say("trap")
+                    nodeGrid.changeValue(colourTile, 255)
+                    possibleEnds, victims = bfs(maze, start, [0, 100], 200)
+                    if len(victims) and victims[0][2] < 20:
 
-                if len(victims) and victims[0][2] < 25:
-                    end = victims[0]
-                elif len(possibleEnds):
-                    end = possibleEnds[0]
-                else:
-                    end = startTile
-                    end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
-                    ending = True
-                finalPath = getAstar(start, end)
-
+                        end = victims[0]
+                    elif len(possibleEnds):
+                        end = possibleEnds[0]
+                    else:
+                        say("exit")
+                        end = startTile
+                        end = (int(end[0] + nodeGrid.center[0]), int(end[1] + nodeGrid.center[1]))
+                        ending = True
+                    finalPath = getAstar(start, end)
+            else:
+                overWrite = False
         else:
             did360 = do360(0.3)
-
-
         if ending and robotTile == startTile:
             sendMessage(0, 0, 'E')
-
-
-        # do360(0.3)
         updateWheels()
 
-        if cv.waitKey(1) == 'q':
-            cv.destroyAllWindows()
+    elif mode == "detectingVictim":
+        if colour == "trap":
+            say("trap")
+            MFAVMoveBackST = robot.getTime()
+            MFAVMoveBack = True
+            mode = "mainLoop"
+        if MFAVFirstTime:
+            say("victim")
+            MFAVStartTime = robot.getTime()
+            MFAVFirstTime = False
+            MFAVMoveBack = False
+        else:
+            if stopDelay:
+                if not waiting:
+                    waiting = True
+                    startOfDelay = robot.getTime()
+                else:
+                    actualTime = robot.getTime()
+                    if actualTime - startOfDelay > stopDelay:
+                        stopDelay = 0
+                        waiting = False
+
+            elif robot.getTime() - MFAVStartTime > 1.5 and not MFAVMoveBack:
+                stop()
+                stopDelay = 3
+                sendVictimMessage(victimInSight)
+                messageSent = False
+                nodeGrid.changeValue(robotTile, 120)
+                MFAVMoveBack = True
+                MFAVMoveBackST = robot.getTime()
+            elif MFAVMoveBack:
+                if robot.getTime() - MFAVMoveBackST < 1.5 + 3:
+                    move(-0.2, -0.2)
+                else:
+                    stop()
+                    MFAVFirstTime = True
+                    mode = "mainLoop"
+            else:
+                move(0.4, 0.4)
+
+
+    updateWheels()
+    cv.waitKey(1)
