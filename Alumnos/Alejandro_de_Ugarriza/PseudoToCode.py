@@ -3,6 +3,7 @@ import numpy as np
 import struct
 import math
 
+# Global time step
 timeStep = 32 // 2
 
 # Corrects the given angle to be in a range from 0 to 360
@@ -27,6 +28,7 @@ def getCoords(angle, distance):
 def getDistance(position):
     return math.sqrt((position[0] ** 2) + (position[1] ** 2))
 
+# Manages a distance sensor
 class DistanceSensor:
     def __init__(self, sensor, sensorAngle, robotDiameter, timeStep):
         self.sensor = sensor
@@ -34,27 +36,31 @@ class DistanceSensor:
         self.offset = -1
         self.robotDiameter = robotDiameter
         self.angle = sensorAngle
+    # Gets the distance from the sensor value
     def getDistance(self):
         val = self.sensor.getValue()
         dist = mapVals(val, 0.0, 0.8, 0, 12 * 2.4)
         dist += self.robotDiameter / 2
         dist += self.offset
         return dist
+    # Gets the current rotation of the sensor
     def getAngle(self, globalRotation):
         return normalizeAngle(self.angle + globalRotation + 270)
+    # Gets the global coordinates of the detection given the robot global rotation and position
     def getGlobalDetection(self, globalRotation, robotPos):
         pos = getCoords(self.getAngle(globalRotation), self.getDistance())
         pos[0] -= robotPos[0]
         pos[1] -= robotPos[1]
         return pos
 
-
+# Tracks global rotation
 class Gyroscope:
     def __init__(self, gyro, timeStep):
         self.sensor = gyro
         self.sensor.enable(timeStep)
         self.rotation = 0
         self.oldTime = 0.0
+    # Do on every timestep
     def update(self, time):
         timeElapsed = time - self.oldTime  # Time passed in time step
         radsInTimestep = (self.sensor.getValues())[0] * timeElapsed
@@ -62,21 +68,29 @@ class Gyroscope:
         self.rotation += degsInTimestep
         self.rotation = normalizeAngle(self.rotation)
         self.oldTime = time
+    # Returns the global rotation
     def getRotation(self):
         return self.rotation
+    
+    def changeRotation(self, rot):
+        self.rotation = rot
 
+# Reads the heat sensor
 class HeatSensor:
     def __init__(self, sensor, timeStep):
         self.sensor = sensor
         self.sensor.enable(timeStep)
+    # Retuns True if it detects victim close
     def isClose(self):
         return self.sensor.getValue() > 35
 
+# Reads the colour sensor
 class ColourSensor:
     def __init__(self, sensor, timeStep):
         self.sensor = sensor
         self.sensor.enable(timeStep)
 
+    # Returns the type of tyle detected from the colour data
     def getTileType(self):
         colour = self.sensor.getImage()
         r = colour[0]
@@ -93,27 +107,31 @@ class ColourSensor:
             tileType = "checkpoint"
         return tileType
 
+# Tracks global position
 class Gps:
     def __init__(self, gps, timeStep):
         self.gps = gps
         self.gps.enable(timeStep)
+    # Returns the global position
     def getPosition(self):
         vals = self.gps.getValues()
         return [int(vals[0] * 100), int(vals[2] * 100)]
 
+# Captures images and processes them
 class Camera:
     def __init__(self, camera, timeStep):
         self.camera = camera
         self.camera.enable(timeStep)
-        
+    # Gets an image from the raw camera data    
     def getImg(self):
         imageData = self.camera.getImage()
         return np.array(np.frombuffer(imageData, np.uint8).reshape((self.camera.getHeight(), self.camera.getWidth(), 4)))
 
+# Sends messages
 class Emitter:
     def __init__(self, emmitter):
         self.emitter = emmitter
-    
+    # Sends a message given a position and identifier
     def sendMessage(self,pos, identifier):
         message = struct.pack('i i c', pos[0], pos[1] * 100, identifier.encode())
         self.emitter.send(message)
@@ -160,7 +178,8 @@ class AbstractionLayer:
         self.delayFirstTime = True
         self.globalPos = [0, 0]
         self.globalRot = 0
-        
+    
+    # Advances simulation by 1 timeStep, returns True if simulation is running
     def step(self):
         return self.robot.step(timeStep) != -1
     
@@ -183,7 +202,6 @@ class AbstractionLayer:
                     self.linePointer += 1
                     return True
         
-
     # Hace un print en sequencia
     # Prints something in sequence
     def seqPrint(self, text):
@@ -193,7 +211,6 @@ class AbstractionLayer:
             self.linePointer += 1
             return True
         
-
     # Cambia el estado
     # Changes the state
     def changeState(self, newState):
@@ -215,6 +232,8 @@ r = AbstractionLayer(timeStep,"start")
 #MAIN PROGRAM
 while r.step():
     r.update()
+    # --Put your program here--
+    # v Demo program v
     print("Global position: " + str(r.globalPos))
     print("Global rotation: " + str(r.globalRot))
 
