@@ -58,7 +58,7 @@ class Gyroscope:
     def update(self, time):
         timeElapsed = time - self.oldTime  # Time passed in time step
         radsInTimestep = (self.sensor.getValues())[0] * timeElapsed
-        degsInTimestep = radsInTimestep * 180 / math.pi
+        degsInTimestep = int(radsInTimestep * 180 / math.pi)
         self.rotation += degsInTimestep
         self.rotation = normalizeAngle(self.rotation)
         self.oldTime = time
@@ -210,10 +210,12 @@ class AbstractionLayer:
 
 # Instanciacion de capa de abstracción
 # Abstraction layer instantiation
-r = AbstractionLayer("start")
+r = AbstractionLayer(timeStep,"start")
 
 #MAIN PROGRAM
 while r.step():
     r.update()
-    print(r.globalPos)
+    print("Global position: " + str(r.globalPos))
+    print("Global rotation: " + str(r.globalRot))
+
     
