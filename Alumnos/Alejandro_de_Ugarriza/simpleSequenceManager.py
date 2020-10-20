@@ -20,7 +20,7 @@ class AbstractionLayer:
     
     # Para la sequencia por la cantidad de segundos que uno le ponga
     # Stops a sequence for the given amount of seconds 
-    def seqDelay(self, delay):
+    def delay(self, delay):
         self.lineIdentifier += 1
         if self.lineIdentifier == self.linePointer:
             if self.delayFirstTime:
@@ -74,9 +74,9 @@ while True:
         #Esto corre en sequencia
         #This runs in sequence
         r.startSequence()
-        r.seqPrint("Antes de seqDelay / before seqDelay")
-        r.seqDelay(0.1)
-        if r.seqPrint("Despues de seqDelay / after seqDelay"):
+        r.seqPrint("Antes de delay / before delay")
+        r.delay(0.1)
+        if r.seqPrint("Despues de delay / after delay"):
             r.changeState("overTime")
 
     elif r.state == "overTime":
@@ -84,8 +84,5 @@ while True:
         #This runs every timestep
         print("overtime!")
         r.changeState("end")
-    
-    elif r.state == "end":
-        break
 
     
