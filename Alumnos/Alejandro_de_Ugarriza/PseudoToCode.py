@@ -28,6 +28,15 @@ def getCoords(angle, distance):
 def getDistance(position):
     return math.sqrt((position[0] ** 2) + (position[1] ** 2))
 
+class Wheel:
+    def __init__(self, wheel, maxVelocity):
+        self.maxVelocity = maxVelocity
+        self.wheel = wheel
+        self.wheel.setPosition(float("inf"))
+    # Moves the wheel at a ratio of the maximum speed
+    def move(self, ratio):
+        self.wheel.setVelocity(ratio * self.maxVelocity)
+
 # Manages a distance sensor
 class DistanceSensor:
     def __init__(self, sensor, sensorAngle, robotDiameter, timeStep):
@@ -58,22 +67,18 @@ class Gyroscope:
     def __init__(self, gyro, timeStep):
         self.sensor = gyro
         self.sensor.enable(timeStep)
-        self.rotation = 0
         self.oldTime = 0.0
     # Do on every timestep
-    def update(self, time):
+    def update(self, time, currentRotation):
         timeElapsed = time - self.oldTime  # Time passed in time step
         radsInTimestep = (self.sensor.getValues())[0] * timeElapsed
-        degsInTimestep = int(radsInTimestep * 180 / math.pi)
-        self.rotation += degsInTimestep
-        self.rotation = normalizeAngle(self.rotation)
+        degsInTimestep = radsInTimestep * 180 / math.pi
+        finalRot = currentRotation + degsInTimestep
+        finalRot = normalizeAngle(finalRot)
         self.oldTime = time
-    # Returns the global rotation
-    def getRotation(self):
-        return self.rotation
+        return finalRot
     
-    def changeRotation(self, rot):
-        self.rotation = rot
+    
 
 # Reads the heat sensor
 class HeatSensor:
@@ -150,8 +155,8 @@ class AbstractionLayer:
         self.robotDiameter = 0.071
         # Variables
         # Wheels
-        self.leftWheel = self.robot.getMotor("left wheel motor")
-        self.rightWheel = self.robot.getMotor("right wheel motor")
+        self.leftWheel = Wheel(self.robot.getMotor("left wheel motor"), self.maxVelocity)
+        self.rightWheel = Wheel(self.robot.getMotor("right wheel motor"), self.maxVelocity)
         #Cameras
         self.centreCamera = Camera(self.robot.getCamera("camera_centre"), self.timeStep)
         self.rightCamera = Camera(self.robot.getCamera("camera_right"), self.timeStep)
@@ -168,7 +173,6 @@ class AbstractionLayer:
         self.heatLeft = HeatSensor(self.robot.getLightSensor("left_heat_sensor"), self.timeStep)
         self.heatRight = HeatSensor(self.robot.getLightSensor("right_heat_sensor"), self.timeStep)
 
-
         # Variables for abstraction layer
         self.state = initialState
         self.startTime = self.actualTime = self.robot.getTime()
@@ -176,12 +180,57 @@ class AbstractionLayer:
         self.linePointer = 0
         self.delayStart = 0.0
         self.delayFirstTime = True
-        self.globalPos = [0, 0]
+        self.seqMoveDistStart = [0, 0]
+        self.seqMoveDistFirstTime = True
+        self.globalPos = self.prevGlobalPos = [0, 0]
         self.globalRot = 0
+        self.rotationDetectionMethod = "velocity"
+    
+    def getRotationByPos(self):
+        if self.prevGlobalPos == self.globalPos:
+            return -1
+        else:
+            posDiff = [self.globalPos[0] - self.prevGlobalPos[0], self.globalPos[1] - self.prevGlobalPos[1]]
+            rads = math.atan2(posDiff[0], posDiff[1])
+            degs = rads * 180 / math.pi
+            degs = normalizeAngle(degs)
+            return degs
     
     # Advances simulation by 1 timeStep, returns True if simulation is running
     def step(self):
         return self.robot.step(timeStep) != -1
+
+    def move(self, ratio1, ratio2):
+        self.rightWheel.move(ratio1)
+        self.leftWheel.move(ratio2)
+
+    def seqMove(self,ratio1, ratio2):
+        self.lineIdentifier += 1
+        if self.lineIdentifier == self.linePointer:
+            self.move(ratio1, ratio2)
+            self.linePointer += 1
+            return True
+        return False
+    
+    def seqMoveDist(self, ratio, dist):
+        self.lineIdentifier += 1
+        if self.lineIdentifier == self.linePointer:
+            if self.seqMoveDistFirstTime == True:
+                self.seqMoveDistStart = self.globalPos
+                self.seqMoveDistFirstTime = False
+            else:
+                diffInX = max(self.seqMoveDistStart[0], self.globalPos[0]) - min(self.seqMoveDistStart[0], self.globalPos[0])
+                diffInY = max(self.seqMoveDistStart[1], self.globalPos[1]) - min(self.seqMoveDistStart[1], self.globalPos[1])
+                distFromStart = getDistance([diffInX, diffInY])
+                if distFromStart < dist:
+                    self.move(ratio,ratio)
+                else:
+                    self.seqMoveDistFirstTime = True
+                    self.move(0,0)
+                    self.linePointer += 1
+                    return True
+        return False
+
     
     # Poner antes de empezar una sequencia o de usar una funcion sequencial
     # Put before starting a sequence or using a sequencial function
@@ -190,17 +239,18 @@ class AbstractionLayer:
     
     # Para la sequencia por la cantidad de segundos que uno le ponga
     # Stops a sequence for the given amount of seconds 
-    def delay(self, delay):
+    def seqDelay(self, delay):
         self.lineIdentifier += 1
         if self.lineIdentifier == self.linePointer:
             if self.delayFirstTime:
-                self.delayStart = self.robot.getTime
+                self.delayStart = self.robot.getTime()
                 self.delayFirstTime = False
             else:
                 if self.actualTime - self.delayStart >= delay:
                     self.delayFirstTime = True
                     self.linePointer += 1
                     return True
+        return False
         
     # Hace un print en sequencia
     # Prints something in sequence
@@ -210,6 +260,7 @@ class AbstractionLayer:
             print(text)
             self.linePointer += 1
             return True
+        return False
         
     # Cambia el estado
     # Changes the state
@@ -219,22 +270,43 @@ class AbstractionLayer:
 
     # Poner al inicio del loop principal
     # Put at the start of the main loop
-    def update(self):
+    def atTop(self):
         self.actualTime = self.robot.getTime()
-        self.gyro.update(self.actualTime)
-        self.globalRot = self.gyro.getRotation()
         self.globalPos = self.gps.getPosition()
+        if self.rotationDetectionMethod == "velocity":
+            self.globalRot = self.gyro.update(self.actualTime, self.globalRot)
+        elif self.rotationDetectionMethod == "position":
+            rot = self.getRotationByPos()
+            if rot != -1:
+                self.globalRot = rot
+        
+    
+    def atBottom(self):
+        self.prevGlobalPos = self.globalPos
+
 
 # Instanciacion de capa de abstracción
 # Abstraction layer instantiation
 r = AbstractionLayer(timeStep,"start")
 
+
 #MAIN PROGRAM
 while r.step():
-    r.update()
+    r.atTop()
     # --Put your program here--
     # v Demo program v
-    print("Global position: " + str(r.globalPos))
-    print("Global rotation: " + str(r.globalRot))
+    r.startSequence()
+    if r.seqDelay(0):
+        print("changed to position")
+        r.rotationDetectionMethod = "position"
+    if r.seqMoveDist(0.8, 6):
+        print("changed to velocity")
+        r.rotationDetectionMethod = "velocity"
+    r.seqMoveDist(-0.8, 6)
 
-    
+
+    #print("Global position: " + str(r.globalPos))
+    print("Global rotation: " + str(round(r.globalRot)))
+    #print("Tile type: " + str(r.colourSensor.getTileType()))
+
+    r.atBottom()
