@@ -1,0 +1,75 @@
+
+# Flags
+
+mapear = True
+
+loop:
+    Obtiene los valores del gps, del gyro
+    Obtengo tiempo
+	tipo de casilla = Obtengo el tipo de casilla (undefined, normal, trap, swamp or checkpoint)
+	Actualizando los valores de distancia
+	cámaraVíctimaDetectada = detectCameraVictim (Las tres cámaras)
+	victimaDeCalor = DetectHeatVictim
+
+    estado onStart:
+		mapear = False
+        Calibra la rotación y offsets para la grilla
+		mapear = True
+        estado = mainLoop
+
+    estado mainLoop:
+		si hay trampa:
+			estado = seguir navegación
+			continue
+
+		si se teltrasportó:
+			estado = teletransportación
+			continue
+
+		si estoy en casilla de posible vícitima visual:
+			estado = 360
+			continue
+		si hay víctima de calor:
+			estado = detectando víctima de calor
+			continue	
+		si hay algo nuevo en grilla o llegué a destino previo:
+			estado = seguir navegación
+			continue
+		si no:
+			sigo nuevo camino
+
+	estado 360:
+		doy 360
+		si veo víctima cerca:
+			estado = detectando víctima visual
+			continue
+		si no:
+			marco casilla como víctima documentada
+			modo = mainLoop
+
+	estado detectando víctima visual:
+		paro 3 segundos
+		aviso al controlador
+		marco casilla como víctima documentada
+		estado = mainLoop
+
+	estado detectando víctima de calor:
+		paro 3 segundos
+		aviso al controlador
+		estado = mainLoop
+
+	estado seguir navegación:
+        veo bfs
+        comparo tiempo
+        Decido si uso casilla de bfs o la de inicio
+        Saco camino de Astar
+		estado = mainLoop
+
+	estado teletransportación:
+		mapear = False
+		Calibra la rotación
+		mapear = True
+		estado = mainLoop
+
+	si mapear:
+		Mapeo de paredes, obstáculos y casilla
