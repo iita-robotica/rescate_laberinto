@@ -1,0 +1,123 @@
+Clase wheel: 
+    para inicializar pasar: 
+        . componente de rueda de robot
+        . velocidad máxima
+    Métodos:
+        move:
+            actualiza la velocidad de las ruedas
+            argumentos:
+                fracción del 0 al 1 de la velocidad máxima
+
+Clase DistanceSensor:
+    para inicializar pasar:
+        . componente de sensor de distancia de robot
+        . ángulo del sensor de distancia
+        . díametro del robot
+        . Timestep de la simulacion
+    Métdos:
+        getDistance:
+            Retorna:
+                .distancia de detección con respecto al robt
+        getAngle:
+            retorna:
+                LA ROTACIÓN GLOBAL DEL SENSOR
+            argumentos:
+                ROTACIÓN DEL ROBOT
+        getGlobalDetection:
+            Retorna:
+                 LA POSICION GLOBAL DE LA DETECCION DEL SENSOR
+            argumentos:
+                ratición y posición del robot
+
+Clase Gyroscope:
+    para inicializar pasar:
+        . componente de gyro del robot
+        . time step
+    Métodos:
+        update:
+            argumentos:
+                . Tiempo actual
+                . Rotación anterior
+            retorna:
+                rotación actual
+
+Clase HeatSensor:
+    para iniclizar pasar:
+        . componente de sensor del robot
+        . umbral
+        . time step
+    Métodos:
+        isClose (Reveer nombre):
+            retorna:
+                si el valor de la detección es mayor al humbral
+
+Clase ColurSensor:
+    para inicializar pasar:
+        . componente de sensor de color del robot
+        . time step
+    Métodos:
+        getTileType:
+            retorna:
+                string con tipo de baldosa
+
+Clase TileType:
+    para inicializar pasar:
+        . componente de sensor de color de robot
+        . time step
+    
+    Métodos:
+        private:
+            update:
+                Actualiza el valor de los colores
+        
+            __is...
+        public:
+            getTileType:
+                retorna: 
+                    tipo de piso
+
+Clase Gps:
+    para inicializar pasar:
+        . componente de gps del robot
+        . time step
+        . multiplicador
+    Métodos:
+        getPosition:
+            devuelve:
+                la posición global del robot
+
+Clase Camera:
+    para inicializar pasar:
+        . componente de camra del robot
+        . time step
+    Métodos:
+        getImg:
+            retorna:
+                la imagen de la cámara
+
+Clase Emitter:
+    para inicializar pasar:
+        . componente de emisor del robot
+        . divisor de coordenadas
+    
+    Métodos:
+        sendMessage:
+            manda mun mensaje al controlador
+            argumentos:
+                posición del robot
+                identificador de  víctima
+
+Clase AbstractionLayer:
+
+
+
+
+
+
+
+
+
+
+
+
+        

@@ -4,7 +4,7 @@ import struct
 import math
 
 # Global time step
-timeStep = 32 // 2
+timeStep = 16 * 2 
 
 # Corrects the given angle to be in a range from 0 to 360
 def normalizeAngle(ang):
@@ -82,63 +82,82 @@ class Gyroscope:
 
 # Reads the heat sensor
 class HeatSensor:
-    def __init__(self, sensor, timeStep):
+    def __init__(self, sensor, thershold, timeStep):
         self.sensor = sensor
         self.sensor.enable(timeStep)
+        self.threshold = thershold
     # Retuns True if it detects victim close
     def isClose(self):
-        return self.sensor.getValue() > 35
+        return self.sensor.getValue() > self.threshold
 
 # Reads the colour sensor
 class ColourSensor:
     def __init__(self, sensor, timeStep):
         self.sensor = sensor
         self.sensor.enable(timeStep)
-
+        self.r = 0
+        self.g = 0
+        self.b = 0
+    
+    
+    def __update(self):
+        colour = self.sensor.getImage()
+        self.r = colour[0]
+        self.g = colour[1]
+        self.b = colour[2]
+    
+    def __isTrap(self):
+        return (57 < self.r < 61 and 57 < self.g < 61) or (self.r == 111 and self.g == 111)
+    def __isSwamp(self):
+        return (144 > self.r > 140 and 225 > self.g > 220 and self.b == 246)
+    def __isCheckpoint(self):
+        return (self.r == 255 and self.g == 255 and self.b == 255)
+    def __isNormal(self):
+        return self.r == 252 and self.g == 252
     # Returns the type of tyle detected from the colour data
     def getTileType(self):
-        colour = self.sensor.getImage()
-        r = colour[0]
-        g = colour[1]
-        b = colour[2]
+        self.__update
         tileType = "undefined"
-        if r == 252 and g == 252:
+        if self.__isNormal():
             tileType = "normal"
-        elif (57 < r < 61 and 57 < g < 61) or (r == 111 and g == 111):
+        elif self.__isTrap():
             tileType = "trap"
-        elif 144 > r > 140 and 225 > g > 220 and b == 246:
+        elif self.__isSwamp():
             tileType = "swamp"
-        elif r == 255 and g == 255 and b == 255:
+        elif self.__isCheckpoint():
             tileType = "checkpoint"
         return tileType
 
+
 # Tracks global position
 class Gps:
-    def __init__(self, gps, timeStep):
+    def __init__(self, gps,timeStep, coordsMultiplier=0):
         self.gps = gps
         self.gps.enable(timeStep)
+        self.multiplier = coordsMultiplier
     # Returns the global position
     def getPosition(self):
         vals = self.gps.getValues()
-        return [int(vals[0] * 100), int(vals[2] * 100)]
+        return [vals[0] * self.multiplier, vals[2] * self.multiplier]
 
 # Captures images and processes them
 class Camera:
     def __init__(self, camera, timeStep):
         self.camera = camera
         self.camera.enable(timeStep)
-    # Gets an image from the raw camera data    
+    # Gets an image from the raw camera data
     def getImg(self):
         imageData = self.camera.getImage()
         return np.array(np.frombuffer(imageData, np.uint8).reshape((self.camera.getHeight(), self.camera.getWidth(), 4)))
 
 # Sends messages
 class Emitter:
-    def __init__(self, emmitter):
+    def __init__(self, emmitter, coordsDivisor=0):
         self.emitter = emmitter
+        self.divisor = coordsDivisor
     # Sends a message given a position and identifier
     def sendMessage(self,pos, identifier):
-        message = struct.pack('i i c', pos[0], pos[1] * 100, identifier.encode())
+        message = struct.pack('i i c', pos[0] / self.divisor * 100, pos[1] / self.divisor * 100, identifier.encode())
         self.emitter.send(message)
 
 
@@ -150,9 +169,11 @@ class AbstractionLayer:
         self.robot = Robot()
         # For self.robot
         # Constants
+        self.posMultiplier = 100
         self.timeStep = timeStep
         self.maxVelocity = 6.28
-        self.robotDiameter = 0.071
+        self.robotDiameter = 0.071 * self.posMultiplier
+        
         # Variables
         # Wheels
         self.leftWheel = Wheel(self.robot.getMotor("left wheel motor"), self.maxVelocity)
@@ -164,14 +185,14 @@ class AbstractionLayer:
         #Colour sensor
         self.colourSensor = ColourSensor(self.robot.getCamera("colour_sensor"), self.timeStep)
         #Emitter
-        self.emitter = Emitter(self.robot.getEmitter("emitter"))
+        self.emitter = Emitter(self.robot.getEmitter("emitter"), self.posMultiplier)
         #Gps
-        self.gps = Gps(self.robot.getGPS("gps"), self.timeStep)
+        self.gps = Gps(self.robot.getGPS("gps"), self.timeStep, self.posMultiplier)
         #Gyro
         self.gyro = Gyroscope(self.robot.getGyro("gyro"), self.timeStep)
         #Heat sensors
-        self.heatLeft = HeatSensor(self.robot.getLightSensor("left_heat_sensor"), self.timeStep)
-        self.heatRight = HeatSensor(self.robot.getLightSensor("right_heat_sensor"), self.timeStep)
+        self.heatLeft = HeatSensor(self.robot.getLightSensor("left_heat_sensor"), 35, self.timeStep)
+        self.heatRight = HeatSensor(self.robot.getLightSensor("right_heat_sensor"), 35, self.timeStep)
 
         # Variables for abstraction layer
         self.state = initialState
@@ -190,6 +211,9 @@ class AbstractionLayer:
         self.firstStep = True
         self.doMap = True
     
+    def sendMessage(self, indentifier):
+        self.emitter.sendMessage(self.globalPos, indentifier)
+    
     def getRotationByPos(self):
         if self.prevGlobalPos == self.globalPos:
             return -1
@@ -199,10 +223,6 @@ class AbstractionLayer:
             degs = rads * 180 / math.pi
             degs = normalizeAngle(degs)
             return degs
-    
-    # Advances simulation by 1 timeStep, returns True if simulation is running
-    def step(self):
-        return self.robot.step(timeStep) != -1
 
     def move(self, ratio1, ratio2):
         self.rightWheel.move(ratio1)
@@ -240,6 +260,13 @@ class AbstractionLayer:
     # Put before starting a sequence or using a sequencial function
     def startSequence(self):
         self.lineIdentifier = -1
+
+    def seqEvent(self):
+        self.lineIdentifier += 1
+        if self.lineIdentifier == self.linePointer:
+            self.linePointer += 1
+            return True
+        return False
     
     # Para la sequencia por la cantidad de segundos que uno le ponga
     # Stops a sequence for the given amount of seconds 
@@ -272,10 +299,9 @@ class AbstractionLayer:
         self.state = newState
         self.linePointer = 0
 
-    # Poner al inicio del loop principal
-    # Put at the start of the main loop
+    
+    # Runs at the start of every timestep
     def atTop(self):
-        
         self.actualTime = self.robot.getTime()
         self.globalPos = self.gps.getPosition()
         if self.firstStep:
@@ -293,73 +319,94 @@ class AbstractionLayer:
         diffInY = max(self.globalPos[1], self.prevGlobalPos[1]) -  min(self.globalPos[1], self.prevGlobalPos[1])
         self.diffInPos = getDistance([diffInX, diffInY])
         
-    
+    # Runs at the end of every timestep
     def atBottom(self):
         self.prevGlobalPos = self.globalPos
         if self.doMap:
             pass
             # mapping
+    # returns True if simulation is running, updates the onTop and onBottom functions
+    def step(self):
+        self.atBottom()
+        self.stepped = self.robot.step(timeStep) != -1
+        self.atTop()
+        return self.stepped
 
 
 # Instanciacion de capa de abstracción
 # Abstraction layer instantiation
 r = AbstractionLayer(timeStep,"start")
 
-
 #MAIN PROGRAM
 while r.step():
-    r.atTop()
     # --Put your program here--
     # v Demo program v
 
     if r.diffInPos > 11:
-        r.state = "teleported"
+        r.changeState("teleported")
     elif r.colourTileType == "trap":
-        r.state = "navigation"
+        r.changeState("navigation")
 
     # Start state
     if r.state == "start":
         r.doMap = False
         r.startSequence()
-        if r.seqDelay(0):
+        if r.seqEvent():
             r.rotDetectMethod = "position"
         if r.seqMoveDist(0.8, 6):
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, 6):
             r.doMap = True
             r.changeState("main")
+
     # Main state
-    elif r.state == ("main"):
+    elif r.state == "main":
         print("main state")
+
     # Analyze state
-    elif r.state == ("analyze"):
+    elif r.state == "analyze":
         print("analyze state")
+
     # Visual victim state
-    elif r.state == ("visualVictim"):
+    elif r.state == "visualVictim":
         print("visualVictim state")
+        r.startSequence()
+        if r.seqDelay(3):
+            r.sendMessage("N")
+            r.changeState("main")
+        
+        
     # Heated victim state
-    elif r.state == ("heatVictim"):
+    elif r.state == "heatVictim":
         print("visualVictim state")
+        r.startSequence()
+        if r.seqDelay(3):
+            r.sendMessage("T")
+            r.changeState("main")
+        
+
     # Navigation state
-    elif r.state == ("navigation"):
+    elif r.state == "navigation":
         print("navigation state")
+        r.changeState("follow")
+
+    elif r.state == "follow":
+        print("follow state")
+
     # Teletransported state
-    elif r.state == ("teleported"):
+    elif r.state == "teleported":
         r.doMap = False
         r.startSequence()
-        if r.seqDelay(0):
+        if r.seqEvent():
             r.rotDetectMethod = "position"
         if r.seqMoveDist(0.8, 6):
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, 6):
             r.doMap = True
             r.changeState("main")
-    
 
-
-    print("diff in pos: " + str(r.diffInPos))
-    #print("Global position: " + str(r.globalPos))
+    #print("diff in pos: " + str(r.diffInPos))
+    print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
 
-    r.atBottom()
