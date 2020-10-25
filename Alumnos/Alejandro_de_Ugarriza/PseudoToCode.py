@@ -39,28 +39,35 @@ class Wheel:
 
 # Manages a distance sensor
 class DistanceSensor:
-    def __init__(self, sensor, sensorAngle, robotDiameter, timeStep):
+    def __init__(self, sensor, sensorAngle, robotDiameter, tileSize, timeStep):
         self.sensor = sensor
         self.sensor.enable(timeStep)
         self.offset = -1
         self.robotDiameter = robotDiameter
         self.angle = sensorAngle
+        self.tileSize = tileSize
     # Gets the distance from the sensor value
     def getDistance(self):
         val = self.sensor.getValue()
-        dist = mapVals(val, 0.0, 0.8, 0, 12 * 2.4)
-        dist += self.robotDiameter / 2
-        dist += self.offset
-        return dist
+        if val < 0.8:
+            dist = mapVals(val, 0.0, 0.8, 0, self.tileSize * 2.4)
+            dist += self.robotDiameter / 2
+            dist += self.offset
+            return dist
+        return -1
     # Gets the current rotation of the sensor
-    def getAngle(self, globalRotation):
+    def __getAngle(self, globalRotation):
         return normalizeAngle(self.angle + globalRotation + 270)
     # Gets the global coordinates of the detection given the robot global rotation and position
     def getGlobalDetection(self, globalRotation, robotPos):
-        pos = getCoords(self.getAngle(globalRotation), self.getDistance())
-        pos[0] -= robotPos[0]
-        pos[1] -= robotPos[1]
-        return pos
+        dist = self.getDistance()
+        angle = self.__getAngle(globalRotation)
+        if dist != -1:
+            pos = getCoords(angle, dist)
+            pos[0] -= robotPos[0]
+            pos[1] -= robotPos[1]
+            return pos
+        return -1
 
 # Tracks global rotation
 class Gyroscope:
@@ -160,48 +167,33 @@ class Emitter:
         message = struct.pack('i i c', pos[0] / self.divisor * 100, pos[1] / self.divisor * 100, identifier.encode())
         self.emitter.send(message)
 
-class SeqOrder:
-    def __init__(self):
-        self.done = False
-    
-    def check(self):
-        return self.done
-    
-    def finish(self):
-        self.done = True
 
 class StateManager:
     def __init__(self, initialState):
         self.state = initialState
-    def changeSt(self, newState):
+    def changeState(self, newState):
         self.state = newState
         return True
-    def checkSt(self, state):
+    def checkState(self, state):
         return self.state == state
 
+
 class SequenceManager:
-    def __init__(self, initialState):
-        self.state = initialState
+    def __init__(self):
         self.lineIdentifier = 0
         self.linePointer = 1
         self.done = False
-    
     def resetSequence(self):
         self.linePointer = 1
-    
     def startSequence(self):
         self.lineIdentifier = 0
-
         self.done = False
-    
     def check(self):
         self.lineIdentifier += 1
         return self.lineIdentifier == self.linePointer
-    
     def nextSeq(self):
         self.linePointer += 1
         self.done = True
-    
     def seqDone(self):
         if self.done:
             self.done = False
@@ -209,11 +201,10 @@ class SequenceManager:
         return False
     
 
-
 # Clase de capa de obstarccion
 # Abstraction layer class
 class AbstractionLayer:
-    def __init__(self,timeStep, initialState=""):
+    def __init__(self,timeStep):
 
         self.robot = Robot()
         # For self.robot
@@ -222,6 +213,7 @@ class AbstractionLayer:
         self.timeStep = timeStep
         self.maxVelocity = 6.28
         self.robotDiameter = 0.071 * self.posMultiplier
+        self.tileSize = 0.12 * self.posMultiplier
         
         # Variables
         # Wheels
@@ -242,9 +234,20 @@ class AbstractionLayer:
         #Heat sensors
         self.heatLeft = HeatSensor(self.robot.getLightSensor("left_heat_sensor"), 35, self.timeStep)
         self.heatRight = HeatSensor(self.robot.getLightSensor("right_heat_sensor"), 35, self.timeStep)
+        #Distance sensors
+        self.distSensors = []
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps0"), 72.76564, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps1"), 44.11775, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps2"), 0, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps3"), 298.511, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps4"), 241.2152, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps5"), 180, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps6"), 135.791, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps7"), 107.1431, self.robotDiameter, self.tileSize, self.timeStep))
+        
 
         # Variables for abstraction layer
-        self.seqMg = SequenceManager(initialState)
+        self.seqMg = SequenceManager()
         self.startTime = self.actualTime = self.robot.getTime()
         self.delayStart = 0.0
         self.delayFirstTime = True
@@ -303,7 +306,7 @@ class AbstractionLayer:
     # Put before starting a sequence or using a sequencial function
     def startSequence(self):
         self.seqMg.startSequence()
-    
+
     def resetSequence(self):
         self.seqMg.resetSequence()
 
@@ -340,7 +343,7 @@ class AbstractionLayer:
 
 # Instanciacion de capa de abstracción
 # Abstraction layer instantiation
-r = AbstractionLayer(timeStep,"start")
+r = AbstractionLayer(timeStep)
 stMg = StateManager("start")
 
 #MAIN PROGRAM
@@ -363,76 +366,72 @@ while r.step():
     diffInY = max(r.globalPos[1], r.prevGlobalPos[1]) -  min(r.globalPos[1], r.prevGlobalPos[1])
     r.diffInPos = getDistance([diffInX, diffInY])
 
+    # v Program v
 
-    # --Put your program here--
-    # v Demo program v
-
-    if r.diffInPos > 11:
-        stMg.changeSt("teleported")
+    if r.diffInPos >= r.tileSize:
+        stMg.changeState("teleported")
     elif r.colourTileType == "trap":
-        stMg.changeSt("navigation")
+        stMg.changeState("navigation")
 
     # Start state
-    if stMg.checkSt("start"):
+    if stMg.checkState("start"):
         r.doMap = False
         r.startSequence()
         if r.seqEvent():
             r.rotDetectMethod = "position"
-        if r.seqMoveDist(0.8, 6):
+        if r.seqMoveDist(0.8, r.tileSize / 2):
             r.rotDetectMethod = "velocity"
-        if r.seqMoveDist(-0.8, 6):
+        if r.seqMoveDist(-0.8, r.tileSize / 2):
             r.doMap = True
-            stMg.changeSt("main")
+            stMg.changeState("main")
             r.resetSequence()
 
     # Main state
-    elif stMg.checkSt("main"):
+    elif stMg.checkState("main"):
         print("main state")
 
     # Analyze state
-    elif stMg.checkSt("analyze"):
+    elif stMg.checkState("analyze"):
         print("analyze state")
 
     # Visual victim state
-    elif stMg.checkSt("visualVictim"):
+    elif stMg.checkState("visualVictim"):
         print("visualVictim state")
         r.startSequence()
         if r.seqDelay(3):
             r.sendMessage("N")
-            stMg.changeSt("main")
+            stMg.changeState("main")
             r.resetSequence()
         
-        
     # Heated victim state
-    elif stMg.checkSt("heatVictim"):
+    elif stMg.checkState("heatVictim"):
         print("visualVictim state")
         r.startSequence()
         if r.seqDelay(3):
             r.sendMessage("T")
-            stMg.changeSt("main")
+            stMg.changeState("main")
             r.resetSequence()
         
 
     # Navigation state
-    elif stMg.checkSt("navigation"):
+    elif stMg.checkState("navigation"):
         print("navigation state")
-        stMg.changeSt("follow")
-        r.resetSequence()
+        stMg.changeState("follow")
 
-    elif stMg.checkSt("follow"):
+    elif stMg.checkState("follow"):
         print("follow state")
 
     # Teletransported state
-    elif stMg.checkSt("teleported"):
+    elif stMg.checkState("teleported"):
         r.doMap = False
         r.startSequence()
         if r.seqEvent():
             r.rotDetectMethod = "position"
-        if r.seqMoveDist(0.8, 6):
+        if r.seqMoveDist(0.8, r.tileSize / 2):
             r.rotDetectMethod = "velocity"
-        if r.seqMoveDist(-0.8, 6):
+        if r.seqMoveDist(-0.8, r.tileSize / 2):
             r.doMap = True
-            stMg.changeSt("main")
+            stMg.changeState("main")
             r.resetSequence()
 
     #print("diff in pos: " + str(r.diffInPos))
