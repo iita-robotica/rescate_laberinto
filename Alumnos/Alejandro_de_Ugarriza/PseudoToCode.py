@@ -160,6 +160,15 @@ class Emitter:
         message = struct.pack('i i c', pos[0] / self.divisor * 100, pos[1] / self.divisor * 100, identifier.encode())
         self.emitter.send(message)
 
+class StateManager:
+    def __init__(self, initialState):
+        self.state = initialState
+        self.lineIdentifier = -1
+        self.linePointer = 0
+    
+    def changeState(self, newState):
+        self.state = newState
+        
 
 # Clase de capa de obstarccion
 # Abstraction layer class
@@ -298,39 +307,11 @@ class AbstractionLayer:
     def changeState(self, newState):
         self.state = newState
         self.linePointer = 0
-
-    
-    # Runs at the start of every timestep
-    def atTop(self):
-        self.actualTime = self.robot.getTime()
-        self.globalPos = self.gps.getPosition()
-        if self.firstStep:
-            self.prevGlobalPos = self.globalPos
-            self.firstStep = False
-
-        if self.rotDetectMethod == "velocity":
-            self.globalRot = self.gyro.update(self.actualTime, self.globalRot)
-        elif self.rotDetectMethod == "position":
-            rot = self.getRotationByPos()
-            if rot != -1:
-                self.globalRot = rot
-        self.colourTileType = self.colourSensor.getTileType()
-        diffInX = max(self.globalPos[0], self.prevGlobalPos[0]) -  min(self.globalPos[0], self.prevGlobalPos[0])
-        diffInY = max(self.globalPos[1], self.prevGlobalPos[1]) -  min(self.globalPos[1], self.prevGlobalPos[1])
-        self.diffInPos = getDistance([diffInX, diffInY])
         
-    # Runs at the end of every timestep
-    def atBottom(self):
-        self.prevGlobalPos = self.globalPos
-        if self.doMap:
-            pass
-            # mapping
-    # returns True if simulation is running, updates the onTop and onBottom functions
+        
+    # returns True if simulation is running
     def step(self):
-        self.atBottom()
-        self.stepped = self.robot.step(timeStep) != -1
-        self.atTop()
-        return self.stepped
+        return self.robot.step(timeStep) != -1
 
 
 # Instanciacion de capa de abstracción
@@ -339,6 +320,25 @@ r = AbstractionLayer(timeStep,"start")
 
 #MAIN PROGRAM
 while r.step():
+    # Top updates
+    r.actualTime = r.robot.getTime()
+    r.globalPos = r.gps.getPosition()
+    if r.firstStep:
+        r.prevGlobalPos = r.globalPos
+        r.firstStep = False
+
+    if r.rotDetectMethod == "velocity":
+        r.globalRot = r.gyro.update(r.actualTime, r.globalRot)
+    elif r.rotDetectMethod == "position":
+        rot = r.getRotationByPos()
+        if rot != -1:
+            r.globalRot = rot
+    r.colourTileType = r.colourSensor.getTileType()
+    diffInX = max(r.globalPos[0], r.prevGlobalPos[0]) -  min(r.globalPos[0], r.prevGlobalPos[0])
+    diffInY = max(r.globalPos[1], r.prevGlobalPos[1]) -  min(r.globalPos[1], r.prevGlobalPos[1])
+    r.diffInPos = getDistance([diffInX, diffInY])
+
+
     # --Put your program here--
     # v Demo program v
 
@@ -409,4 +409,10 @@ while r.step():
     print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
+
+    # Bottom updates
+    r.prevGlobalPos = r.globalPos
+        if r.doMap:
+            pass
+            # mapping
 
