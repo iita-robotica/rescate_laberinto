@@ -169,21 +169,29 @@ class SeqOrder:
     
     def finish(self):
         self.done = True
-    
 
 class StateManager:
+    def __init__(self, initialState):
+        self.state = initialState
+    def changeSt(self, newState):
+        self.state = newState
+        return True
+    def checkSt(self, state):
+        return self.state == state
+
+class SequenceManager:
     def __init__(self, initialState):
         self.state = initialState
         self.lineIdentifier = 0
         self.linePointer = 1
         self.done = False
     
-    def changeState(self, newState):
-        self.state = newState
+    def resetSequence(self):
         self.linePointer = 1
     
     def startSequence(self):
         self.lineIdentifier = 0
+
         self.done = False
     
     def check(self):
@@ -236,7 +244,7 @@ class AbstractionLayer:
         self.heatRight = HeatSensor(self.robot.getLightSensor("right_heat_sensor"), 35, self.timeStep)
 
         # Variables for abstraction layer
-        self.stMg = StateManager(initialState)
+        self.seqMg = SequenceManager(initialState)
         self.startTime = self.actualTime = self.robot.getTime()
         self.delayStart = 0.0
         self.delayFirstTime = True
@@ -268,13 +276,13 @@ class AbstractionLayer:
         self.leftWheel.move(ratio2)
 
     def seqMove(self,ratio1, ratio2):
-        if self.stMg.check():
+        if self.seqMg.check():
             self.move(ratio1, ratio2)
-            self.stMg.nextSeq()
-        return self.stMg.seqDone()
+            self.seqMg.nextSeq()
+        return self.seqMg.seqDone()
     
     def seqMoveDist(self, ratio, dist):
-        if self.stMg.check():
+        if self.seqMg.check():
             if self.seqMoveDistFirstTime == True:
                 self.seqMoveDistStart = self.globalPos
                 self.seqMoveDistFirstTime = False
@@ -287,40 +295,43 @@ class AbstractionLayer:
                 else:
                     self.seqMoveDistFirstTime = True
                     self.move(0,0)
-                    self.stMg.nextSeq()
-        return self.stMg.seqDone()
+                    self.seqMg.nextSeq()
+        return self.seqMg.seqDone()
 
     
     # Poner antes de empezar una sequencia o de usar una funcion sequencial
     # Put before starting a sequence or using a sequencial function
     def startSequence(self):
-        self.stMg.startSequence()
+        self.seqMg.startSequence()
+    
+    def resetSequence(self):
+        self.seqMg.resetSequence()
 
     def seqEvent(self):
-        if self.stMg.check():
-            self.stMg.nextSeq()
-        return self.stMg.seqDone()
+        if self.seqMg.check():
+            self.seqMg.nextSeq()
+        return self.seqMg.seqDone()
     
     # Para la sequencia por la cantidad de segundos que uno le ponga
     # Stops a sequence for the given amount of seconds 
     def seqDelay(self, delay):
-        if self.stMg.check():
+        if self.seqMg.check():
             if self.delayFirstTime:
                 self.delayStart = self.robot.getTime()
                 self.delayFirstTime = False
             else:
                 if self.actualTime - self.delayStart >= delay:
                     self.delayFirstTime = True
-                    self.stMg.nextSeq()
-        return self.stMg.seqDone()
+                    self.seqMg.nextSeq()
+        return self.seqMg.seqDone()
         
     # Hace un print en sequencia
     # Prints something in sequence
     def seqPrint(self, text):
-        if self.stMg.check():
+        if self.seqMg.check():
             print(text)
-            self.stMg.nextSeq()
-        return self.stMg.seqDone()
+            self.seqMg.nextSeq()
+        return self.seqMg.seqDone()
         
     # returns True if simulation is running
     def step(self):
@@ -330,6 +341,7 @@ class AbstractionLayer:
 # Instanciacion de capa de abstracción
 # Abstraction layer instantiation
 r = AbstractionLayer(timeStep,"start")
+stMg = StateManager("start")
 
 #MAIN PROGRAM
 while r.step():
@@ -356,12 +368,12 @@ while r.step():
     # v Demo program v
 
     if r.diffInPos > 11:
-        r.stMg.changeState("teleported")
+        stMg.changeSt("teleported")
     elif r.colourTileType == "trap":
-        r.stMg.changeState("navigation")
+        stMg.changeSt("navigation")
 
     # Start state
-    if r.stMg.state == "start":
+    if stMg.checkSt("start"):
         r.doMap = False
         r.startSequence()
         if r.seqEvent():
@@ -370,44 +382,48 @@ while r.step():
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, 6):
             r.doMap = True
-            r.stMg.changeState("main")
+            stMg.changeSt("main")
+            r.resetSequence()
 
     # Main state
-    elif r.stMg.state == "main":
+    elif stMg.checkSt("main"):
         print("main state")
 
     # Analyze state
-    elif r.stMg.state == "analyze":
+    elif stMg.checkSt("analyze"):
         print("analyze state")
 
     # Visual victim state
-    elif r.stMg.state == "visualVictim":
+    elif stMg.checkSt("visualVictim"):
         print("visualVictim state")
         r.startSequence()
         if r.seqDelay(3):
             r.sendMessage("N")
-            r.stMg.changeState("main")
+            stMg.changeSt("main")
+            r.resetSequence()
         
         
     # Heated victim state
-    elif r.stMg.state == "heatVictim":
+    elif stMg.checkSt("heatVictim"):
         print("visualVictim state")
         r.startSequence()
         if r.seqDelay(3):
             r.sendMessage("T")
-            r.stMg.changeState("main")
+            stMg.changeSt("main")
+            r.resetSequence()
         
 
     # Navigation state
-    elif r.stMg.state == "navigation":
+    elif stMg.checkSt("navigation"):
         print("navigation state")
-        r.changeState("follow")
+        stMg.changeSt("follow")
+        r.resetSequence()
 
-    elif r.stMg.state == "follow":
+    elif stMg.checkSt("follow"):
         print("follow state")
 
     # Teletransported state
-    elif r.stMg.state == "teleported":
+    elif stMg.checkSt("teleported"):
         r.doMap = False
         r.startSequence()
         if r.seqEvent():
@@ -416,7 +432,8 @@ while r.step():
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, 6):
             r.doMap = True
-            r.stMg.changeState("main")
+            stMg.changeSt("main")
+            r.resetSequence()
 
     #print("diff in pos: " + str(r.diffInPos))
     print("Global position: " + str(r.globalPos))
