@@ -200,13 +200,18 @@ class SequenceManager:
             return True
         return False
     
-
+class RobotLayer:
+    def __init__(self):
+        pass
 # Clase de capa de obstarccion
 # Abstraction layer class
 class AbstractionLayer:
-    def __init__(self,timeStep):
+    def __init__(self,timeStep, initialState):
 
+        #Instantiations
         self.robot = Robot()
+        self.seqMg = SequenceManager()
+        self.stMg = StateManager(initialState)
         # For self.robot
         # Constants
         self.posMultiplier = 100
@@ -247,7 +252,7 @@ class AbstractionLayer:
         
 
         # Variables for abstraction layer
-        self.seqMg = SequenceManager()
+        
         self.startTime = self.actualTime = self.robot.getTime()
         self.delayStart = 0.0
         self.delayFirstTime = True
@@ -260,6 +265,7 @@ class AbstractionLayer:
         self.diffInPos = 0
         self.firstStep = True
         self.doMap = True
+
     
     def sendMessage(self, indentifier):
         self.emitter.sendMessage(self.globalPos, indentifier)
@@ -273,6 +279,9 @@ class AbstractionLayer:
             degs = rads * 180 / math.pi
             degs = normalizeAngle(degs)
             return degs
+    
+    def followCalculatedPath(self):
+        pass
 
     def move(self, ratio1, ratio2):
         self.rightWheel.move(ratio1)
@@ -306,9 +315,13 @@ class AbstractionLayer:
     # Put before starting a sequence or using a sequencial function
     def startSequence(self):
         self.seqMg.startSequence()
-
-    def resetSequence(self):
+    
+    def changeState(self, newState):
+        self.stMg.changeState(newState)
         self.seqMg.resetSequence()
+    
+    def isState(self, state):
+        return self.stMg.checkState(state)
 
     def seqEvent(self):
         if self.seqMg.check():
@@ -337,44 +350,52 @@ class AbstractionLayer:
         return self.seqMg.seqDone()
         
     # returns True if simulation is running
-    def step(self):
+    def update(self):
+
         return self.robot.step(timeStep) != -1
+    
+    def topUpdate(self):
+            # Top updates
+        self.actualTime = self.robot.getTime()
+        self.globalPos = self.gps.getPosition()
+        if self.firstStep:
+            self.prevGlobalPos = self.globalPos
+            self.firstStep = False
+
+        if self.rotDetectMethod == "velocity":
+            self.globalRot = self.gyro.update(r.actualTime, r.globalRot)
+        elif self.rotDetectMethod == "position":
+            rot = self.getRotationByPos()
+            if rot != -1:
+                self.globalRot = rot
+        self.colourTileType = self.colourSensor.getTileType()
+        diffInX = max(self.globalPos[0], self.prevGlobalPos[0]) -  min(self.globalPos[0], self.prevGlobalPos[0])
+        diffInY = max(self.globalPos[1], self.prevGlobalPos[1]) -  min(self.globalPos[1], self.prevGlobalPos[1])
+        self.diffInPos = getDistance([diffInX, diffInY])
+    
+    def bottomUpdate(self):
+        # Bottom updates
+        r.prevGlobalPos = r.globalPos
+        if r.doMap:
+            pass
+            # mapping
 
 
 # Instanciacion de capa de abstracción
 # Abstraction layer instantiation
-r = AbstractionLayer(timeStep)
-stMg = StateManager("start")
+r = AbstractionLayer(timeStep, "start")
 
 #MAIN PROGRAM
-while r.step():
-    # Top updates
-    r.actualTime = r.robot.getTime()
-    r.globalPos = r.gps.getPosition()
-    if r.firstStep:
-        r.prevGlobalPos = r.globalPos
-        r.firstStep = False
-
-    if r.rotDetectMethod == "velocity":
-        r.globalRot = r.gyro.update(r.actualTime, r.globalRot)
-    elif r.rotDetectMethod == "position":
-        rot = r.getRotationByPos()
-        if rot != -1:
-            r.globalRot = rot
-    r.colourTileType = r.colourSensor.getTileType()
-    diffInX = max(r.globalPos[0], r.prevGlobalPos[0]) -  min(r.globalPos[0], r.prevGlobalPos[0])
-    diffInY = max(r.globalPos[1], r.prevGlobalPos[1]) -  min(r.globalPos[1], r.prevGlobalPos[1])
-    r.diffInPos = getDistance([diffInX, diffInY])
-
+while r.update():
     # v Program v
 
     if r.diffInPos >= r.tileSize:
-        stMg.changeState("teleported")
+        r.changeState("teleported")
     elif r.colourTileType == "trap":
-        stMg.changeState("navigation")
+        r.changeState("navigation")
 
     # Start state
-    if stMg.checkState("start"):
+    if r.isState("start"):
         r.doMap = False
         r.startSequence()
         if r.seqEvent():
@@ -383,46 +404,35 @@ while r.step():
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, r.tileSize / 2):
             r.doMap = True
-            stMg.changeState("main")
-            r.resetSequence()
+            r.changeState("main")
 
     # Main state
-    elif stMg.checkState("main"):
+    elif r.isState("main"):
         print("main state")
+        r.followCalculatedPath()
 
     # Analyze state
-    elif stMg.checkState("analyze"):
+    elif r.isState("analyze"):
         print("analyze state")
 
     # Visual victim state
-    elif stMg.checkState("visualVictim"):
+    elif r.isState("visualVictim"):
         print("visualVictim state")
         r.startSequence()
         if r.seqDelay(3):
             r.sendMessage("N")
-            stMg.changeState("main")
-            r.resetSequence()
+            r.changeState("main")
         
     # Heated victim state
-    elif stMg.checkState("heatVictim"):
+    elif r.isState("heatVictim"):
         print("visualVictim state")
         r.startSequence()
         if r.seqDelay(3):
             r.sendMessage("T")
-            stMg.changeState("main")
-            r.resetSequence()
-        
-
-    # Navigation state
-    elif stMg.checkState("navigation"):
-        print("navigation state")
-        stMg.changeState("follow")
-
-    elif stMg.checkState("follow"):
-        print("follow state")
+            r.changeState("main")
 
     # Teletransported state
-    elif stMg.checkState("teleported"):
+    elif r.isState("teleported"):
         r.doMap = False
         r.startSequence()
         if r.seqEvent():
@@ -431,17 +441,12 @@ while r.step():
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, r.tileSize / 2):
             r.doMap = True
-            stMg.changeState("main")
-            r.resetSequence()
+            r.changeState("main")
 
     #print("diff in pos: " + str(r.diffInPos))
     print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
 
-    # Bottom updates
-    r.prevGlobalPos = r.globalPos
-    if r.doMap:
-        pass
-        # mapping
+
 
