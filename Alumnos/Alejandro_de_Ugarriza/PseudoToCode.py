@@ -375,8 +375,8 @@ class AbstractionLayer:
     
     def bottomUpdate(self):
         # Bottom updates
-        r.prevGlobalPos = r.globalPos
-        if r.doMap:
+        self.prevGlobalPos = self.globalPos
+        if self.doMap:
             pass
             # mapping
 
