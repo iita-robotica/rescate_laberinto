@@ -1,4 +1,5 @@
 from controller import Robot
+import cv2 as cv
 import numpy as np
 import struct
 import math
@@ -27,6 +28,111 @@ def getCoords(angle, distance):
 # Gets the distance to given coordinates
 def getDistance(position):
     return math.sqrt((position[0] ** 2) + (position[1] ** 2))
+
+# Node grid class for mapping
+class NodeGrid:
+    # Creates grid and prepares it
+    def __init__(self, x, y, tileSize, offsets=[0,0]):
+        self.grid = np.zeros((x, y), dtype=np.uint8)
+        self.center = (self.grid.shape[0] // 2, self.grid.shape[1] // 2)
+        self.tileSize = tileSize
+        self.offsets = offsets
+        self.orientations = {
+            "up":[-1,0],
+            "down": [1,0],
+            "right": [0,1],
+            "left": [0,-1],
+            "center":[0,0]
+        }
+
+        for i in range(0, len(self.grid)):
+            if i % 2 != 0:
+                for j in range(0, len(self.grid[i])):
+                    if j % 2 != 0:
+                        self.grid[i][j] = 255
+
+        # Empty walls
+        for i in range(0, len(self.grid)):
+            if (i + 1) % 2 != 0:
+                for j in range(0, len(self.grid[i])):
+                    if (j + 0) % 2 != 0:
+                        self.grid[i][j] = 20
+
+        for i in range(0, len(self.grid)):
+            if (i + 0) % 2 != 0:
+                for j in range(0, len(self.grid[i])):
+                    if (j + 1) % 2 != 0:
+                        self.grid[i][j] = 20
+
+    # Prints the grid in the console
+    def printMap(self):
+        print(self.grid)
+
+    # Returns the grid
+    def getMap(self):
+        return self.grid
+
+    def setPosition(self, position, val, orientation="center"):
+        tile = self.getTileNode(position)
+        return self.changeValue(tile, val, orientation)
+
+    def getTileNode(self, pos):
+        node = [(pos[1] + self.offsets[1]) // self.tileSize * 2, (pos[0] + self.offsets[0]) // self.tileSize * 2]
+        return node
+
+    # Changes the value of a given node in the grid
+    def changeValue(self, pos, val, orientation="center"):
+        # print(pos)
+        try:
+            finalIndex = [pos[0] + self.center[0], pos[1] + self.center[1]]
+            finalIndex[0] = finalIndex[0] + (self.orientations[orientation])[0]
+            finalIndex[1] = finalIndex[1] + (self.orientations[orientation])[1]
+            self.grid[int(finalIndex[0]), int(finalIndex[1])] = val
+            if finalIndex[0] < 0 or finalIndex[1] < 0:
+                return "undefined"
+        except IndexError:
+            return "undefined"
+
+    # Gets the value of a given node of the grid
+    def getValue(self, pos, orientation="center"):
+        try:
+            finalIndex = [pos[0] * 2 + self.center[0], pos[1] * 2 + self.center[1]]
+            finalIndex[0] = finalIndex[0] + self.orientations[orientation][0]
+            finalIndex[1] = finalIndex[1] + self.orientations[orientation][1]
+
+            if finalIndex[0] < 0 or finalIndex[1] < 0:
+                return "undefined"
+            else:
+                return self.grid[int(finalIndex[0]), int(finalIndex[1])]
+        except IndexError:
+            return "undefined"
+    
+    # Gets the tile of the position in the actual maze
+    def getTile(self, position):
+        node = [int((position[0] + self.offsets[0]) // self.tileSize), int((position[1] + self.offsets[1]) // self.tileSize)]
+        return node
+
+    # Gets the walls and obstacles given the global positions
+    def getOrientationInTile(self, pos):
+        sideClearance = 0.036 * 100
+        centreClearance = 0.04 * 100
+        thicknessClearance = 0.004 * 100
+        posTile = self.getTile(pos)
+        tilePos = [posTile[0] * self.tileSize, posTile[1] * self.tileSize]
+        posInTile = [pos[0] - tilePos[0], pos[1] - tilePos[1]]
+        if sideClearance < posInTile[1] < self.tileSize - sideClearance and posInTile[0] > self.tileSize - thicknessClearance:
+            return  "left"
+        elif sideClearance < posInTile[1] < self.tileSize - sideClearance and posInTile[0] < thicknessClearance:
+            return  "right"
+        elif sideClearance < posInTile[0] < self.tileSize - sideClearance and posInTile[1] > self.tileSize - thicknessClearance:
+            return  "up"
+        elif sideClearance < posInTile[0] < self.tileSize - sideClearance and posInTile[1] < thicknessClearance:
+            return  "down"
+        elif centreClearance < posInTile[0] < self.tileSize - centreClearance and centreClearance < posInTile[1] < self.tileSize - centreClearance:
+            return "center"
+        else:
+            return "undefined"
+
 
 class Wheel:
     def __init__(self, wheel, maxVelocity):
@@ -66,6 +172,8 @@ class DistanceSensor:
             pos = getCoords(angle, dist)
             pos[0] -= robotPos[0]
             pos[1] -= robotPos[1]
+            pos[0] *= -1
+            pos[1] *= -1
             return pos
         return -1
 
@@ -189,37 +297,26 @@ class SequenceManager:
         self.lineIdentifier = 0
         self.done = False
     def check(self):
+        self.done = False
         self.lineIdentifier += 1
         return self.lineIdentifier == self.linePointer
     def nextSeq(self):
         self.linePointer += 1
         self.done = True
     def seqDone(self):
-        if self.done:
-            self.done = False
-            return True
-        return False
+        return self.done
     
 class RobotLayer:
-    def __init__(self):
-        pass
-# Clase de capa de obstarccion
-# Abstraction layer class
-class AbstractionLayer:
-    def __init__(self,timeStep, initialState):
-
+    def __init__(self, timeStep, posMultiplier, maxVelocity, robotDiameter, tileSize):
         #Instantiations
         self.robot = Robot()
-        self.seqMg = SequenceManager()
-        self.stMg = StateManager(initialState)
-        # For self.robot
         # Constants
-        self.posMultiplier = 100
+        self.posMultiplier = posMultiplier
         self.timeStep = timeStep
-        self.maxVelocity = 6.28
-        self.robotDiameter = 0.071 * self.posMultiplier
-        self.tileSize = 0.12 * self.posMultiplier
-        
+        self.maxVelocity = maxVelocity
+        self.robotDiameter = robotDiameter
+        self.tileSize = tileSize
+
         # Variables
         # Wheels
         self.leftWheel = Wheel(self.robot.getMotor("left wheel motor"), self.maxVelocity)
@@ -253,7 +350,54 @@ class AbstractionLayer:
 
         # Variables for abstraction layer
         
-        self.startTime = self.actualTime = self.robot.getTime()
+        self.startTime = self.robot.getTime()
+        
+    def step(self):
+        return self.robot.step(timeStep) != -1
+
+    def getTime(self):
+        return self.robot.getTime() - self.startTime
+    
+    def getRotationByPos(self, prevGlobalPos, globalPos):
+        if prevGlobalPos == globalPos:
+            return -1
+        else:
+            posDiff = [globalPos[0] - prevGlobalPos[0], globalPos[1] - prevGlobalPos[1]]
+            rads = math.atan2(posDiff[0], posDiff[1])
+            degs = rads * 180 / math.pi
+            degs = normalizeAngle(degs)
+            return degs
+    
+    
+
+    def move(self, ratio1, ratio2):
+        self.rightWheel.move(ratio1)
+        self.leftWheel.move(ratio2)
+    
+
+    
+# Clase de capa de obstarccion
+# Abstraction layer class
+class AbstractionLayer:
+    def __init__(self,timeStep, initialState):
+        # For self.robot
+        # Constants
+        self.posMultiplier = 100
+        self.timeStep = timeStep
+        self.maxVelocity = 6.28
+        self.robotDiameter = 0.071 * self.posMultiplier
+        self.tileSize = 0.12 * self.posMultiplier
+
+        #Instantiations
+        self.robot = RobotLayer(timeStep, self.posMultiplier, self.maxVelocity, self.robotDiameter, self.tileSize)
+        self.seqMg = SequenceManager()
+        self.stMg = StateManager(initialState)
+        self.grid = NodeGrid(40, 40, self.tileSize, [self.tileSize / 2, self.tileSize / 2])
+        
+
+        # Variables for abstraction layer
+        
+        self.actualTime = self.robot.getTime()
         self.delayStart = 0.0
         self.delayFirstTime = True
         self.seqMoveDistStart = [0, 0]
@@ -266,36 +410,37 @@ class AbstractionLayer:
         self.firstStep = True
         self.doMap = True
 
+    def doMapping(self):
+        self.grid.setPosition(self.globalPos, 100)
+        sensor = self.robot.distSensors[5]
+        detection = sensor.getGlobalDetection(self.globalRot, self.globalPos)
+        if detection != -1:
+            orientation = self.grid.getOrientationInTile(detection)
+            if orientation != "undefined":
+                    self.grid.setPosition(detection, 255, orientation)
+    
+    def showGrid(self):
+        cv.imshow("ventana", cv.resize(self.grid.getMap(), (400, 400), interpolation=cv.INTER_AREA))     
     
     def sendMessage(self, indentifier):
-        self.emitter.sendMessage(self.globalPos, indentifier)
-    
-    def getRotationByPos(self):
-        if self.prevGlobalPos == self.globalPos:
-            return -1
-        else:
-            posDiff = [self.globalPos[0] - self.prevGlobalPos[0], self.globalPos[1] - self.prevGlobalPos[1]]
-            rads = math.atan2(posDiff[0], posDiff[1])
-            degs = rads * 180 / math.pi
-            degs = normalizeAngle(degs)
-            return degs
+        self.robot.emitter.sendMessage(self.globalPos, indentifier)
     
     def followCalculatedPath(self):
         pass
 
-    def move(self, ratio1, ratio2):
-        self.rightWheel.move(ratio1)
-        self.leftWheel.move(ratio2)
+    def followPath(self):
+        pass
 
     def seqMove(self,ratio1, ratio2):
         if self.seqMg.check():
-            self.move(ratio1, ratio2)
+            self.robot.move(ratio1, ratio2)
             self.seqMg.nextSeq()
         return self.seqMg.seqDone()
     
+    # This function doesnt stop if the robot is blocked by an obstacle
     def seqMoveDist(self, ratio, dist):
         if self.seqMg.check():
-            if self.seqMoveDistFirstTime == True:
+            if self.seqMoveDistFirstTime:
                 self.seqMoveDistStart = self.globalPos
                 self.seqMoveDistFirstTime = False
             else:
@@ -303,10 +448,10 @@ class AbstractionLayer:
                 diffInY = max(self.seqMoveDistStart[1], self.globalPos[1]) - min(self.seqMoveDistStart[1], self.globalPos[1])
                 distFromStart = getDistance([diffInX, diffInY])
                 if distFromStart < dist:
-                    self.move(ratio,ratio)
+                    self.robot.move(ratio,ratio)
                 else:
                     self.seqMoveDistFirstTime = True
-                    self.move(0,0)
+                    self.robot.move(0,0)
                     self.seqMg.nextSeq()
         return self.seqMg.seqDone()
 
@@ -330,7 +475,7 @@ class AbstractionLayer:
     
     # Para la sequencia por la cantidad de segundos que uno le ponga
     # Stops a sequence for the given amount of seconds 
-    def seqDelay(self, delay):
+    def seqDelaySec(self, delay):
         if self.seqMg.check():
             if self.delayFirstTime:
                 self.delayStart = self.robot.getTime()
@@ -351,34 +496,36 @@ class AbstractionLayer:
         
     # returns True if simulation is running
     def update(self):
-
-        return self.robot.step(timeStep) != -1
+        self.bottomUpdate()
+        stepping = self.robot.step()
+        self.topUpdate()
+        return stepping
     
     def topUpdate(self):
             # Top updates
         self.actualTime = self.robot.getTime()
-        self.globalPos = self.gps.getPosition()
+        self.globalPos = self.robot.gps.getPosition()
         if self.firstStep:
             self.prevGlobalPos = self.globalPos
             self.firstStep = False
 
         if self.rotDetectMethod == "velocity":
-            self.globalRot = self.gyro.update(r.actualTime, r.globalRot)
+            self.globalRot = self.robot.gyro.update(r.actualTime, r.globalRot)
         elif self.rotDetectMethod == "position":
-            rot = self.getRotationByPos()
+            rot = self.robot.getRotationByPos(self.prevGlobalPos, self.globalPos)
             if rot != -1:
                 self.globalRot = rot
-        self.colourTileType = self.colourSensor.getTileType()
+        self.colourTileType = self.robot.colourSensor.getTileType()
         diffInX = max(self.globalPos[0], self.prevGlobalPos[0]) -  min(self.globalPos[0], self.prevGlobalPos[0])
         diffInY = max(self.globalPos[1], self.prevGlobalPos[1]) -  min(self.globalPos[1], self.prevGlobalPos[1])
         self.diffInPos = getDistance([diffInX, diffInY])
+        self.showGrid()
     
     def bottomUpdate(self):
         # Bottom updates
         self.prevGlobalPos = self.globalPos
         if self.doMap:
-            pass
-            # mapping
+            self.doMapping()
 
 
 # Instanciacion de capa de abstracción
@@ -386,6 +533,7 @@ class AbstractionLayer:
 r = AbstractionLayer(timeStep, "start")
 
 #MAIN PROGRAM
+# Updates the global position, rotation, colorSensor position and colors, shows the grid and does mapping
 while r.update():
     # v Program v
 
@@ -419,7 +567,7 @@ while r.update():
     elif r.isState("visualVictim"):
         print("visualVictim state")
         r.startSequence()
-        if r.seqDelay(3):
+        if r.seqDelaySec(3):
             r.sendMessage("N")
             r.changeState("main")
         
@@ -427,11 +575,11 @@ while r.update():
     elif r.isState("heatVictim"):
         print("visualVictim state")
         r.startSequence()
-        if r.seqDelay(3):
+        if r.seqDelaySec(3):
             r.sendMessage("T")
             r.changeState("main")
 
-    # Teletransported state
+    # Teleported state
     elif r.isState("teleported"):
         r.doMap = False
         r.startSequence()
@@ -447,6 +595,8 @@ while r.update():
     print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
+
+    cv.waitKey(1)
 
 
 
