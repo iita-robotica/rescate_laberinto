@@ -72,12 +72,12 @@ class NodeGrid:
     def getMap(self):
         return self.grid
 
-    def setPosition(self, position, val, orientation="center"):
+    def setPosition(self, position, val, orientation="center", offsetTile=False):
         tile = self.getTileNode(position)
         return self.changeValue(tile, val, orientation)
 
     def getTileNode(self, pos):
-        node = [(pos[1] + self.offsets[1]) // self.tileSize * 2, (pos[0] + self.offsets[0]) // self.tileSize * 2]
+        node = [int(((pos[1] + self.offsets[1]) // self.tileSize) * 2), int(((pos[0] + self.offsets[0]) // self.tileSize) * 2)]
         return node
 
     # Changes the value of a given node in the grid
@@ -109,29 +109,37 @@ class NodeGrid:
     
     # Gets the tile of the position in the actual maze
     def getTile(self, position):
-        node = [int((position[0] + self.offsets[0]) // self.tileSize), int((position[1] + self.offsets[1]) // self.tileSize)]
+        node = [position[0] // self.tileSize, position[1] // self.tileSize]
         return node
 
     # Gets the walls and obstacles given the global positions
-    def getOrientationInTile(self, pos):
-        sideClearance = 0.036 * 100
-        centreClearance = 0.04 * 100
-        thicknessClearance = 0.004 * 100
+    def getOrientationInTile(self, inputPos):
+        sideClearance = self.tileSize / 4
+        centreClearance = self.tileSize / 4
+        thicknessClearance = self.tileSize / 6
+        #pos = inputPos
+        pos = [inputPos[0] + self.offsets[0], inputPos[1] + self.offsets[1]]
         posTile = self.getTile(pos)
         tilePos = [posTile[0] * self.tileSize, posTile[1] * self.tileSize]
         posInTile = [pos[0] - tilePos[0], pos[1] - tilePos[1]]
+        print("input pos: " + str(inputPos))
+        print("tile: " + str(posTile))
+        print("tile pos: " + str(tilePos))
+        print("pos in tile: " + str(posInTile))
         if sideClearance < posInTile[1] < self.tileSize - sideClearance and posInTile[0] > self.tileSize - thicknessClearance:
-            return  "left"
+            orientation =   "right"
         elif sideClearance < posInTile[1] < self.tileSize - sideClearance and posInTile[0] < thicknessClearance:
-            return  "right"
+            orientation =  "left"
         elif sideClearance < posInTile[0] < self.tileSize - sideClearance and posInTile[1] > self.tileSize - thicknessClearance:
-            return  "up"
+            orientation = "down"
         elif sideClearance < posInTile[0] < self.tileSize - sideClearance and posInTile[1] < thicknessClearance:
-            return  "down"
+            orientation =  "up"
         elif centreClearance < posInTile[0] < self.tileSize - centreClearance and centreClearance < posInTile[1] < self.tileSize - centreClearance:
-            return "center"
+            orientation = "center"
         else:
-            return "undefined"
+            orientation = "undefined"
+        print(orientation)
+        return orientation
 
 
 class Wheel:
@@ -148,7 +156,7 @@ class DistanceSensor:
     def __init__(self, sensor, sensorAngle, robotDiameter, tileSize, timeStep):
         self.sensor = sensor
         self.sensor.enable(timeStep)
-        self.offset = -1
+        self.offset = 1
         self.robotDiameter = robotDiameter
         self.angle = sensorAngle
         self.tileSize = tileSize
@@ -156,7 +164,7 @@ class DistanceSensor:
     def getDistance(self):
         val = self.sensor.getValue()
         if val < 0.8:
-            dist = mapVals(val, 0.0, 0.8, 0, self.tileSize * 2.4)
+            dist = mapVals(val, 0, 0.8, 0, self.tileSize * 2.4)
             dist += self.robotDiameter / 2
             dist += self.offset
             return dist
@@ -170,10 +178,8 @@ class DistanceSensor:
         angle = self.__getAngle(globalRotation)
         if dist != -1:
             pos = getCoords(angle, dist)
-            pos[0] -= robotPos[0]
-            pos[1] -= robotPos[1]
-            pos[0] *= -1
-            pos[1] *= -1
+            pos[0] += robotPos[0]
+            pos[1] += robotPos[1]
             return pos
         return -1
 
@@ -412,12 +418,12 @@ class AbstractionLayer:
 
     def doMapping(self):
         self.grid.setPosition(self.globalPos, 100)
-        sensor = self.robot.distSensors[5]
-        detection = sensor.getGlobalDetection(self.globalRot, self.globalPos)
-        if detection != -1:
-            orientation = self.grid.getOrientationInTile(detection)
-            if orientation != "undefined":
-                    self.grid.setPosition(detection, 255, orientation)
+        for sensor in self.robot.distSensors:
+            detection = sensor.getGlobalDetection(self.globalRot, self.globalPos)
+            if detection != -1:
+                orientation = self.grid.getOrientationInTile(detection)
+                if orientation != "undefined":
+                        self.grid.setPosition(detection, 255, orientation, offsetTile=True)
     
     def showGrid(self):
         cv.imshow("ventana", cv.resize(self.grid.getMap(), (400, 400), interpolation=cv.INTER_AREA))     
@@ -508,7 +514,6 @@ class AbstractionLayer:
         if self.firstStep:
             self.prevGlobalPos = self.globalPos
             self.firstStep = False
-
         if self.rotDetectMethod == "velocity":
             self.globalRot = self.robot.gyro.update(r.actualTime, r.globalRot)
         elif self.rotDetectMethod == "position":
