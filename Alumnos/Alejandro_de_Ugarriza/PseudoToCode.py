@@ -5,7 +5,7 @@ import struct
 import math
 
 # Global time step
-timeStep = 16 * 2 
+timeStep = 16 * 1
 
 # Corrects the given angle to be in a range from 0 to 360
 def normalizeAngle(ang):
@@ -29,10 +29,13 @@ def getCoords(angle, distance):
 def getDistance(position):
     return math.sqrt((position[0] ** 2) + (position[1] ** 2))
 
+def isInRange(val, minVal, maxVal):
+    return minVal < val < maxVal
+
 # Node grid class for mapping
 class NodeGrid:
     # Creates grid and prepares it
-    def __init__(self, x, y, tileSize, offsets=[0,0]):
+    def __init__(self, x, y, tileSize, nodeTypeDict, offsets=[0,0]):
         self.grid = np.zeros((x, y), dtype=np.uint8)
         self.center = (self.grid.shape[0] // 2, self.grid.shape[1] // 2)
         self.tileSize = tileSize
@@ -45,13 +48,21 @@ class NodeGrid:
             "center":[0,0]
         }
 
+        self.nodeColors = nodeTypeDict
+        self.colorNames = {}
+        for item in self.nodeColors.items():
+            self.colorNames[item[1]] = item[0]
+        #print(self.nodeColors)
+        #print(self.colorNames)
+
         for i in range(0, len(self.grid)):
             if i % 2 != 0:
                 for j in range(0, len(self.grid[i])):
                     if j % 2 != 0:
-                        self.grid[i][j] = 255
+                        self.grid[i][j] = self.nodeColors["occupied"]
 
         # Empty walls
+        """
         for i in range(0, len(self.grid)):
             if (i + 1) % 2 != 0:
                 for j in range(0, len(self.grid[i])):
@@ -63,6 +74,7 @@ class NodeGrid:
                 for j in range(0, len(self.grid[i])):
                     if (j + 1) % 2 != 0:
                         self.grid[i][j] = 20
+        """
 
     # Prints the grid in the console
     def printMap(self):
@@ -72,9 +84,14 @@ class NodeGrid:
     def getMap(self):
         return self.grid
 
-    def setPosition(self, position, val, orientation="center", offsetTile=False):
+    def setPosition(self, position, val, orientation="center"):
         tile = self.getTileNode(position)
         return self.changeValue(tile, val, orientation)
+    
+    def getPosition(self, position, orientation="center"):
+        tile = self.getTileNode(position)
+        return self.getValue(tile, orientation)
+
 
     def getTileNode(self, pos):
         node = [int(((pos[1] + self.offsets[1]) // self.tileSize) * 2), int(((pos[0] + self.offsets[0]) // self.tileSize) * 2)]
@@ -83,6 +100,8 @@ class NodeGrid:
     # Changes the value of a given node in the grid
     def changeValue(self, pos, val, orientation="center"):
         # print(pos)
+        if val in self.nodeColors.keys():
+            val = self.nodeColors[val]
         try:
             finalIndex = [pos[0] + self.center[0], pos[1] + self.center[1]]
             finalIndex[0] = finalIndex[0] + (self.orientations[orientation])[0]
@@ -96,14 +115,18 @@ class NodeGrid:
     # Gets the value of a given node of the grid
     def getValue(self, pos, orientation="center"):
         try:
-            finalIndex = [pos[0] * 2 + self.center[0], pos[1] * 2 + self.center[1]]
+            finalIndex = [pos[0] + self.center[0], pos[1] + self.center[1]]
             finalIndex[0] = finalIndex[0] + self.orientations[orientation][0]
             finalIndex[1] = finalIndex[1] + self.orientations[orientation][1]
 
             if finalIndex[0] < 0 or finalIndex[1] < 0:
                 return "undefined"
             else:
-                return self.grid[int(finalIndex[0]), int(finalIndex[1])]
+                node = self.grid[int(finalIndex[0]), int(finalIndex[1])]
+                if node in self.colorNames.keys():
+                    node = self.colorNames[node]
+                return node
+                
         except IndexError:
             return "undefined"
     
@@ -122,10 +145,10 @@ class NodeGrid:
         posTile = self.getTile(pos)
         tilePos = [posTile[0] * self.tileSize, posTile[1] * self.tileSize]
         posInTile = [pos[0] - tilePos[0], pos[1] - tilePos[1]]
-        print("input pos: " + str(inputPos))
-        print("tile: " + str(posTile))
-        print("tile pos: " + str(tilePos))
-        print("pos in tile: " + str(posInTile))
+        #print("input pos: " + str(inputPos))
+        #print("tile: " + str(posTile))
+        #print("tile pos: " + str(tilePos))
+        #print("pos in tile: " + str(posInTile))
         if sideClearance < posInTile[1] < self.tileSize - sideClearance and posInTile[0] > self.tileSize - thicknessClearance:
             orientation =   "right"
         elif sideClearance < posInTile[1] < self.tileSize - sideClearance and posInTile[0] < thicknessClearance:
@@ -138,7 +161,7 @@ class NodeGrid:
             orientation = "center"
         else:
             orientation = "undefined"
-        print(orientation)
+        #print(orientation)
         return orientation
 
 
@@ -198,8 +221,7 @@ class Gyroscope:
         finalRot = normalizeAngle(finalRot)
         self.oldTime = time
         return finalRot
-    
-    
+     
 
 # Reads the heat sensor
 class HeatSensor:
@@ -213,13 +235,17 @@ class HeatSensor:
 
 # Reads the colour sensor
 class ColourSensor:
-    def __init__(self, sensor, timeStep):
+    def __init__(self, sensor, distancefromCenter, timeStep):
+        self.distance = distancefromCenter
         self.sensor = sensor
         self.sensor.enable(timeStep)
         self.r = 0
         self.g = 0
         self.b = 0
     
+    def getPosition(self, robotGlobalPosition, robotGlobalRotation):
+        relPosition = getCoords(robotGlobalRotation, self.distance)
+        return [robotGlobalPosition[0] + relPosition[0], robotGlobalPosition[1] + relPosition[1]]
     
     def __update(self):
         colour = self.sensor.getImage()
@@ -237,7 +263,7 @@ class ColourSensor:
         return self.r == 252 and self.g == 252
     # Returns the type of tyle detected from the colour data
     def getTileType(self):
-        self.__update
+        self.__update()
         tileType = "undefined"
         if self.__isNormal():
             tileType = "normal"
@@ -266,10 +292,66 @@ class Camera:
     def __init__(self, camera, timeStep):
         self.camera = camera
         self.camera.enable(timeStep)
+        self.height = self.camera.getHeight()
+        self.width = self.camera.getWidth()
     # Gets an image from the raw camera data
     def getImg(self):
         imageData = self.camera.getImage()
-        return np.array(np.frombuffer(imageData, np.uint8).reshape((self.camera.getHeight(), self.camera.getWidth(), 4)))
+        return np.array(np.frombuffer(imageData, np.uint8).reshape((self.height, self.width, 4)))
+
+    def getVictimImagesAndPositions(self):
+        img = self.getImg()
+        # Hace una copia de la imagen
+        img1 = img.copy()
+        # Filtra la copia para aislar su elemento azul
+        img1[:, :, 2] = np.zeros([img1.shape[0], img1.shape[1]])
+        # Hace una version es escala de grises
+        gray = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
+        # Hace un thershold para hacer la imagen binaria
+        thresh = cv.threshold(gray, 140, 255, cv.THRESH_BINARY)[1]
+        cv.imshow("thresh", thresh)
+        # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
+        contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        # Pra evitar la confusion dibuja rectangulos blancos donde estan los contornos en la imagen y despues vuelve a
+        # sacar los contornos para obtener solo los del rectangulo, no los de las letras.
+        for c0 in contours:
+            x, y, w, h = cv.boundingRect(c0)
+            cv.rectangle(thresh, (x, y), (x + w, y + h), (225, 255, 255), -1)
+        cv.imshow("thresh2", thresh)
+        contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        # saca las medidas y la posicion de los contornos y agrega a la lista de imagenes la parte esa de la imagen original
+        # Tambien anade la posicion de cada recuadro en la imagen original
+        finalPoses = []
+        finalImages = []
+        for c in contours:
+            x, y, w, h = cv.boundingRect(c)
+            finalImages.append(img[y:y + h, x:x + w])
+            finalPoses.append((y, x))
+        return finalPoses, finalImages
+
+    # Requiere de argumentos provenientes del metodo getImagesAndPositions
+    def isVictimInRange(self, pos, img):
+        # Chequea si la victima esta en rango para ser clasificada
+        status = False
+        # Valores obtenidos probandolos de acuerdo a la cercania o tamaño de la victima 
+        # en camara necesaria para su clasificacion
+        heightThreshold = (50, 105)
+        minRatio = (0.8)
+        if img.shape[0] != 0:
+            ratio = img.shape[1] / img.shape[0]
+        else:
+            ratio = 0
+        # se fija si es lo suficientemente grande para detctectar la letra
+        if isInRange(img.shape[0], heightThreshold[0], heightThreshold[1]) \
+            and ratio > minRatio:
+                status = True
+        
+        #print("Ratio: " + str(ratio))
+        #print("Shape: " + str(img.shape))
+        #print("Status: " + str(status))
+        return status
+                
+
 
 # Sends messages
 class Emitter:
@@ -322,7 +404,7 @@ class RobotLayer:
         self.maxVelocity = maxVelocity
         self.robotDiameter = robotDiameter
         self.tileSize = tileSize
-
+        colourSensorOffset = 1
         # Variables
         # Wheels
         self.leftWheel = Wheel(self.robot.getMotor("left wheel motor"), self.maxVelocity)
@@ -332,7 +414,8 @@ class RobotLayer:
         self.rightCamera = Camera(self.robot.getCamera("camera_right"), self.timeStep)
         self.leftCamera = Camera(self.robot.getCamera("camera_left"), self.timeStep)
         #Colour sensor
-        self.colourSensor = ColourSensor(self.robot.getCamera("colour_sensor"), self.timeStep)
+        
+        self.colourSensor = ColourSensor(self.robot.getCamera("colour_sensor"), self.robotDiameter + colourSensorOffset, self.timeStep)
         #Emitter
         self.emitter = Emitter(self.robot.getEmitter("emitter"), self.posMultiplier)
         #Gps
@@ -393,12 +476,19 @@ class AbstractionLayer:
         self.maxVelocity = 6.28
         self.robotDiameter = 0.071 * self.posMultiplier
         self.tileSize = 0.12 * self.posMultiplier
-
+        self.nodeTypes = {
+            "occupied":255,
+            "unknown":0,
+            "unoccupied":30,
+            "uncollectedVictim":100,
+            "collectedVictim":170,
+            "checkpoint":50
+        }
         #Instantiations
         self.robot = RobotLayer(timeStep, self.posMultiplier, self.maxVelocity, self.robotDiameter, self.tileSize)
         self.seqMg = SequenceManager()
         self.stMg = StateManager(initialState)
-        self.grid = NodeGrid(40, 40, self.tileSize, [self.tileSize / 2, self.tileSize / 2])
+        self.grid = NodeGrid(40, 40, self.tileSize, self.nodeTypes,[self.tileSize / 2, self.tileSize / 2])
         
 
         # Variables for abstraction layer
@@ -414,16 +504,25 @@ class AbstractionLayer:
         self.tileType = "undefined"
         self.diffInPos = 0
         self.firstStep = True
-        self.doMap = True
+        self.doMap = False
+        self.seqRotateToDegsFirstTime = True
+        self.seqRotateToDegsDirection = ""
+        self.followPathIndex = 0
 
-    def doMapping(self):
-        self.grid.setPosition(self.globalPos, 100)
+    def doWallMapping(self):
         for sensor in self.robot.distSensors:
             detection = sensor.getGlobalDetection(self.globalRot, self.globalPos)
             if detection != -1:
                 orientation = self.grid.getOrientationInTile(detection)
                 if orientation != "undefined":
-                        self.grid.setPosition(detection, 255, orientation, offsetTile=True)
+                        self.grid.setPosition(detection, "occupied", orientation)
+
+    def doTileMapping(self):
+        if self.tileType == "trap":
+            self.grid.setPosition(self.robot.colourSensor.getPosition(), "occupied")
+        #print(self.grid.getPosition(self.globalPos))
+        if self.grid.getPosition(self.globalPos) in ("unknown",):
+            self.grid.setPosition(self.globalPos, "unoccupied")
     
     def showGrid(self):
         cv.imshow("ventana", cv.resize(self.grid.getMap(), (400, 400), interpolation=cv.INTER_AREA))     
@@ -433,9 +532,16 @@ class AbstractionLayer:
     
     def followCalculatedPath(self):
         pass
+    
+    
+    def seqFollowPath(self, path):
+        if self.seqMg.check():
+            if self.followPathIndex == len(path):
+                self.seqMg.nextSeq()
+            elif self.moveToCoords(path[self.followPathIndex]):
+                self.followPathIndex += 1
+        return self.seqMg.seqDone()
 
-    def followPath(self):
-        pass
 
     def seqMove(self,ratio1, ratio2):
         if self.seqMg.check():
@@ -459,6 +565,77 @@ class AbstractionLayer:
                     self.seqMoveDistFirstTime = True
                     self.robot.move(0,0)
                     self.seqMg.nextSeq()
+        return self.seqMg.seqDone()
+
+
+    def rotateToDegs(self, degs, orientation="closest"):
+        accuracy = 1
+        diff = round(self.globalRot) - degs 
+        moveDiff = max(round(self.globalRot), degs) - min(self.globalRot, degs)
+        #print("Diff: " + str(diff))
+        if diff > 180:
+            moveDiff = 360 - moveDiff
+            speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), 0.7)
+        else:
+            speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), 0.7)
+        if accuracy  * -1 < diff < accuracy:
+            self.seqRotateToDegsDirection = ""
+            self.seqRotateToDegsFirstTime = True
+        elif self.seqRotateToDegsFirstTime:
+            self.seqRotateToDegsFirstTime = False
+            if orientation == "closest":
+                if diff > 0:
+                    self.seqRotateToDegsDirection = "right"
+                else:
+                    self.seqRotateToDegsDirection = "left"
+            elif orientation == "farthest":
+                if diff > 0:
+                    self.seqRotateToDegsDirection = "left"
+                else:
+                    self.seqRotateToDegsDirection = "right"
+            else:
+                self.seqRotateToDegsDirection = orientation
+        if self.seqRotateToDegsDirection == "right":
+            self.robot.move(speedFract * -1, speedFract)
+        elif self.seqRotateToDegsDirection == "left":
+            self.robot.move(speedFract, speedFract * -1)
+        else:
+            return True
+        return False
+
+    def seqRotateToDegs(self, degs, orientation="closest"):
+        if self.seqMg.check():
+            if self.rotateToDegs(degs, orientation):
+                self.robot.move(0,0)
+                self.seqMg.nextSeq()
+        return self.seqMg.seqDone()
+
+
+    def moveToCoords(self, targetPos):
+        errorMargin = 0.1
+        diffX = targetPos[0] - self.globalPos[0]
+        diffY = targetPos[1] - self.globalPos[1]
+        #print("diff in pos: " + str(diffX) + " , " + str(diffY))
+        dist = math.sqrt(diffX ** 2 + diffY ** 2)
+        #print("Dist: "+ str(dist))
+        if errorMargin * -1 < dist < errorMargin:
+            self.robot.move(0,0)
+            return True
+        else:
+            rad = math.atan2(diffX, diffY)
+            ang = rad * 180 / math.pi
+            ang = normalizeAngle(ang)
+            #print("traget ang: " + str(ang))
+            ratio = min(mapVals(dist, 0, self.tileSize, 0.1, 1), 0.8)
+            ratio = max(ratio, 0.2)
+            if self.rotateToDegs(ang):
+                self.robot.move(ratio, ratio)
+        return False
+
+    def seqMoveToCoords(self, targetPos):
+        if self.seqMg.check():
+            if self.moveToCoords(targetPos):
+                self.seqMg.nextSeq()
         return self.seqMg.seqDone()
 
     
@@ -530,7 +707,8 @@ class AbstractionLayer:
         # Bottom updates
         self.prevGlobalPos = self.globalPos
         if self.doMap:
-            self.doMapping()
+            self.doWallMapping()
+            self.doTileMapping()
 
 
 # Instanciacion de capa de abstracción
@@ -541,11 +719,14 @@ r = AbstractionLayer(timeStep, "start")
 # Updates the global position, rotation, colorSensor position and colors, shows the grid and does mapping
 while r.update():
     # v Program v
-
+    """
     if r.diffInPos >= r.tileSize:
         r.changeState("teleported")
-    elif r.colourTileType == "trap":
+    """
+    if r.colourTileType == "trap":
         r.changeState("navigation")
+        #print("trap!")
+    #print(r.colourTileType)
 
     # Start state
     if r.isState("start"):
@@ -561,9 +742,14 @@ while r.update():
 
     # Main state
     elif r.isState("main"):
-        print("main state")
-        r.followCalculatedPath()
+        
+        #cv.imshow("centro", r.robot.centreCamera.getImg())
+        poses, images = r.robot.centreCamera.getVictimImagesAndPositions()
+        for pos, img in zip(poses, images):
+            r.robot.centreCamera.isVictimInRange(pos, img)
 
+
+    """
     # Analyze state
     elif r.isState("analyze"):
         print("analyze state")
@@ -597,9 +783,10 @@ while r.update():
             r.changeState("main")
 
     #print("diff in pos: " + str(r.diffInPos))
-    print("Global position: " + str(r.globalPos))
+    #print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
+    """
 
     cv.waitKey(1)
 
