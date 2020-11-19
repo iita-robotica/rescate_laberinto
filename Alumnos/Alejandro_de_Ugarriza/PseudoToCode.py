@@ -653,7 +653,7 @@ class AbstractionLayer:
         self.firstStep = True
         self.doWallMap = self.doTileMap = False
         self.seqRotateToDegsFirstTime = True
-        self.seqRotateToDegsDirection = ""
+        self.seqRotateToDegsInitialRot = 0
         self.followPathIndex = 0
         self.calculatedPath = []
         self.do360FirstTime = True
@@ -776,37 +776,35 @@ class AbstractionLayer:
 
     def rotateToDegs(self, degs, orientation="closest"):
         accuracy = 1
-        diff = round(self.globalRot) - degs 
-        moveDiff = max(round(self.globalRot), degs) - min(self.globalRot, degs)
-        #print("Diff: " + str(diff))
-        if diff > 180:
-            moveDiff = 360 - moveDiff
-            speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), 0.7)
-        else:
-            speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), 0.7)
-        if accuracy  * -1 < diff < accuracy:
-            self.seqRotateToDegsDirection = ""
-            self.seqRotateToDegsFirstTime = True
-        elif self.seqRotateToDegsFirstTime:
+        if self.seqRotateToDegsFirstTime:
+            self.seqRotateToDegsInitialRot = self.globalRot
             self.seqRotateToDegsFirstTime = False
-            if orientation == "closest":
-                if diff > 0:
-                    self.seqRotateToDegsDirection = "right"
-                else:
-                    self.seqRotateToDegsDirection = "left"
-            elif orientation == "farthest":
-                if diff > 0:
-                    self.seqRotateToDegsDirection = "left"
-                else:
-                    self.seqRotateToDegsDirection = "right"
-            else:
-                self.seqRotateToDegsDirection = orientation
-        if self.seqRotateToDegsDirection == "right":
-            self.robot.move(speedFract * -1, speedFract)
-        elif self.seqRotateToDegsDirection == "left":
-            self.robot.move(speedFract, speedFract * -1)
-        else:
+        diff = self.globalRot - degs
+        initialDiff = self.seqRotateToDegsInitialRot - degs
+        moveDiff = max(round(self.globalRot), degs) - min(self.globalRot, degs)
+        if diff > 180 or diff < -180:
+            moveDiff = 360 - moveDiff
+        speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), 0.7)
+        if accuracy  * -1 < diff < accuracy or 360 + (accuracy  * -1) < diff < 360 + accuracy:
+            self.seqRotateToDegsFirstTime = True
             return True
+        else:
+            if orientation == "closest":
+                if 180 > initialDiff > 0 or initialDiff < -180:
+                    direction = "right"
+                else:
+                    direction = "left"
+            elif orientation == "farthest":
+                if 180 > initialDiff > 0 or initialDiff < -180:
+                    direction = "left"
+                else:
+                    direction = "right"
+            else:
+                direction = orientation
+            if direction == "right":
+                self.robot.move(speedFract * -1, speedFract)
+            elif direction == "left":
+                self.robot.move(speedFract, speedFract * -1)
         return False
 
     def seqRotateToDegs(self, degs, orientation="closest"):
@@ -1019,7 +1017,7 @@ while r.update():
             r.changeState("main")
     """
     #print("diff in pos: " + str(r.diffInPos))
-    print("Global position: " + str(r.globalPos))
+    #print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
     
