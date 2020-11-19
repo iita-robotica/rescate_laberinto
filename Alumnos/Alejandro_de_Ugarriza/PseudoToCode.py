@@ -32,7 +32,23 @@ def getDistance(position):
 def isInRange(val, minVal, maxVal):
     return minVal < val < maxVal
 
-# Node grid class for mapping
+
+
+# aStarNode class for A* pathfinding (Not to be confused with the node grid)
+class aStarNode():
+
+    def __init__(self, parent=None, position=None):
+        self.parent = parent
+        self.position = position
+
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.position == other.position
+
+# aStarNode grid class for mapping
 class NodeGrid:
     # Creates grid and prepares it
     def __init__(self, x, y, tileSize, nodeTypeDict, offsets=[0,0]):
@@ -75,7 +91,133 @@ class NodeGrid:
                     if (j + 1) % 2 != 0:
                         self.grid[i][j] = 20
         """
+    # A Star algorithm
+    # Returns a list of tuples as a path from the given start to the given end in the given maze
+    def astar(self, start, end):
+        # Create start and end node
+        start_node = aStarNode(None, (start[0], start[1]))
+        start_node.g = start_node.h = start_node.f = 0
+        end_node = aStarNode(None, (end[0], end[1]))
+        end_node.g = end_node.h = end_node.f = 0
+        # Initialize open and closed list
+        open_list = []
+        closed_list = []
+        # Add the start node
+        open_list.append(start_node)
+        # Loop until end
+        while len(open_list) > 0:
+            # Get the current node
+            current_node = open_list[0]
+            current_index = 0
+            for index, item in enumerate(open_list):
+                if item.f < current_node.f:
+                    current_node = item
+                    current_index = index
+            # Pop current off open list, add to closed list
+            open_list.pop(current_index)
+            closed_list.append(current_node)
+            # If found the goal
+            if current_node == end_node:
+                path = []
+                current = current_node
+                while current is not None:
+                    path.append(current.position)
+                    current = current.parent
+                return path[::-1]  # Return reversed path
+            # Generate children
+            children = []
+            for new_orientation in ("up", "down", "right", "left"):  # Adjacent squares
 
+                new_position = self.orientations[new_orientation]
+                # Get node position
+                node_position = (current_node.position[0] + new_position[0] * 2, current_node.position[1] + new_position[1] * 2)
+
+                """
+                # Make sure within range
+                if node_position[0] > (len(self.grid) - 1) or node_position[0] < 0 or node_position[1] > (
+                        len(self.grid[len(self.grid) - 1]) - 1) or node_position[1] < 0:
+                    continue
+                """
+                
+                # Make sure walkable terrain
+                
+                if self.getValue(node_position) == "occupied" or self.getValue(node_position) == "undefined":
+                    continue
+                if self.getValue(current_node.position, new_orientation) == "occupied":
+                    continue
+                
+                
+                
+                # Create new node
+                new_node = aStarNode(current_node, node_position)
+                # Append
+                children.append(new_node)
+            # Loop through children
+            for child in children:
+                continueLoop = False
+                # Child is on the closed list
+                for closed_child in closed_list:
+                    if child == closed_child:
+                        continueLoop = True
+                        break
+                # Create the f, g, and h values
+                child.g = current_node.g + 1
+                child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
+                            (child.position[1] - end_node.position[1]) ** 2)
+                child.f = child.g + child.h
+                # Child is already in the open list
+                for open_node in open_list:
+                    if child == open_node and child.g > open_node.g:
+                        continueLoop = True
+                        break
+                if continueLoop:
+                    continue
+                # Add the child to the open list
+                open_list.append(child)
+    # Breath First Search algorithm
+    # Returns the tiles with the color given in objectives in order and with the distance of each one
+    def bfs(self, start, objectives, limit="undefined"):
+        visited = []
+        queue = []
+        found = []
+        start = [start[0], start[1], 0]
+        visited.append(start)
+        queue.append(start)
+        for i in objectives:
+            found.append(list())
+        while queue:
+            coords = queue.pop(0)
+            x = coords[0]
+            y = coords[1]
+            dist = coords[2]
+            if limit != "undefined":
+                if dist > limit:
+                    break
+            for index, objective in enumerate(objectives):
+                if self.getValue([x,y]) == objective:
+                    found[index].append(coords)
+            for newOrientation in ("up", "down", "right", "left"):
+                newPosition = self.orientations[newOrientation]
+                neighbour = [x + newPosition[0] * 2, y + newPosition[1] * 2, dist + 1]
+                
+                inList = False
+                for node in visited:
+                    if node[0] == neighbour[0] and node[1] == neighbour[1]:
+                        inList = True
+                        break
+                if inList:
+                    continue
+
+                # Make sure walkable terrain
+                if self.getValue([x,y], newOrientation) == "occupied" \
+                    or self.getValue([x,y], newOrientation) == "undefined":
+                        continue
+                if self.getValue([neighbour[0], neighbour[1]]) == "occupied" \
+                    or self.getValue([neighbour[0], neighbour[1]]) == "undefined":
+                        continue
+                visited.append(neighbour)
+                queue.append(neighbour)
+        return found
     # Prints the grid in the console
     def printMap(self):
         print(self.grid)
@@ -96,6 +238,9 @@ class NodeGrid:
     def getTileNode(self, pos):
         node = [int(((pos[1] + self.offsets[1]) // self.tileSize) * 2), int(((pos[0] + self.offsets[0]) // self.tileSize) * 2)]
         return node
+    
+    def getPosfromTileNode(self, tileNode):
+        return [tileNode[0] // 2 * self.tileSize, tileNode[1] // 2 * self.tileSize]
 
     # Changes the value of a given node in the grid
     def changeValue(self, pos, val, orientation="center"):
@@ -176,18 +321,20 @@ class Wheel:
 
 # Manages a distance sensor
 class DistanceSensor:
-    def __init__(self, sensor, sensorAngle, robotDiameter, tileSize, timeStep):
+    def __init__(self, sensor, sensorAngle, robotDiameter, tileSize, timeStep, detectionLimit=1):
         self.sensor = sensor
         self.sensor.enable(timeStep)
         self.offset = 1
         self.robotDiameter = robotDiameter
         self.angle = sensorAngle
         self.tileSize = tileSize
+        self.maxDetect = 0.8
+        self.detectionLimit = detectionLimit
     # Gets the distance from the sensor value
     def getDistance(self):
         val = self.sensor.getValue()
-        if val < 0.8:
-            dist = mapVals(val, 0, 0.8, 0, self.tileSize * 2.4)
+        if val < self.maxDetect * self.detectionLimit:
+            dist = mapVals(val, 0, self.maxDetect, 0, self.tileSize * 2.4)
             dist += self.robotDiameter / 2
             dist += self.offset
             return dist
@@ -309,7 +456,7 @@ class Camera:
         gray = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
         # Hace un thershold para hacer la imagen binaria
         thresh = cv.threshold(gray, 140, 255, cv.THRESH_BINARY)[1]
-        cv.imshow("thresh", thresh)
+        #cv.imshow("thresh", thresh)
         # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
         contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         # Pra evitar la confusion dibuja rectangulos blancos donde estan los contornos en la imagen y despues vuelve a
@@ -317,7 +464,7 @@ class Camera:
         for c0 in contours:
             x, y, w, h = cv.boundingRect(c0)
             cv.rectangle(thresh, (x, y), (x + w, y + h), (225, 255, 255), -1)
-        cv.imshow("thresh2", thresh)
+        #cv.imshow("thresh2", thresh)
         contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         # saca las medidas y la posicion de los contornos y agrega a la lista de imagenes la parte esa de la imagen original
         # Tambien anade la posicion de cada recuadro en la imagen original
@@ -341,11 +488,10 @@ class Camera:
             ratio = img.shape[1] / img.shape[0]
         else:
             ratio = 0
-        # se fija si es lo suficientemente grande para detctectar la letra
+        # se fija si es lo suficientemente grande para detectectar la letra
         if isInRange(img.shape[0], heightThreshold[0], heightThreshold[1]) \
             and ratio > minRatio:
                 status = True
-        
         #print("Ratio: " + str(ratio))
         #print("Shape: " + str(img.shape))
         #print("Status: " + str(status))
@@ -395,7 +541,7 @@ class SequenceManager:
         return self.done
     
 class RobotLayer:
-    def __init__(self, timeStep, posMultiplier, maxVelocity, robotDiameter, tileSize):
+    def __init__(self, timeStep, posMultiplier, maxVelocity, robotDiameter, tileSize, distSensorLimit=1):
         #Instantiations
         self.robot = Robot()
         # Constants
@@ -415,7 +561,7 @@ class RobotLayer:
         self.leftCamera = Camera(self.robot.getCamera("camera_left"), self.timeStep)
         #Colour sensor
         
-        self.colourSensor = ColourSensor(self.robot.getCamera("colour_sensor"), self.robotDiameter + colourSensorOffset, self.timeStep)
+        self.colourSensor = ColourSensor(self.robot.getCamera("colour_sensor"), self.robotDiameter / 2 + colourSensorOffset, self.timeStep)
         #Emitter
         self.emitter = Emitter(self.robot.getEmitter("emitter"), self.posMultiplier)
         #Gps
@@ -427,14 +573,14 @@ class RobotLayer:
         self.heatRight = HeatSensor(self.robot.getLightSensor("right_heat_sensor"), 35, self.timeStep)
         #Distance sensors
         self.distSensors = []
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps0"), 72.76564, self.robotDiameter, self.tileSize, self.timeStep))
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps1"), 44.11775, self.robotDiameter, self.tileSize, self.timeStep))
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps2"), 0, self.robotDiameter, self.tileSize, self.timeStep))
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps3"), 298.511, self.robotDiameter, self.tileSize, self.timeStep))
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps4"), 241.2152, self.robotDiameter, self.tileSize, self.timeStep))
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps5"), 180, self.robotDiameter, self.tileSize, self.timeStep))
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps6"), 135.791, self.robotDiameter, self.tileSize, self.timeStep))
-        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps7"), 107.1431, self.robotDiameter, self.tileSize, self.timeStep))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps0"), 72.76564, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps1"), 44.11775, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps2"), 0, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps3"), 298.511, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps4"), 241.2152, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps5"), 180, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps6"), 135.791, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
+        self.distSensors.append(DistanceSensor(self.robot.getDistanceSensor("ps7"), 107.1431, self.robotDiameter, self.tileSize, self.timeStep, distSensorLimit))
         
 
         # Variables for abstraction layer
@@ -476,6 +622,7 @@ class AbstractionLayer:
         self.maxVelocity = 6.28
         self.robotDiameter = 0.071 * self.posMultiplier
         self.tileSize = 0.12 * self.posMultiplier
+        self.distSensorLimit = 0.6
         self.nodeTypes = {
             "occupied":255,
             "unknown":0,
@@ -485,7 +632,7 @@ class AbstractionLayer:
             "checkpoint":50
         }
         #Instantiations
-        self.robot = RobotLayer(timeStep, self.posMultiplier, self.maxVelocity, self.robotDiameter, self.tileSize)
+        self.robot = RobotLayer(timeStep, self.posMultiplier, self.maxVelocity, self.robotDiameter, self.tileSize, self.distSensorLimit)
         self.seqMg = SequenceManager()
         self.stMg = StateManager(initialState)
         self.grid = NodeGrid(40, 40, self.tileSize, self.nodeTypes,[self.tileSize / 2, self.tileSize / 2])
@@ -501,28 +648,38 @@ class AbstractionLayer:
         self.globalPos = self.prevGlobalPos = [0,0]
         self.globalRot = 0
         self.rotDetectMethod = "velocity"
-        self.tileType = "undefined"
+        self.colourTileType = "undefined"
         self.diffInPos = 0
         self.firstStep = True
-        self.doMap = False
+        self.doWallMap = self.doTileMap = False
         self.seqRotateToDegsFirstTime = True
         self.seqRotateToDegsDirection = ""
         self.followPathIndex = 0
+        self.calculatedPath = []
+        self.do360FirstTime = True
+        self.do360OriginAngle = 0
+        self.closestReachableNodeTile = [0,0]
 
     def doWallMapping(self):
+        mapped = False
         for sensor in self.robot.distSensors:
             detection = sensor.getGlobalDetection(self.globalRot, self.globalPos)
             if detection != -1:
                 orientation = self.grid.getOrientationInTile(detection)
                 if orientation != "undefined":
-                        self.grid.setPosition(detection, "occupied", orientation)
+                        if self.grid.getPosition(detection, orientation) not in ("occupied", ):
+                            self.grid.setPosition(detection, "occupied", orientation)
+                            mapped = True
+        return mapped
 
     def doTileMapping(self):
-        if self.tileType == "trap":
-            self.grid.setPosition(self.robot.colourSensor.getPosition(), "occupied")
         #print(self.grid.getPosition(self.globalPos))
         if self.grid.getPosition(self.globalPos) in ("unknown",):
             self.grid.setPosition(self.globalPos, "unoccupied")
+        if self.colourTileType == "trap":
+            self.grid.setPosition(self.robot.colourSensor.getPosition(self.globalPos, self.globalRot), "occupied")
+            return True
+        return False
     
     def showGrid(self):
         cv.imshow("ventana", cv.resize(self.grid.getMap(), (400, 400), interpolation=cv.INTER_AREA))     
@@ -530,16 +687,66 @@ class AbstractionLayer:
     def sendMessage(self, indentifier):
         self.robot.emitter.sendMessage(self.globalPos, indentifier)
     
-    def followCalculatedPath(self):
-        pass
-    
+    def seqFollowCalculatedPath(self):
+        self.seqFollowPath(self.calculatedPath)
+
+    def calculatePath(self):
+        #print(" CALCULATING ")
+        start = self.grid.getTileNode(self.globalPos)
+        bfsResults = self.grid.bfs(start, ("unknown", ), 10)
+        unknownResults = bfsResults[0]
+        print("BFS Results: " + str(unknownResults))
+        priorClosestReachable = False
+        for result in unknownResults:
+            if result[0] == self.closestReachableNodeTile[0] and result[1] == self.closestReachableNodeTile[1]:
+                priorClosestReachable = True
+                break
+        if not priorClosestReachable:
+            self.closestReachableNodeTile = unknownResults[0]
+        print("closest: " + str(self.grid.getPosfromTileNode(self.closestReachableNodeTile)))
+        path = self.grid.astar(start, self.closestReachableNodeTile)
+        self.calculatedPath = []
+        for node in path:
+            self.calculatedPath.append(self.grid.getPosfromTileNode([node[1], node[0]]))
+        self.calculatedPath.pop(0)
+        self.followPathIndex = 0
+        print("Path: " + str(self.calculatedPath))
+        """
+        end = self.grid.getTileNode([-72, 0])
+        path = self.grid.astar(start, end)
+        for node in path:
+            self.grid.changeValue(node, 110)
+        """
+
+    def seqDo360(self, direction="right"):
+        if self.seqEvent():
+            if self.do360FirstTime:
+                self.do360OriginAngle = self.globalRot
+                self.do360FirstTime = False
+        if direction == "right":
+            self.seqMove(7, -7)
+            self.seqDelaySec(0.2)
+            if self.seqRotateToDegs(self.do360OriginAngle, "farthest"):
+                self.do360FirstTime = True
+        else:
+            self.seqMove(-7, 7)
+            self.seqDelaySec(0.2)
+            if self.seqRotateToDegs(self.do360OriginAngle, "farthest"):
+                self.do360FirstTime = True
+
     
     def seqFollowPath(self, path):
         if self.seqMg.check():
+            
             if self.followPathIndex == len(path):
+                print("finished")
                 self.seqMg.nextSeq()
+                self.followPathIndex = 0
             elif self.moveToCoords(path[self.followPathIndex]):
+                print("moved!")
                 self.followPathIndex += 1
+        else:
+            self.followPathIndex = 0
         return self.seqMg.seqDone()
 
 
@@ -566,7 +773,6 @@ class AbstractionLayer:
                     self.robot.move(0,0)
                     self.seqMg.nextSeq()
         return self.seqMg.seqDone()
-
 
     def rotateToDegs(self, degs, orientation="closest"):
         accuracy = 1
@@ -610,7 +816,6 @@ class AbstractionLayer:
                 self.seqMg.nextSeq()
         return self.seqMg.seqDone()
 
-
     def moveToCoords(self, targetPos):
         errorMargin = 0.1
         diffX = targetPos[0] - self.globalPos[0]
@@ -638,7 +843,6 @@ class AbstractionLayer:
                 self.seqMg.nextSeq()
         return self.seqMg.seqDone()
 
-    
     # Poner antes de empezar una sequencia o de usar una funcion sequencial
     # Put before starting a sequence or using a sequencial function
     def startSequence(self):
@@ -647,6 +851,8 @@ class AbstractionLayer:
     def changeState(self, newState):
         self.stMg.changeState(newState)
         self.seqMg.resetSequence()
+        self.followPathIndex = 0
+        self.do360FirstTime = True
     
     def isState(self, state):
         return self.stMg.checkState(state)
@@ -706,9 +912,14 @@ class AbstractionLayer:
     def bottomUpdate(self):
         # Bottom updates
         self.prevGlobalPos = self.globalPos
-        if self.doMap:
-            self.doWallMapping()
-            self.doTileMapping()
+        newWalls = False
+        newTiles = False
+        if self.doWallMap:
+            newWalls = self.doWallMapping()
+        if self.doTileMap:
+            newTiles = self.doTileMapping()
+        if newWalls:
+            self.calculatePath()
 
 
 # Instanciacion de capa de abstracción
@@ -724,36 +935,61 @@ while r.update():
         r.changeState("teleported")
     """
     if r.colourTileType == "trap":
-        r.changeState("navigation")
+        r.changeState("trap")
         #print("trap!")
     #print(r.colourTileType)
 
     # Start state
     if r.isState("start"):
-        r.doMap = False
         r.startSequence()
+        if r.seqEvent():
+            r.doWallMap = False
+            r.doTileMap = False
         if r.seqEvent():
             r.rotDetectMethod = "position"
         if r.seqMoveDist(0.8, r.tileSize / 2):
             r.rotDetectMethod = "velocity"
-        if r.seqMoveDist(-0.8, r.tileSize / 2):
-            r.doMap = True
+        r.seqMoveDist(-0.8, r.tileSize / 2)
+        if r.seqEvent():
+            r.doWallMap = True
+            r.doTileMap = True
+        r.seqDo360()
+        if r.seqEvent():
+            r.calculatePath()
             r.changeState("main")
+        
 
     # Main state
     elif r.isState("main"):
+        r.startSequence()
+        r.seqFollowCalculatedPath()
+        r.seqMove(0,0)
+        if r.seqEvent():
+            r.calculatePath()
+            r.changeState("main")
+
+    elif r.isState("trap"):
+        r.startSequence()
+        if r.seqEvent():
+            r.doWallMap == False
+        r.seqMove(-0.2, -0.2)
+        r.seqDelaySec(0.5)
+        r.seqMove(0,0)
+        if r.seqEvent():
+            r.calculatePath()
+            r.doWallMap == True
+            r.changeState("main")
         
-        #cv.imshow("centro", r.robot.centreCamera.getImg())
-        poses, images = r.robot.centreCamera.getVictimImagesAndPositions()
-        for pos, img in zip(poses, images):
-            r.robot.centreCamera.isVictimInRange(pos, img)
+        
 
 
     """
     # Analyze state
     elif r.isState("analyze"):
-        print("analyze state")
-
+        poses, images = r.robot.centreCamera.getVictimImagesAndPositions()
+        for pos, img in zip(poses, images):
+            r.robot.centreCamera.isVictimInRange(pos, img)
+            #cv.imshow("centro", r.robot.centreCamera.getImg())
     # Visual victim state
     elif r.isState("visualVictim"):
         print("visualVictim state")
@@ -781,12 +1017,12 @@ while r.update():
         if r.seqMoveDist(-0.8, r.tileSize / 2):
             r.doMap = True
             r.changeState("main")
-
+    """
     #print("diff in pos: " + str(r.diffInPos))
-    #print("Global position: " + str(r.globalPos))
+    print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
-    """
+    
 
     cv.waitKey(1)
 
