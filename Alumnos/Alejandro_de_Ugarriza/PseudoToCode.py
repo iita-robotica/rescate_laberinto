@@ -236,11 +236,11 @@ class NodeGrid:
 
 
     def getTileNode(self, pos):
-        node = [int(((pos[1] + self.offsets[1]) // self.tileSize) * 2), int(((pos[0] + self.offsets[0]) // self.tileSize) * 2)]
+        node = [int(((pos[1] + self.offsets[0]) // self.tileSize) * 2), int(((pos[0] + self.offsets[1]) // self.tileSize) * 2)]
         return node
     
     def getPosfromTileNode(self, tileNode):
-        return [tileNode[0] // 2 * self.tileSize, tileNode[1] // 2 * self.tileSize]
+        return [(tileNode[0] // 2 * self.tileSize) + (self.tileSize // 2 - self.offsets[0]), (tileNode[1] // 2 * self.tileSize) + (self.tileSize // 2 - self.offsets[1])]
 
     # Changes the value of a given node in the grid
     def changeValue(self, pos, val, orientation="center"):
@@ -361,6 +361,7 @@ class Gyroscope:
         self.oldTime = 0.0
     # Do on every timestep
     def update(self, time, currentRotation):
+        #print("Gyro Vals: " + str(self.sensor.getValues()))
         timeElapsed = time - self.oldTime  # Time passed in time step
         radsInTimestep = (self.sensor.getValues())[0] * timeElapsed
         degsInTimestep = radsInTimestep * 180 / math.pi
@@ -436,11 +437,12 @@ class Gps:
 
 # Captures images and processes them
 class Camera:
-    def __init__(self, camera, timeStep):
+    def __init__(self, camera, tileRanges, timeStep):
         self.camera = camera
         self.camera.enable(timeStep)
         self.height = self.camera.getHeight()
         self.width = self.camera.getWidth()
+        self.tileRanges = tileRanges
     # Gets an image from the raw camera data
     def getImg(self):
         imageData = self.camera.getImage()
@@ -477,21 +479,22 @@ class Camera:
         return finalPoses, finalImages
 
     # Requiere de argumentos provenientes del metodo getImagesAndPositions
-    def isVictimInRange(self, pos, img):
-        # Chequea si la victima esta en rango para ser clasificada
-        status = False
+    def getVictimRange(self, pos, img):
+        # Chequea si la victima esta en rango para ser clasificada y la cantidad de casillas hasta el robot
+        status = "undefined"
         # Valores obtenidos probandolos de acuerdo a la cercania o tamaño de la victima 
         # en camara necesaria para su clasificacion
-        heightThreshold = (50, 105)
         minRatio = (0.8)
         if img.shape[0] != 0:
             ratio = img.shape[1] / img.shape[0]
         else:
             ratio = 0
-        # se fija si es lo suficientemente grande para detectectar la letra
-        if isInRange(img.shape[0], heightThreshold[0], heightThreshold[1]) \
-            and ratio > minRatio:
-                status = True
+        # Determina la distancia de la victima hasta la camara teniendo en cuenta los thresholds de la camara
+        for index, ranges in enumerate(self.tileRanges):
+            if isInRange(img.shape[0], ranges[0], ranges[1]):
+                status = index
+            if ratio < minRatio and status == 0:
+                status = "undefined"
         #print("Ratio: " + str(ratio))
         #print("Shape: " + str(img.shape))
         #print("Status: " + str(status))
@@ -506,7 +509,7 @@ class Emitter:
         self.divisor = coordsDivisor
     # Sends a message given a position and identifier
     def sendMessage(self,pos, identifier):
-        message = struct.pack('i i c', pos[0] / self.divisor * 100, pos[1] / self.divisor * 100, identifier.encode())
+        message = struct.pack('i i c', int(pos[0] / self.divisor * 100), int(pos[1] / self.divisor * 100), identifier.encode())
         self.emitter.send(message)
 
 
@@ -556,11 +559,13 @@ class RobotLayer:
         self.leftWheel = Wheel(self.robot.getMotor("left wheel motor"), self.maxVelocity)
         self.rightWheel = Wheel(self.robot.getMotor("right wheel motor"), self.maxVelocity)
         #Cameras
-        self.centreCamera = Camera(self.robot.getCamera("camera_centre"), self.timeStep)
-        self.rightCamera = Camera(self.robot.getCamera("camera_right"), self.timeStep)
-        self.leftCamera = Camera(self.robot.getCamera("camera_left"), self.timeStep)
-        #Colour sensor
+        self.cameras = {
+            "centre":Camera(self.robot.getCamera("camera_centre"), ((50, 105), ), self.timeStep),
+            "right":Camera(self.robot.getCamera("camera_right"), (), self.timeStep),
+            "left":Camera(self.robot.getCamera("camera_left"), (), self.timeStep)
+        }
         
+        #Colour sensor
         self.colourSensor = ColourSensor(self.robot.getCamera("colour_sensor"), self.robotDiameter / 2 + colourSensorOffset, self.timeStep)
         #Emitter
         self.emitter = Emitter(self.robot.getEmitter("emitter"), self.posMultiplier)
@@ -622,7 +627,7 @@ class AbstractionLayer:
         self.maxVelocity = 6.28
         self.robotDiameter = 0.071 * self.posMultiplier
         self.tileSize = 0.12 * self.posMultiplier
-        self.distSensorLimit = 0.6
+        self.distSensorLimit = 0.45
         self.nodeTypes = {
             "occupied":255,
             "unknown":0,
@@ -635,7 +640,7 @@ class AbstractionLayer:
         self.robot = RobotLayer(timeStep, self.posMultiplier, self.maxVelocity, self.robotDiameter, self.tileSize, self.distSensorLimit)
         self.seqMg = SequenceManager()
         self.stMg = StateManager(initialState)
-        self.grid = NodeGrid(40, 40, self.tileSize, self.nodeTypes,[self.tileSize / 2, self.tileSize / 2])
+        self.grid = NodeGrid(40, 40, self.tileSize, self.nodeTypes,[0, 0])
         
 
         # Variables for abstraction layer
@@ -645,8 +650,10 @@ class AbstractionLayer:
         self.delayFirstTime = True
         self.seqMoveDistStart = [0, 0]
         self.seqMoveDistFirstTime = True
+        self.ending = False
         self.globalPos = self.prevGlobalPos = [0,0]
         self.globalRot = 0
+        self.startPos = [0,0]
         self.rotDetectMethod = "velocity"
         self.colourTileType = "undefined"
         self.diffInPos = 0
@@ -659,6 +666,14 @@ class AbstractionLayer:
         self.do360FirstTime = True
         self.do360OriginAngle = 0
         self.closestReachableNodeTile = [0,0]
+        self.movedInPath = True
+        self.overridePath = False
+        self.doCalculatePath = True
+        self.isHot = False
+        self.cameras = {"centre":{"images":[], "poses":[], "camera":self.robot.cameras["centre"]}, 
+                            "right":{"images":[], "poses":[], "camera":self.robot.cameras["right"]}, 
+                            "left":{"images":[], "poses":[], "camera":self.robot.cameras["left"]}}
+        self.offsets = [0,0]
 
     def doWallMapping(self):
         mapped = False
@@ -676,8 +691,6 @@ class AbstractionLayer:
         #print(self.grid.getPosition(self.globalPos))
         if self.grid.getPosition(self.globalPos) in ("unknown",):
             self.grid.setPosition(self.globalPos, "unoccupied")
-        if self.colourTileType == "trap":
-            self.grid.setPosition(self.robot.colourSensor.getPosition(self.globalPos, self.globalRot), "occupied")
             return True
         return False
     
@@ -695,14 +708,20 @@ class AbstractionLayer:
         start = self.grid.getTileNode(self.globalPos)
         bfsResults = self.grid.bfs(start, ("unknown", ), 10)
         unknownResults = bfsResults[0]
-        print("BFS Results: " + str(unknownResults))
+        if len(unknownResults) == 0:
+            bfsResults = self.grid.bfs(start, ("unknown", ))
+        unknownResults = bfsResults[0]
         priorClosestReachable = False
-        for result in unknownResults:
-            if result[0] == self.closestReachableNodeTile[0] and result[1] == self.closestReachableNodeTile[1]:
-                priorClosestReachable = True
-                break
-        if not priorClosestReachable:
-            self.closestReachableNodeTile = unknownResults[0]
+        if len(unknownResults):
+            for result in unknownResults:
+                if result[0] == self.closestReachableNodeTile[0] and result[1] == self.closestReachableNodeTile[1]:
+                    priorClosestReachable = True
+                    break
+            if not priorClosestReachable:
+                self.closestReachableNodeTile = unknownResults[0]
+        else:
+            self.closestReachableNodeTile = self.grid.getTileNode(self.startPos)
+            self.ending = True
         print("closest: " + str(self.grid.getPosfromTileNode(self.closestReachableNodeTile)))
         path = self.grid.astar(start, self.closestReachableNodeTile)
         self.calculatedPath = []
@@ -737,19 +756,27 @@ class AbstractionLayer:
     
     def seqFollowPath(self, path):
         if self.seqMg.check():
-            
             if self.followPathIndex == len(path):
-                print("finished")
                 self.seqMg.nextSeq()
                 self.followPathIndex = 0
             elif self.moveToCoords(path[self.followPathIndex]):
-                print("moved!")
                 self.followPathIndex += 1
+                self.movedInPath = True
+            else:
+                self.movedInPath = False
         else:
             self.followPathIndex = 0
+            self.movedInPath = False
         return self.seqMg.seqDone()
 
-
+    def areVictimsAtRange(self, camera, inputRange):
+        victimInRange = False
+        for pos, img in zip(r.cameras[camera]["poses"], r.cameras[camera]["images"]):
+            if self.cameras[camera]["camera"].getVictimRange(pos, img) == inputRange:
+                victimInRange = True
+                break
+        return victimInRange
+        
     def seqMove(self,ratio1, ratio2):
         if self.seqMg.check():
             self.robot.move(ratio1, ratio2)
@@ -775,7 +802,7 @@ class AbstractionLayer:
         return self.seqMg.seqDone()
 
     def rotateToDegs(self, degs, orientation="closest"):
-        accuracy = 1
+        accuracy = 2
         if self.seqRotateToDegsFirstTime:
             self.seqRotateToDegsInitialRot = self.globalRot
             self.seqRotateToDegsFirstTime = False
@@ -880,7 +907,7 @@ class AbstractionLayer:
             print(text)
             self.seqMg.nextSeq()
         return self.seqMg.seqDone()
-        
+    
     # returns True if simulation is running
     def update(self):
         self.bottomUpdate()
@@ -894,6 +921,12 @@ class AbstractionLayer:
         self.globalPos = self.robot.gps.getPosition()
         if self.firstStep:
             self.prevGlobalPos = self.globalPos
+            self.startPos = self.globalPos
+            actualTile = self.grid.getTile(self.globalPos)
+            self.offsets =  [round((actualTile[0] * self.tileSize) - self.globalPos[0]) + self.tileSize // 2, round((actualTile[1] * self.tileSize) - self.globalPos[1]) + self.tileSize // 2]
+            self.offsets = [self.offsets[0] % self.tileSize, self.offsets[1] % self.tileSize]
+            print("OFFSETS: " + str(self.offsets))
+            self.grid.offsets = self.offsets
             self.firstStep = False
         if self.rotDetectMethod == "velocity":
             self.globalRot = self.robot.gyro.update(r.actualTime, r.globalRot)
@@ -901,10 +934,15 @@ class AbstractionLayer:
             rot = self.robot.getRotationByPos(self.prevGlobalPos, self.globalPos)
             if rot != -1:
                 self.globalRot = rot
+        self.isHot = self.robot.heatLeft.isClose() or self.robot.heatRight.isClose()
         self.colourTileType = self.robot.colourSensor.getTileType()
         diffInX = max(self.globalPos[0], self.prevGlobalPos[0]) -  min(self.globalPos[0], self.prevGlobalPos[0])
         diffInY = max(self.globalPos[1], self.prevGlobalPos[1]) -  min(self.globalPos[1], self.prevGlobalPos[1])
         self.diffInPos = getDistance([diffInX, diffInY])
+        # Updating cameras
+        self.cameras["centre"]["poses"], self.cameras["centre"]["images"] = self.cameras["centre"]["camera"].getVictimImagesAndPositions()
+        self.cameras["right"]["poses"], self.cameras["right"]["images"] = self.cameras["right"]["camera"].getVictimImagesAndPositions()
+        self.cameras["left"]["poses"], self.cameras["left"]["images"] = self.cameras["left"]["camera"].getVictimImagesAndPositions()
         self.showGrid()
     
     def bottomUpdate(self):
@@ -917,7 +955,11 @@ class AbstractionLayer:
         if self.doTileMap:
             newTiles = self.doTileMapping()
         if newWalls:
+            self.doCalculatePath = True
+        if self.doCalculatePath and (self.overridePath or ((not self.overridePath) and self.movedInPath)):
             self.calculatePath()
+            self.doCalculatePath = False
+        cv.waitKey(1)
 
 
 # Instanciacion de capa de abstracción
@@ -928,10 +970,10 @@ r = AbstractionLayer(timeStep, "start")
 # Updates the global position, rotation, colorSensor position and colors, shows the grid and does mapping
 while r.update():
     # v Program v
-    """
+    
     if r.diffInPos >= r.tileSize:
         r.changeState("teleported")
-    """
+    
     if r.colourTileType == "trap":
         r.changeState("trap")
         #print("trap!")
@@ -959,6 +1001,7 @@ while r.update():
 
     # Main state
     elif r.isState("main"):
+        
         r.startSequence()
         r.seqFollowCalculatedPath()
         r.seqMove(0,0)
@@ -966,10 +1009,22 @@ while r.update():
             r.calculatePath()
             r.changeState("main")
 
+        if r.grid.getTileNode(r.globalPos) == r.grid.getTileNode(r.startPos) and r.ending:
+            r.changeState("exit")
+
+        if r.areVictimsAtRange("centre", 0) and r.grid.getPosition(r.globalPos) != "collectedVictim":
+            r.changeState("visualVictim")
+
+        if r.isHot:
+            r.changeState("heatVictim")
+
+        
+
     elif r.isState("trap"):
         r.startSequence()
         if r.seqEvent():
             r.doWallMap == False
+            r.grid.setPosition(r.robot.colourSensor.getPosition(r.globalPos, r.globalRot), "occupied")
         r.seqMove(-0.2, -0.2)
         r.seqDelaySec(0.5)
         r.seqMove(0,0)
@@ -978,31 +1033,30 @@ while r.update():
             r.doWallMap == True
             r.changeState("main")
         
-        
-
-
-    """
-    # Analyze state
-    elif r.isState("analyze"):
-        poses, images = r.robot.centreCamera.getVictimImagesAndPositions()
-        for pos, img in zip(poses, images):
-            r.robot.centreCamera.isVictimInRange(pos, img)
-            #cv.imshow("centro", r.robot.centreCamera.getImg())
     # Visual victim state
     elif r.isState("visualVictim"):
         print("visualVictim state")
         r.startSequence()
+        r.seqMove(0,0)
         if r.seqDelaySec(3):
             r.sendMessage("N")
+            r.grid.setPosition(r.globalPos, "collectedVictim")
             r.changeState("main")
         
     # Heated victim state
     elif r.isState("heatVictim"):
-        print("visualVictim state")
+        print("heatVictim state")
         r.startSequence()
+        r.seqMove(0,0)
         if r.seqDelaySec(3):
             r.sendMessage("T")
+        r.seqDelaySec(0.2)
+        if r.seqEvent():
             r.changeState("main")
+    
+    # Exit state
+    elif r.isState("exit"):
+        r.sendMessage("E")
 
     # Teleported state
     elif r.isState("teleported"):
@@ -1015,14 +1069,14 @@ while r.update():
         if r.seqMoveDist(-0.8, r.tileSize / 2):
             r.doMap = True
             r.changeState("main")
-    """
+
     #print("diff in pos: " + str(r.diffInPos))
     #print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
     
 
-    cv.waitKey(1)
+    
 
 
 

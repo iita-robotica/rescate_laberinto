@@ -436,11 +436,13 @@ class Gps:
 
 # Captures images and processes them
 class Camera:
-    def __init__(self, camera, timeStep):
+    def __init__(self, camera, tileRanges, timeStep):
         self.camera = camera
         self.camera.enable(timeStep)
         self.height = self.camera.getHeight()
         self.width = self.camera.getWidth()
+        self.tileRanges = tileRanges
+
     # Gets an image from the raw camera data
     # Obtiene una imagen tipo numpy array de la data original de la camara que esta en bytes
     def getImg(self):
@@ -480,8 +482,8 @@ class Camera:
 
     # Requiere de argumentos provenientes del metodo getImagesAndPositions
     def isVictimInRange(self, pos, img):
-        # Chequea si la victima esta en rango para ser clasificada
-        status = False
+        # Chequea si la victima esta en rango para ser clasificada y la cantidad de casillas hasta el robot
+        status = "undefined"
         # Valores obtenidos probandolos de acuerdo a la cercania o tamaño de la victima 
         # en camara necesaria para su clasificacion
         heightThreshold = (50, 105)
@@ -490,10 +492,12 @@ class Camera:
             ratio = img.shape[1] / img.shape[0]
         else:
             ratio = 0
-        # se fija si es lo suficientemente grande para detectectar la letra
-        if isInRange(img.shape[0], heightThreshold[0], heightThreshold[1]) \
-            and ratio > minRatio:
-                status = True
+        # Determina la distancia de la victima hasta la camara teniendo en cuenta los thresholds de la camara
+        for index, ranges in enumerate(self.tileRanges):
+            if isInRange(img.shape[0], ranges[0], ranges[1]):
+                status = index
+            if ratio < minRatio and status == 0:
+                status = "undefined"
         #print("Ratio: " + str(ratio))
         #print("Shape: " + str(img.shape))
         #print("Status: " + str(status))
@@ -558,9 +562,9 @@ class RobotLayer:
         self.leftWheel = Wheel(self.robot.getMotor("left wheel motor"), self.maxVelocity)
         self.rightWheel = Wheel(self.robot.getMotor("right wheel motor"), self.maxVelocity)
         #Cameras
-        self.centreCamera = Camera(self.robot.getCamera("camera_centre"), self.timeStep)
-        self.rightCamera = Camera(self.robot.getCamera("camera_right"), self.timeStep)
-        self.leftCamera = Camera(self.robot.getCamera("camera_left"), self.timeStep)
+        self.centreCamera = Camera(self.robot.getCamera("camera_centre"), [(50, 105), ], self.timeStep)
+        self.rightCamera = Camera(self.robot.getCamera("camera_right"), [], self.timeStep)
+        self.leftCamera = Camera(self.robot.getCamera("camera_left"), [], self.timeStep)
         #Colour sensor
         
         self.colourSensor = ColourSensor(self.robot.getCamera("colour_sensor"), self.robotDiameter / 2 + colourSensorOffset, self.timeStep)
@@ -886,21 +890,6 @@ class AbstractionLayer:
             self.seqMg.nextSeq()
         return self.seqMg.seqDone()
     
-    def areVictimsInRange(self, camera):
-        isInRange = False
-        if camera == "left":
-            for pos, img in zip(self.cameraData[camera]["poses"], self.cameraData[camera]["images"]):
-                if self.robot.leftCamera.isVictimInRange(pos, img):
-                    isInRange = True
-        elif camera == "right":
-            for pos, img in zip(self.cameraData[camera]["poses"], self.cameraData[camera]["images"]):
-                if self.robot.leftCamera.isVictimInRange(pos, img):
-                    isInRange = True
-        else:
-            for pos, img in zip(self.cameraData[camera]["poses"], self.cameraData[camera]["images"]):
-                if self.robot.centreCamera.isVictimInRange(pos, img):
-                    isInRange = True
-        return isInRange
     # returns True if simulation is running
     def update(self):
         self.bottomUpdate()
@@ -925,6 +914,7 @@ class AbstractionLayer:
         diffInX = max(self.globalPos[0], self.prevGlobalPos[0]) -  min(self.globalPos[0], self.prevGlobalPos[0])
         diffInY = max(self.globalPos[1], self.prevGlobalPos[1]) -  min(self.globalPos[1], self.prevGlobalPos[1])
         self.diffInPos = getDistance([diffInX, diffInY])
+
         temp = self.robot.centreCamera.getVictimImagesAndPositions()
         self.cameraData["centre"]["poses"] =  temp[0]
         self.cameraData["centre"]["images"] =  temp[1]
@@ -999,7 +989,9 @@ while r.update():
 
         imgsCamaraCentro = r.cameraData["centre"]["images"]
         posesEnImagenCamaraCentro = r.cameraData["centre"]["poses"]
-        victimasEnRangoCamaraCentro = r.areVictimsInRange("centre")
+        for pos, img in zip(r.cameraData["centre"]["poses"], r.cameraData[camera]["images"]):
+                if self.robot.leftCamera.isVictimInRange(pos, img) == 0:
+                    isInRange = True
 
         imgsCamaraDerecha = r.cameraData["right"]["images"]
         posesEnImagenCamaraDerecha = r.cameraData["right"]["poses"]
@@ -1011,8 +1003,11 @@ while r.update():
 
         for index, img in enumerate(imgsCamaraCentro):
             cv.imshow("victima" + str(index), img)
+            print("escala de imagenes del centro: " + str(imgsCamaraCentro[index].shape))
+
             #Para gurdar imagenes
             #directorio = r"C:/..."
             #cv.imwrite(str(directorio) + "/victima" + str(index) + ".png", img)
         print("Posicion de victimas en imagen de camara del centro: " + str(posesEnImagenCamaraCentro))
         print("Hay victimas en rango en el centro: " + str(victimasEnRangoCamaraCentro))
+        
