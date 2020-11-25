@@ -514,7 +514,12 @@ class Camera:
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         thresh1 = cv.threshold(gray, 100, 255, cv.THRESH_BINARY_INV)[1]
         conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        x, y, w, h = cv.boundingRect(conts[0])
+        print(conts)
+        maxCont = []
+        for c in conts:
+            if len(c) > len(maxCont):
+                maxCont = c
+        x, y, w, h = cv.boundingRect(maxCont)
         letter = thresh1[y:y + h, x:x + w]
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         #letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
@@ -546,6 +551,8 @@ class Camera:
             "S":{'top': True, 'middle': True, 'bottom': True},
             "U":{'top': False, 'middle': False, 'bottom': True}
             }
+
+        finalLetter = "N"
         for letterKey in letters.keys():
             if counts == letters[letterKey]:
                 finalLetter = letterKey
