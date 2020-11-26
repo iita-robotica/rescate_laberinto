@@ -703,6 +703,9 @@ class AbstractionLayer:
         self.ending = False
         self.globalPos = self.prevGlobalPos = [0,0]
         self.actualTile = [0, 0]
+        self.actualTileNode = [0, 0]
+        self.prevTSTileNode = [0, 0]
+        self.prevTileNode = [0, 0]
         self.globalRot = 0
         self.startPos = [0,0]
         self.rotDetectMethod = "velocity"
@@ -741,13 +744,19 @@ class AbstractionLayer:
 
     def doTileMapping(self):
         mapped = False
+        passedOrient = self.getPassedWall()
+
+        if passedOrient != "undefined":
+            self.grid.changeValue(self.actualTileNode, "unoccupied", passedOrient)
+
+
         #print(self.grid.getPosition(self.globalPos))
         if self.grid.getPosition(self.globalPos) in ("unknown", "occupied") and self.isInCenter(1):
             self.grid.setPosition(self.globalPos, "unoccupied")
             mapped = True
         
-        alignment = self.getAligment(5)
-        if alignment != "undefined" and self.isInCenter(1):
+        alignment = self.getAligment(10)
+        if alignment != "undefined" and self.isInCenter(2):
             for camera in self.cameras.keys():
                 for img, pos in zip(self.cameras[camera]["images"], self.cameras[camera]["poses"]):
                     victimRange = self.cameras[camera]["camera"].getVictimRange(pos, img)
@@ -785,6 +794,24 @@ class AbstractionLayer:
     def showGrid(self):
         cv.imshow("ventana", cv.resize(self.grid.getMap(), (400, 400), interpolation=cv.INTER_AREA))     
     
+    def getPassedWall(self):
+        diff = [(self.actualTileNode[0] - self.prevTileNode[0]) // 2, (self.actualTileNode[1] - self.prevTileNode[1]) // 2]
+
+        if diff == [-1,0]:
+            orient = "down"
+        elif diff == [1,0]:
+            orient = "up"
+        elif diff == [0,1]:
+            orient = "left"
+        elif diff == [0,-1]:
+            orient = "right"
+        else:
+            orient = "undefined"
+
+        return orient
+
+        
+
     def sendMessage(self, indentifier):
         self.robot.emitter.sendMessage(self.globalPos, indentifier)
     
@@ -909,8 +936,8 @@ class AbstractionLayer:
         moveDiff = max(round(self.globalRot), degs) - min(self.globalRot, degs)
         if diff > 180 or diff < -180:
             moveDiff = 360 - moveDiff
-        speedFract = min(mapVals(moveDiff, 0, 90, 0.2, 1), maxSpeed)
-        if accuracy  * -1 < diff < accuracy or 360 + (accuracy  * -1) < diff < 360 + accuracy:
+        speedFract = min(mapVals(moveDiff, accuracy, 90, 0.2, 1), maxSpeed)
+        if accuracy  * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
             self.seqRotateToDegsFirstTime = True
             return True
         else:
@@ -957,7 +984,7 @@ class AbstractionLayer:
             ang = normalizeAngle(ang)
             #print("traget ang: " + str(ang))
             ratio = min(mapVals(dist, 0, self.tileSize, 0.1, 1), 0.8)
-            ratio = max(ratio, 0.2)
+            ratio = max(ratio, 0.3)
             if self.rotateToDegs(ang):
                 self.robot.move(ratio, ratio)
         return False
@@ -1016,12 +1043,17 @@ class AbstractionLayer:
         return stepping
     
     def topUpdate(self):
-            # Top updates
+        # Top updates
         self.actualTime = self.robot.getTime()
         self.globalPos = self.robot.gps.getPosition()
         self.actualTile = self.grid.getTile([self.globalPos[0] + self.offsets[0], self.globalPos[1] + self.offsets[1]])
+        self.actualTileNode = self.grid.getTileNode(self.globalPos)
+        self.prevTSTileNode = self.grid.getTileNode(self.prevGlobalPos)
+        if self.actualTileNode != self.prevTSTileNode:
+            self.prevTileNode =  self.prevTSTileNode
         if self.firstStep:
             self.prevGlobalPos = self.globalPos
+            self.prevTSTileNode = self.prevTileNode = self.actualTileNode
             self.startPos = self.globalPos
             self.offsets =  [round((self.actualTile[0] * self.tileSize) - self.globalPos[0]) + self.tileSize // 2, round((self.actualTile[1] * self.tileSize) - self.globalPos[1]) + self.tileSize // 2]
             self.offsets = [self.offsets[0] % self.tileSize, self.offsets[1] % self.tileSize]
@@ -1048,6 +1080,7 @@ class AbstractionLayer:
     def bottomUpdate(self):
         # Bottom updates
         self.prevGlobalPos = self.globalPos
+
         newWalls = False
         newTiles = False
         if self.doWallMap:
@@ -1079,16 +1112,21 @@ r = AbstractionLayer(timeStep, "start")
 while r.update():
     # v Program v
     
+    
+
+    # --This are checks that need to happen on any state--
+
+    # Detects if the robot has teleported and changes to the corresponding state
     if r.diffInPos >= r.tileSize:
         r.changeState("teleported")
-    
+    # Detects if the robot is close to a hole and changes to the corresponding state
     if r.colourTileType == "trap":
         r.changeState("trap")
-        #print("trap!")
-    #print(r.colourTileType)
 
     # Start state
+    # runs at the start of th program. Calibrates the offsets for mapping and the initial global rotaion of the robot.
     if r.isState("start"):
+        # This happens in sequence (One order executes after the other)
         r.startSequence()
         if r.seqEvent():
             r.doWallMap = False
@@ -1112,6 +1150,7 @@ while r.update():
     # Main state
     elif r.isState("main"):
         print("main state")
+        # This happens in sequence (One order executes after the other)
         r.startSequence()
         r.seqFollowCalculatedPath()
         r.seqMove(0,0)
@@ -1119,19 +1158,27 @@ while r.update():
             r.calculatePath()
             r.changeState("main")
 
+        #This happens continously
+
+        #Checks if the robot wants to end and if it is on the exit/start tile
         if r.grid.getTileNode(r.globalPos) == r.grid.getTileNode(r.startPos) and r.ending:
             r.changeState("exit")
-
+        #checks if there are victims to send to the controller in camera and it hasnt sent them yet 
+        # and changes to the corrsponding state
         if r.areVictimsAtRange("centre", 0) and r.grid.getPosition(r.globalPos) != "collectedVictim":
             r.changeState("visualVictim")
-
+        # Checks if the temperature of the heat sensor is high enough to send the victim to the controller 
+        # and changes to the corresponding state
         if r.isHot:
             r.changeState("heatVictim")
         
+        # It is in a tile with possible victims in it, changes to the corresponding state
         if r.movedInPath and r.grid.getPosition(r.globalPos) == "uncollectedVictim":
             r.changeState("analize")
 
+    #Trap state. It gets away from the detected trap and maps it on to the grid
     elif r.isState("trap"):
+        # This happens in sequence (One order executes after the other)
         r.startSequence()
         if r.seqEvent():
             r.doWallMap == False
@@ -1197,8 +1244,6 @@ while r.update():
             r.doMap = True
             r.changeState("main")
 
-    if r.movedInPath:
-        cv.imwrite(r"C:/Users/ANA/Desktop/Webots - Erebus/runMap.png", r.grid.getMap())
     #print("diff in pos: " + str(r.diffInPos))
     #print("Global position: " + str(r.globalPos))
     #print("Global rotation: " + str(round(r.globalRot)))
