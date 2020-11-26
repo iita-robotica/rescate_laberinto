@@ -355,15 +355,16 @@ class DistanceSensor:
 
 # Tracks global rotation
 class Gyroscope:
-    def __init__(self, gyro, timeStep):
+    def __init__(self, gyro, index, timeStep):
         self.sensor = gyro
         self.sensor.enable(timeStep)
         self.oldTime = 0.0
+        self.index = index
     # Do on every timestep
     def update(self, time, currentRotation):
         #print("Gyro Vals: " + str(self.sensor.getValues()))
         timeElapsed = time - self.oldTime  # Time passed in time step
-        radsInTimestep = (self.sensor.getValues())[0] * timeElapsed
+        radsInTimestep = (self.sensor.getValues())[self.index] * timeElapsed
         degsInTimestep = radsInTimestep * 180 / math.pi
         finalRot = currentRotation + degsInTimestep
         finalRot = normalizeAngle(finalRot)
@@ -630,7 +631,10 @@ class RobotLayer:
         #Gps
         self.gps = Gps(self.robot.getGPS("gps"), self.timeStep, self.posMultiplier)
         #Gyro
-        self.gyro = Gyroscope(self.robot.getGyro("gyro"), self.timeStep)
+        gyroSensor = self.robot.getGyro("gyro")
+        self.gyro = Gyroscope(gyroSensor, 0, self.timeStep)
+        self.rollGyro = Gyroscope(gyroSensor, 1, self.timeStep)
+        self.pitchGyro = Gyroscope(gyroSensor, 2, self.timeStep)
         #Heat sensors
         self.heatLeft = HeatSensor(self.robot.getLightSensor("left_heat_sensor"), 35, self.timeStep)
         self.heatRight = HeatSensor(self.robot.getLightSensor("right_heat_sensor"), 35, self.timeStep)
@@ -695,6 +699,7 @@ class AbstractionLayer:
         self.grid = NodeGrid(40, 40, self.tileSize, self.nodeTypes,[0, 0])
         
         # Variables for abstraction layer
+        self.actualTimeStep = 0
         self.actualTime = self.robot.getTime()
         self.delayStart = 0.0
         self.delayFirstTime = True
@@ -707,6 +712,8 @@ class AbstractionLayer:
         self.prevTSTileNode = [0, 0]
         self.prevTileNode = [0, 0]
         self.globalRot = 0
+        self.globalRoll = 0
+        self.globalPitch = 0
         self.startPos = [0,0]
         self.rotDetectMethod = "velocity"
         self.colourTileType = "undefined"
@@ -742,6 +749,12 @@ class AbstractionLayer:
                             mapped = True
         return mapped
 
+    def doAfterTimesteps(self, nOfSteps):
+        if math.ceil((self.actualTimeStep / nOfSteps) % 1):
+            return False
+        else:
+            return True
+
     def doTileMapping(self):
         mapped = False
         passedOrient = self.getPassedWall()
@@ -751,11 +764,11 @@ class AbstractionLayer:
 
 
         #print(self.grid.getPosition(self.globalPos))
-        if self.grid.getPosition(self.globalPos) in ("unknown", "occupied") and self.isInCenter(1):
+        if self.grid.getPosition(self.globalPos) in ("unknown", "occupied") and self.isInCenter(2):
             self.grid.setPosition(self.globalPos, "unoccupied")
             mapped = True
         
-        alignment = self.getAligment(10)
+        alignment = self.getAligment(8)
         if alignment != "undefined" and self.isInCenter(2):
             for camera in self.cameras.keys():
                 for img, pos in zip(self.cameras[camera]["images"], self.cameras[camera]["poses"]):
@@ -870,13 +883,13 @@ class AbstractionLayer:
 
     def seqFollowPath(self, path):
         if self.seqMg.check():
-            print("Following")
+            #print("Following")
             if self.followPathIndex == len(path):
                 self.seqMg.nextSeq()
                 self.followPathIndex = 0
-                print("ENDED")
+                #print("ENDED")
             elif self.moveToCoords(path[self.followPathIndex]):
-                print("Moved")
+                #print("Moved")
                 self.followPathIndex += 1
                 self.movedInPath = True
             else:
@@ -975,10 +988,10 @@ class AbstractionLayer:
         #print("Dist: "+ str(dist))
         if errorMargin * -1 < dist < errorMargin:
             self.robot.move(0,0)
-            print("FinisehedMove")
+            #print("FinisehedMove")
             return True
         else:
-            print("Moving")
+            #print("Moving")
             rad = math.atan2(diffX, diffY)
             ang = rad * 180 / math.pi
             ang = normalizeAngle(ang)
@@ -1001,7 +1014,14 @@ class AbstractionLayer:
         self.seqMg.startSequence()
     
     def changeState(self, newState):
-        self.stMg.changeState(newState)
+        if not self.stMg.checkState(newState):
+            self.stMg.changeState(newState)
+            self.seqMg.resetSequence()
+            self.followPathIndex = 0
+            self.do360FirstTime = True
+    
+    def resetState(self):
+        self.stMg.changeState(self.stMg.state)
         self.seqMg.resetSequence()
         self.followPathIndex = 0
         self.do360FirstTime = True
@@ -1044,6 +1064,7 @@ class AbstractionLayer:
     
     def topUpdate(self):
         # Top updates
+        self.actualTimeStep += 1
         self.actualTime = self.robot.getTime()
         self.globalPos = self.robot.gps.getPosition()
         self.actualTile = self.grid.getTile([self.globalPos[0] + self.offsets[0], self.globalPos[1] + self.offsets[1]])
@@ -1060,8 +1081,10 @@ class AbstractionLayer:
             print("OFFSETS: " + str(self.offsets))
             self.grid.offsets = self.offsets
             self.firstStep = False
+        self.globalRoll = self.robot.rollGyro.update(self.actualTime, self.globalRoll)
+        self.globalPitch = self.robot.pitchGyro.update(self.actualTime, self.globalPitch)
         if self.rotDetectMethod == "velocity":
-            self.globalRot = self.robot.gyro.update(r.actualTime, r.globalRot)
+            self.globalRot = self.robot.gyro.update(self.actualTime, self.globalRot)
         elif self.rotDetectMethod == "position":
             rot = self.robot.getRotationByPos(self.prevGlobalPos, self.globalPos)
             if rot != -1:
@@ -1081,12 +1104,28 @@ class AbstractionLayer:
         # Bottom updates
         self.prevGlobalPos = self.globalPos
 
+        if self.globalRoll < 180:
+            varInRoll = self.globalRoll
+        else:
+            varInRoll = 360 - r.globalRoll
+        if r.globalPitch < 180:
+            varInPitch = self.globalPitch
+        else:
+            varInPitch = 360 - self.globalPitch
+
         newWalls = False
         newTiles = False
-        if self.doWallMap:
-            newWalls = self.doWallMapping()
+        if self.doAfterTimesteps(4):
+            if varInRoll < 3 and varInPitch < 3:
+                if self.doWallMap:
+                    newWalls = self.doWallMapping()
+            else:
+                print("AVOIDED MAPPING")
+
         if self.doTileMap:
             newTiles = self.doTileMapping()
+        
+
         if newWalls:
             self.doCalculatePath = True
         
@@ -1111,11 +1150,9 @@ r = AbstractionLayer(timeStep, "start")
 # Updates the global position, rotation, colorSensor position and colors, shows the grid and does mapping
 while r.update():
     # v Program v
-    
-    
-
+    print(".")
     # --This are checks that need to happen on any state--
-
+    
     # Detects if the robot has teleported and changes to the corresponding state
     if r.diffInPos >= r.tileSize:
         r.changeState("teleported")
@@ -1149,14 +1186,13 @@ while r.update():
 
     # Main state
     elif r.isState("main"):
-        print("main state")
         # This happens in sequence (One order executes after the other)
         r.startSequence()
         r.seqFollowCalculatedPath()
         r.seqMove(0,0)
         if r.seqEvent():
             r.calculatePath()
-            r.changeState("main")
+            r.resetState()
 
         #This happens continously
 
@@ -1182,6 +1218,7 @@ while r.update():
         r.startSequence()
         if r.seqEvent():
             r.doWallMap == False
+            print("MAPPED TRAP")
             r.grid.setPosition(r.robot.colourSensor.getPosition(r.globalPos, r.globalRot), "occupied")
         r.seqMove(-0.2, -0.2)
         r.seqDelaySec(1)
