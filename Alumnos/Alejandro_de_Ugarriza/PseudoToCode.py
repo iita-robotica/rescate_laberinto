@@ -696,7 +696,7 @@ class AbstractionLayer:
         self.robot = RobotLayer(timeStep, self.posMultiplier, self.maxVelocity, self.robotDiameter, self.tileSize, self.distSensorLimit)
         self.seqMg = SequenceManager()
         self.stMg = StateManager(initialState)
-        self.grid = NodeGrid(40, 40, self.tileSize, self.nodeTypes,[0, 0])
+        self.grid = NodeGrid(80, 80, self.tileSize, self.nodeTypes,[0, 0])
         
         # Variables for abstraction layer
         self.actualTimeStep = 0
