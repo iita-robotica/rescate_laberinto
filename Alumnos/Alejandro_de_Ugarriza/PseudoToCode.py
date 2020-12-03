@@ -4,6 +4,17 @@ import numpy as np
 import struct
 import math
 
+# Version de python 3.7.7 64-bit
+# Librerias necesarias:
+# Externas:
+# numpy
+# opencv
+# De Python:
+# struct
+# math
+# SIN API de deteccion (NO DETECTION API)
+
+
 # Global time step
 timeStep = 16 * 1
 
@@ -12,6 +23,8 @@ def normalizeAngle(ang):
     ang = ang % 360
     if ang < 0:
         ang += 360
+    if ang == 360:
+        ang = 0
     return ang
 
 # Converts a number from a range of value to another
@@ -317,6 +330,8 @@ class Wheel:
         self.wheel.setPosition(float("inf"))
     # Moves the wheel at a ratio of the maximum speed
     def move(self, ratio):
+        if ratio > 1:
+            ratio = 1
         self.wheel.setVelocity(ratio * self.maxVelocity)
 
 # Manages a distance sensor
@@ -324,7 +339,7 @@ class DistanceSensor:
     def __init__(self, sensor, sensorAngle, robotDiameter, tileSize, timeStep, detectionLimit=1):
         self.sensor = sensor
         self.sensor.enable(timeStep)
-        self.offset = 1
+        self.offset = 0.8
         self.robotDiameter = robotDiameter
         self.angle = sensorAngle
         self.tileSize = tileSize
@@ -848,7 +863,7 @@ class AbstractionLayer:
                     priorClosestReachable = True
                     break
         if not priorClosestReachable:
-            if len(uncVictimResults):
+            if len(uncVictimResults) and uncVictimResults[0][2] < 10:
                 self.closestReachableNodeTile = uncVictimResults[0]
             elif len(unknownResults):
                 self.closestReachableNodeTile = unknownResults[0]
@@ -970,6 +985,8 @@ class AbstractionLayer:
                 self.robot.move(speedFract * -1, speedFract)
             elif direction == "left":
                 self.robot.move(speedFract, speedFract * -1)
+            print("speed fract: " +  str(speedFract))
+            print("target angle: " +  str(degs))
         return False
 
     def seqRotateToDegs(self, degs, orientation="closest", maxSpeed=0.7):
@@ -981,6 +998,7 @@ class AbstractionLayer:
 
     def moveToCoords(self, targetPos):
         errorMargin = 0.1
+        descelerationStart = 0.8 * self.tileSize
         diffX = targetPos[0] - self.globalPos[0]
         diffY = targetPos[1] - self.globalPos[1]
         #print("diff in pos: " + str(diffX) + " , " + str(diffY))
@@ -996,7 +1014,7 @@ class AbstractionLayer:
             ang = rad * 180 / math.pi
             ang = normalizeAngle(ang)
             #print("traget ang: " + str(ang))
-            ratio = min(mapVals(dist, 0, self.tileSize, 0.1, 1), 0.8)
+            ratio = min(mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
             ratio = max(ratio, 0.3)
             if self.rotateToDegs(ang):
                 self.robot.move(ratio, ratio)
@@ -1017,13 +1035,13 @@ class AbstractionLayer:
         if not self.stMg.checkState(newState):
             self.stMg.changeState(newState)
             self.seqMg.resetSequence()
-            self.followPathIndex = 0
+            #self.followPathIndex = 0
             self.do360FirstTime = True
     
     def resetState(self):
         self.stMg.changeState(self.stMg.state)
         self.seqMg.resetSequence()
-        self.followPathIndex = 0
+        #self.followPathIndex = 0
         self.do360FirstTime = True
     
     def isState(self, state):
@@ -1216,6 +1234,7 @@ while r.update():
     elif r.isState("trap"):
         # This happens in sequence (One order executes after the other)
         r.startSequence()
+        r.seqMove(0,0)
         if r.seqEvent():
             r.doWallMap == False
             print("MAPPED TRAP")
@@ -1271,13 +1290,16 @@ while r.update():
 
     # Teleported state
     elif r.isState("teleported"):
+        print("Teleported state")
         r.doMap = False
         r.startSequence()
         if r.seqEvent():
             r.rotDetectMethod = "position"
-        if r.seqMoveDist(0.8, r.tileSize / 2):
+        r.seqMove(0.8, 0.8)
+        r.seqDelaySec(0.4)
+        if r.seqMove(0,0):
             r.rotDetectMethod = "velocity"
-        if r.seqMoveDist(-0.8, r.tileSize / 2):
+        if r.seqMoveDist(-0.8, 2):
             r.doMap = True
             r.changeState("main")
 
