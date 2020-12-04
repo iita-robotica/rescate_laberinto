@@ -530,7 +530,7 @@ class Camera:
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         thresh1 = cv.threshold(gray, 100, 255, cv.THRESH_BINARY_INV)[1]
         conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        print(conts)
+        #print(conts)
         maxCont = []
         for c in conts:
             if len(c) > len(maxCont):
@@ -1169,7 +1169,7 @@ r = AbstractionLayer(timeStep, "start")
 # Updates the global position, rotation, colorSensor position and colors, shows the grid and does mapping
 while r.update():
     # v Program v
-    print(".")
+    #print(".")
     # --This are checks that need to happen on any state--
     
     # Detects if the robot has teleported and changes to the corresponding state
@@ -1268,7 +1268,7 @@ while r.update():
         r.seqMove(0,0)
         if r.seqDelaySec(3):
             letter = r.getVictimLetter("centre")
-            print("Detected letter: " + str(letter))
+            #print("Detected letter: " + str(letter))
             r.sendMessage(letter)
             r.grid.setPosition(r.globalPos, "collectedVictim")
             r.calculatePath()
