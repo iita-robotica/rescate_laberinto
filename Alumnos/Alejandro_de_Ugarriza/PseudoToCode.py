@@ -635,8 +635,8 @@ class RobotLayer:
         #Cameras
         self.cameras = {
             "centre":Camera(self.robot.getCamera("camera_centre"), ((50, 105), ), self.timeStep),
-            "right":Camera(self.robot.getCamera("camera_right"), ("undefied", (13, 25)), self.timeStep),
-            "left":Camera(self.robot.getCamera("camera_left"), ("undefied", (13, 25)), self.timeStep)
+            "right":Camera(self.robot.getCamera("camera_right"), ("undefied", (13, 28)), self.timeStep),
+            "left":Camera(self.robot.getCamera("camera_left"), ("undefied", (13, 28)), self.timeStep)
         }
         
         #Colour sensor
@@ -764,11 +764,7 @@ class AbstractionLayer:
                             mapped = True
         return mapped
 
-    def doAfterTimesteps(self, nOfSteps):
-        if math.ceil((self.actualTimeStep / nOfSteps) % 1):
-            return False
-        else:
-            return True
+    
 
     def doTileMapping(self):
         mapped = False
@@ -777,8 +773,6 @@ class AbstractionLayer:
         if passedOrient != "undefined":
             self.grid.changeValue(self.actualTileNode, "unoccupied", passedOrient)
 
-
-        #print(self.grid.getPosition(self.globalPos))
         if self.grid.getPosition(self.globalPos) in ("unknown", "occupied") and self.isInCenter(2):
             self.grid.setPosition(self.globalPos, "unoccupied")
             mapped = True
@@ -796,7 +790,13 @@ class AbstractionLayer:
                             self.grid.changeValue(possibleVictimTile, "uncollectedVictim")
                             mapped = True
         return mapped
-    
+
+    def doAfterTimesteps(self, nOfSteps):
+        if math.ceil((self.actualTimeStep / nOfSteps) % 1):
+            return False
+        else:
+            return True
+
     def getAligment(self, errorMargin):
         if 90 - errorMargin < self.globalRot < 90 + errorMargin:
             direction = "right"
@@ -871,14 +871,14 @@ class AbstractionLayer:
                 self.closestReachableNodeTile = self.grid.getTileNode(self.startPos)
                 self.ending = True
 
-        print("closest: " + str(self.grid.getPosfromTileNode(self.closestReachableNodeTile)))
+        #print("closest: " + str(self.grid.getPosfromTileNode(self.closestReachableNodeTile)))
         path = self.grid.astar(start, self.closestReachableNodeTile)
         self.calculatedPath = []
         for node in path:
             self.calculatedPath.append(self.grid.getPosfromTileNode([node[1], node[0]]))
         self.calculatedPath.pop(0)
         self.followPathIndex = 0
-        print("Path: " + str(self.calculatedPath))
+        #print("Path: " + str(self.calculatedPath))
 
     def seqDo360(self, direction="right", maxSpeed=0.7):
         if self.seqEvent():
@@ -917,8 +917,8 @@ class AbstractionLayer:
     def areVictimsAtRange(self, camera, inputRange):
         victimInRange = False
         for pos, img in zip(r.cameras[camera]["poses"], r.cameras[camera]["images"]):
-            print(self.cameras[camera]["camera"].getVictimRange(pos, img))
-            print(img.shape)
+            #print(self.cameras[camera]["camera"].getVictimRange(pos, img))
+            #print(img.shape)
             if self.cameras[camera]["camera"].getVictimRange(pos, img) == inputRange:
                 victimInRange = True
                 break
@@ -1138,7 +1138,8 @@ class AbstractionLayer:
                 if self.doWallMap:
                     newWalls = self.doWallMapping()
             else:
-                print("AVOIDED MAPPING")
+                #print("AVOIDED MAPPING")
+                pass
 
         if self.doTileMap:
             newTiles = self.doTileMapping()
@@ -1258,11 +1259,11 @@ while r.update():
         if r.areVictimsAtRange("centre", 0) and r.grid.getPosition(r.globalPos) != "collectedVictim":
             r.changeState("visualVictim")
             
-        print("ANALIZING")
+        #print("ANALIZING")
 
     # Visual victim state
     elif r.isState("visualVictim"):
-        print("visualVictim state")
+        #print("visualVictim state")
         r.startSequence()
         r.seqMove(0,0)
         if r.seqDelaySec(3):
@@ -1275,7 +1276,7 @@ while r.update():
         
     # Heated victim state
     elif r.isState("heatVictim"):
-        print("heatVictim state")
+        #print("heatVictim state")
         r.startSequence()
         r.seqMove(0,0)
         if r.seqDelaySec(3):
