@@ -1269,7 +1269,8 @@ while r.update():
         if r.seqDelaySec(3):
             letter = r.getVictimLetter("centre")
             #print("Detected letter: " + str(letter))
-            r.sendMessage(letter)
+            if letter is not None:
+                r.sendMessage(letter)
             r.grid.setPosition(r.globalPos, "collectedVictim")
             r.calculatePath()
             r.changeState("main")
