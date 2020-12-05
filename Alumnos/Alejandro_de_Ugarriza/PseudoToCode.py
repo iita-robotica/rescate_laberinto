@@ -297,7 +297,7 @@ class NodeGrid:
     def getOrientationInTile(self, inputPos):
         sideClearance = self.tileSize / 4
         centreClearance = self.tileSize / 4
-        thicknessClearance = self.tileSize / 6
+        thicknessClearance = self.tileSize / 12
         #pos = inputPos
         pos = [inputPos[0] + self.offsets[0], inputPos[1] + self.offsets[1]]
         posTile = self.getTile(pos)
@@ -737,6 +737,7 @@ class AbstractionLayer:
         self.doWallMap = self.doTileMap = False
         self.seqRotateToDegsFirstTime = True
         self.seqRotateToDegsInitialRot = 0
+        self.seqRotateToDegsinitialDiff = 0
         self.followPathIndex = 0
         self.calculatedPath = []
         self.do360FirstTime = True
@@ -759,7 +760,7 @@ class AbstractionLayer:
             if detection != -1:
                 orientation = self.grid.getOrientationInTile(detection)
                 if orientation != "undefined":
-                        if self.grid.getPosition(detection, orientation) not in ("occupied", "unoccupied"):
+                        if self.grid.getPosition(detection, orientation) not in ("occupied", "unoccupied", "collectedVictim"):
                             self.grid.setPosition(detection, "occupied", orientation)
                             mapped = True
         return mapped
@@ -847,7 +848,7 @@ class AbstractionLayer:
         self.seqFollowPath(self.calculatedPath)
 
     def calculatePath(self):
-        #print(" CALCULATING ")
+        print(" CALCULATING ")
         start = self.grid.getTileNode(self.globalPos)
         bfsResults = self.grid.bfs(start, ("unknown", "uncollectedVictim"), 10)
         unknownResults = bfsResults[0]
@@ -957,10 +958,12 @@ class AbstractionLayer:
     def rotateToDegs(self, degs, orientation="closest", maxSpeed=0.7):
         accuracy = 2
         if self.seqRotateToDegsFirstTime:
+            print("STARTED ROTATION")
             self.seqRotateToDegsInitialRot = self.globalRot
+            self.seqRotateToDegsinitialDiff = round(self.seqRotateToDegsInitialRot - degs)
             self.seqRotateToDegsFirstTime = False
         diff = self.globalRot - degs
-        initialDiff = self.seqRotateToDegsInitialRot - degs
+        
         moveDiff = max(round(self.globalRot), degs) - min(self.globalRot, degs)
         if diff > 180 or diff < -180:
             moveDiff = 360 - moveDiff
@@ -970,12 +973,12 @@ class AbstractionLayer:
             return True
         else:
             if orientation == "closest":
-                if 180 > initialDiff > 0 or initialDiff < -180:
+                if 180 > self.seqRotateToDegsinitialDiff > 0 or self.seqRotateToDegsinitialDiff < -180:
                     direction = "right"
                 else:
                     direction = "left"
             elif orientation == "farthest":
-                if 180 > initialDiff > 0 or initialDiff < -180:
+                if 180 > self.seqRotateToDegsinitialDiff > 0 or self.seqRotateToDegsinitialDiff < -180:
                     direction = "left"
                 else:
                     direction = "right"
@@ -987,6 +990,11 @@ class AbstractionLayer:
                 self.robot.move(speedFract, speedFract * -1)
             print("speed fract: " +  str(speedFract))
             print("target angle: " +  str(degs))
+            print("moveDiff: " + str(moveDiff))
+            print("diff: " + str(diff))
+            print("orientation: " + str(orientation))
+            print("direction: " + str(direction))
+            print("initialDiff: " + str(self.seqRotateToDegsinitialDiff))
         return False
 
     def seqRotateToDegs(self, degs, orientation="closest", maxSpeed=0.7):
@@ -1303,10 +1311,13 @@ while r.update():
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, 2):
             r.doMap = True
+            r.calculatePath()
             r.changeState("main")
 
     #print("diff in pos: " + str(r.diffInPos))
     #print("Global position: " + str(r.globalPos))
-    #print("Global rotation: " + str(round(r.globalRot)))
+    print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
+    print("State: " + r.stMg.state)
+    print("-----------------")
     
