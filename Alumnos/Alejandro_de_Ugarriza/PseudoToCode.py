@@ -752,6 +752,7 @@ class AbstractionLayer:
                             "right":{"images":[], "poses":[], "camera":self.robot.cameras["right"]}, 
                             "left":{"images":[], "poses":[], "camera":self.robot.cameras["left"]}}
         self.offsets = [0,0]
+        
 
     def doWallMapping(self):
         mapped = False
@@ -1124,7 +1125,7 @@ class AbstractionLayer:
         self.cameras["centre"]["poses"], self.cameras["centre"]["images"] = self.cameras["centre"]["camera"].getVictimImagesAndPositions()
         self.cameras["right"]["poses"], self.cameras["right"]["images"] = self.cameras["right"]["camera"].getVictimImagesAndPositions()
         self.cameras["left"]["poses"], self.cameras["left"]["images"] = self.cameras["left"]["camera"].getVictimImagesAndPositions()
-        self.showGrid()
+        #self.showGrid()
     
     def bottomUpdate(self):
         # Bottom updates
