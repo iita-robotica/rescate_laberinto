@@ -74,7 +74,7 @@ class NodeGrid:
             "down": [1,0],
             "right": [0,1],
             "left": [0,-1],
-            "center":[0,0]
+            "centre":[0,0]
         }
 
         self.nodeColors = nodeTypeDict
@@ -239,11 +239,11 @@ class NodeGrid:
     def getMap(self):
         return self.grid
 
-    def setPosition(self, position, val, orientation="center"):
+    def setPosition(self, position, val, orientation="centre"):
         tile = self.getTileNode(position)
         return self.changeValue(tile, val, orientation)
     
-    def getPosition(self, position, orientation="center"):
+    def getPosition(self, position, orientation="centre"):
         tile = self.getTileNode(position)
         return self.getValue(tile, orientation)
 
@@ -256,7 +256,7 @@ class NodeGrid:
         return [(tileNode[0] // 2 * self.tileSize) + (self.tileSize // 2 - self.offsets[0]), (tileNode[1] // 2 * self.tileSize) + (self.tileSize // 2 - self.offsets[1])]
 
     # Changes the value of a given node in the grid
-    def changeValue(self, pos, val, orientation="center"):
+    def changeValue(self, pos, val, orientation="centre"):
         # print(pos)
         if val in self.nodeColors.keys():
             val = self.nodeColors[val]
@@ -271,7 +271,7 @@ class NodeGrid:
             return "undefined"
 
     # Gets the value of a given node of the grid
-    def getValue(self, pos, orientation="center"):
+    def getValue(self, pos, orientation="centre"):
         try:
             finalIndex = [pos[0] + self.center[0], pos[1] + self.center[1]]
             finalIndex[0] = finalIndex[0] + self.orientations[orientation][0]
@@ -316,7 +316,7 @@ class NodeGrid:
         elif sideClearance < posInTile[0] < self.tileSize - sideClearance and posInTile[1] < thicknessClearance:
             orientation =  "up"
         elif centreClearance < posInTile[0] < self.tileSize - centreClearance and centreClearance < posInTile[1] < self.tileSize - centreClearance:
-            orientation = "center"
+            orientation = "centre"
         else:
             orientation = "undefined"
         #print(orientation)
