@@ -249,7 +249,7 @@ class NodeGrid:
 
 
     def getTileNode(self, pos):
-        node = [int(((pos[1] + self.offsets[0]) // self.tileSize) * 2), int(((pos[0] + self.offsets[1]) // self.tileSize) * 2)]
+        node = [int(((pos[1] + self.offsets[1]) // self.tileSize) * 2), int(((pos[0] + self.offsets[0]) // self.tileSize) * 2)]
         return node
     
     def getPosfromTileNode(self, tileNode):
