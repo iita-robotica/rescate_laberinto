@@ -848,7 +848,7 @@ class AbstractionLayer:
         self.seqFollowPath(self.calculatedPath)
 
     def calculatePath(self):
-        print(" CALCULATING ")
+        #print(" CALCULATING ")
         start = self.grid.getTileNode(self.globalPos)
         bfsResults = self.grid.bfs(start, ("unknown", "uncollectedVictim"), 10)
         unknownResults = bfsResults[0]
@@ -958,7 +958,7 @@ class AbstractionLayer:
     def rotateToDegs(self, degs, orientation="closest", maxSpeed=0.7):
         accuracy = 2
         if self.seqRotateToDegsFirstTime:
-            print("STARTED ROTATION")
+            #print("STARTED ROTATION")
             self.seqRotateToDegsInitialRot = self.globalRot
             self.seqRotateToDegsinitialDiff = round(self.seqRotateToDegsInitialRot - degs)
             self.seqRotateToDegsFirstTime = False
@@ -988,13 +988,13 @@ class AbstractionLayer:
                 self.robot.move(speedFract * -1, speedFract)
             elif direction == "left":
                 self.robot.move(speedFract, speedFract * -1)
-            print("speed fract: " +  str(speedFract))
-            print("target angle: " +  str(degs))
-            print("moveDiff: " + str(moveDiff))
-            print("diff: " + str(diff))
-            print("orientation: " + str(orientation))
-            print("direction: " + str(direction))
-            print("initialDiff: " + str(self.seqRotateToDegsinitialDiff))
+            #print("speed fract: " +  str(speedFract))
+            #print("target angle: " +  str(degs))
+            #print("moveDiff: " + str(moveDiff))
+            #print("diff: " + str(diff))
+            #print("orientation: " + str(orientation))
+            #print("direction: " + str(direction))
+            #print("initialDiff: " + str(self.seqRotateToDegsinitialDiff))
         return False
 
     def seqRotateToDegs(self, degs, orientation="closest", maxSpeed=0.7):
@@ -1181,7 +1181,7 @@ while r.update():
     # --This are checks that need to happen on any state--
     
     # Detects if the robot has teleported and changes to the corresponding state
-    if r.diffInPos >= r.tileSize:
+    if r.diffInPos >= r.tileSize * 0.5:
         r.changeState("teleported")
     # Detects if the robot is close to a hole and changes to the corresponding state
     if r.colourTileType == "trap":
@@ -1300,24 +1300,30 @@ while r.update():
 
     # Teleported state
     elif r.isState("teleported"):
-        print("Teleported state")
-        r.doMap = False
+        #print("Teleported state")
         r.startSequence()
+        #r.seqMove(-0.5, -0.5)
+        #r.seqDelaySec(1)
         if r.seqEvent():
+            r.doWallMap = False
             r.rotDetectMethod = "position"
-        r.seqMove(0.8, 0.8)
+            r.globalPitch = 0
+            r.globalRoll = 0
+        r.seqMove(0,0)
+        r.seqDelaySec(0.4)
+        r.seqMove(0.1, 0.1)
         r.seqDelaySec(0.4)
         if r.seqMove(0,0):
             r.rotDetectMethod = "velocity"
         if r.seqMoveDist(-0.8, 2):
-            r.doMap = True
+            r.doWallMap = True
             r.calculatePath()
             r.changeState("main")
 
     #print("diff in pos: " + str(r.diffInPos))
     #print("Global position: " + str(r.globalPos))
-    print("Global rotation: " + str(round(r.globalRot)))
+    #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
-    print("State: " + r.stMg.state)
-    print("-----------------")
+    #print("State: " + r.stMg.state)
+    #print("-----------------")
     
