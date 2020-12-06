@@ -459,7 +459,7 @@ class Camera:
         self.height = self.camera.getHeight()
         self.width = self.camera.getWidth()
         self.tileRanges = tileRanges
-        self.classifyThresh = 50
+        self.classifyThresh = 20
 
     # Gets an image from the raw camera data
     def getImg(self):
@@ -528,16 +528,29 @@ class Camera:
     def classifyVictim(self, img):
         img = cv.resize(img, (100, 100))
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        thresh1 = cv.threshold(gray, 100, 255, cv.THRESH_BINARY_INV)[1]
-        conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        threshVal1 = 25
+        threshVal2 = 100
+        thresh1 = cv.threshold(gray, threshVal1, 255, cv.THRESH_BINARY_INV)[1]
+        thresh2 = cv.threshold(gray, threshVal2, 255, cv.THRESH_BINARY_INV)[1]
+        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        white = 255
         #print(conts)
-        maxCont = []
-        for c in conts:
-            if len(c) > len(maxCont):
-                maxCont = c
-        x, y, w, h = cv.boundingRect(maxCont)
-        letter = thresh1[y:y + h, x:x + w]
+        maxX = 0
+        maxY = 0
+        minX = thresh1.shape[0]
+        minY = thresh1.shape[1]
+        for yIndex, row in enumerate(thresh1):
+            for xIndex, pixel in enumerate(row):
+                if pixel == white:
+                    maxX = max(maxX, xIndex)
+                    maxY = max(maxY, yIndex)
+                    minX = min(minX, xIndex)
+                    minY = min(minY, yIndex)
+
+        letter = thresh2[minY:maxY, minX:maxX]
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
+        #cv.imshow("letra", letter)
+        #cv.imshow("thresh", thresh1)
         #letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
         areaWidth = 20
         areaHeight = 30
@@ -559,7 +572,7 @@ class Camera:
             count = 0
             for row in images[key]:
                 for pixel in row:
-                    if pixel == 255:
+                    if pixel == white:
                         count += 1
             counts[key] = count > self.classifyThresh
         letters = {
@@ -573,6 +586,9 @@ class Camera:
             if counts == letters[letterKey]:
                 finalLetter = letterKey
                 break
+        
+        #print(counts)
+        #print(finalLetter)
         return finalLetter
                 
 # Sends messages
@@ -698,7 +714,7 @@ class AbstractionLayer:
         self.maxVelocity = 6.28
         self.robotDiameter = 0.071 * self.posMultiplier
         self.tileSize = 0.12 * self.posMultiplier
-        self.distSensorLimit = 0.45
+        self.distSensorLimit = 0.35
         self.nodeTypes = {
             "occupied":255,
             "unknown":0,
@@ -1125,7 +1141,7 @@ class AbstractionLayer:
         self.cameras["centre"]["poses"], self.cameras["centre"]["images"] = self.cameras["centre"]["camera"].getVictimImagesAndPositions()
         self.cameras["right"]["poses"], self.cameras["right"]["images"] = self.cameras["right"]["camera"].getVictimImagesAndPositions()
         self.cameras["left"]["poses"], self.cameras["left"]["images"] = self.cameras["left"]["camera"].getVictimImagesAndPositions()
-        #self.showGrid()
+        self.showGrid()
     
     def bottomUpdate(self):
         # Bottom updates
