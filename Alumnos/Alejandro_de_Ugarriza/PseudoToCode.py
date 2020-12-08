@@ -349,7 +349,7 @@ class DistanceSensor:
     def getDistance(self):
         val = self.sensor.getValue()
         if val < self.maxDetect * self.detectionLimit:
-            dist = mapVals(val, 0, self.maxDetect, 0, self.tileSize * 2.45)
+            dist = mapVals(val, 0, self.maxDetect, 0, self.tileSize * 2.63)
             dist += self.robotDiameter / 2
             dist += self.offset
             return dist
@@ -590,7 +590,30 @@ class Camera:
         #print(counts)
         #print(finalLetter)
         return finalLetter
-                
+    
+    def getObstacleImagesAndPositions(self):
+        img = self.getImg()
+        # Hace una copia de la imagen
+        img1 = img.copy()
+        # Filtra la copia para aislar su elemento azul
+        img1[:, :, 2] = np.zeros([img1.shape[0], img1.shape[1]])
+        # Hace una version es escala de grises
+        gray = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
+        # Hace un thershold para hacer la imagen binaria
+        thresh = cv.threshold(gray, 50, 255, cv.THRESH_BINARY)[1]
+        cv.imshow("thresh", thresh)
+        # Encuentra los contornos
+        contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        # saca las medidas y la posicion de los contornos y agrega a la lista de imagenes la parte esa de la imagen original
+        # Tambien anade la posicion de cada recuadro en la imagen original
+        finalPoses = []
+        finalImages = []
+        for c in contours:
+            x, y, w, h = cv.boundingRect(c)
+            finalImages.append(img[y:y + h, x:x + w])
+            finalPoses.append((y, x))
+        return finalPoses, finalImages
+
 # Sends messages
 class Emitter:
     def __init__(self, emmitter, coordsDivisor=0):
@@ -651,8 +674,8 @@ class RobotLayer:
         #Cameras
         self.cameras = {
             "centre":Camera(self.robot.getCamera("camera_centre"), ((50, 105), ), self.timeStep),
-            "right":Camera(self.robot.getCamera("camera_right"), ("undefied", (13, 28)), self.timeStep),
-            "left":Camera(self.robot.getCamera("camera_left"), ("undefied", (13, 28)), self.timeStep)
+            "right":Camera(self.robot.getCamera("camera_right"), ("undefied", (13, 32)), self.timeStep),
+            "left":Camera(self.robot.getCamera("camera_left"), ("undefied", (13, 32)), self.timeStep)
         }
         
         #Colour sensor
@@ -714,7 +737,7 @@ class AbstractionLayer:
         self.maxVelocity = 6.28
         self.robotDiameter = 0.071 * self.posMultiplier
         self.tileSize = 0.12 * self.posMultiplier
-        self.distSensorLimit = 0.35
+        self.distSensorLimit = 0.5
         self.nodeTypes = {
             "occupied":255,
             "unknown":0,
@@ -768,7 +791,10 @@ class AbstractionLayer:
                             "right":{"images":[], "poses":[], "camera":self.robot.cameras["right"]}, 
                             "left":{"images":[], "poses":[], "camera":self.robot.cameras["left"]}}
         self.offsets = [0,0]
-        
+        self.timeWithoutMoving = 0
+        self.stoppedMovingFT = True
+        self.stoppedMovingST = 0
+        self.stoppedMovingSP = [0,0]
 
     def doWallMapping(self):
         mapped = False
@@ -828,21 +854,23 @@ class AbstractionLayer:
             direction = "undefined"
         return direction
     
-    def isInCenter(self, errorMargin):
-        center = [(self.actualTile[0] * self.tileSize) + ((self.tileSize // 2 - self.offsets[0]) % self.tileSize), (self.actualTile[1] * self.tileSize) + ((self.tileSize // 2 - self.offsets[1]) % self.tileSize)]
-        diff = [max(self.globalPos[0], center[0]) - min(self.globalPos[0], center[0]), max(self.globalPos[1], center[1]) - min(self.globalPos[1], center[1])]
+    def isDistanceLessThan(self, pos1, pos2, errorMargin):
+        diff = [max(pos1[0], pos2[0]) - min(pos1[0], pos2[0]), max(pos1[1], pos2[1]) - min(pos1[1], pos2[1])]
         distToCenter = getDistance(diff)
         if errorMargin * -1 < distToCenter < errorMargin:
             return True
         else:
             return False
 
+    def isInCenter(self, errorMargin):
+        center = [(self.actualTile[0] * self.tileSize) + ((self.tileSize // 2 - self.offsets[0]) % self.tileSize), (self.actualTile[1] * self.tileSize) + ((self.tileSize // 2 - self.offsets[1]) % self.tileSize)]
+        return self.isDistanceLessThan(self.globalPos, center, errorMargin)
+
     def showGrid(self):
         cv.imshow("ventana", cv.resize(self.grid.getMap(), (400, 400), interpolation=cv.INTER_AREA))     
     
-    def getPassedWall(self):
-        diff = [(self.actualTileNode[0] - self.prevTileNode[0]) // 2, (self.actualTileNode[1] - self.prevTileNode[1]) // 2]
-
+    def getWallBetween(self, tileNode1, tileNode2):
+        diff = [(tileNode1[0] - tileNode2[0]) // 2, (tileNode1[1] - tileNode2[1]) // 2]
         if diff == [-1,0]:
             orient = "down"
         elif diff == [1,0]:
@@ -853,8 +881,10 @@ class AbstractionLayer:
             orient = "right"
         else:
             orient = "undefined"
-
         return orient
+
+    def getPassedWall(self):
+        return self.getWallBetween(self.actualTileNode, self.prevTileNode)
 
         
 
@@ -865,7 +895,7 @@ class AbstractionLayer:
         self.seqFollowPath(self.calculatedPath)
 
     def calculatePath(self):
-        #print(" CALCULATING ")
+        print(" CALCULATING ")
         start = self.grid.getTileNode(self.globalPos)
         bfsResults = self.grid.bfs(start, ("unknown", "uncollectedVictim"), 10)
         unknownResults = bfsResults[0]
@@ -894,9 +924,10 @@ class AbstractionLayer:
         self.calculatedPath = []
         for node in path:
             self.calculatedPath.append(self.grid.getPosfromTileNode([node[1], node[0]]))
-        self.calculatedPath.pop(0)
+        if len(self.calculatedPath) != 1:
+            self.calculatedPath.pop(0)
         self.followPathIndex = 0
-        #print("Path: " + str(self.calculatedPath))
+        print("Path: " + str(self.calculatedPath))
 
     def seqDo360(self, direction="right", maxSpeed=0.7):
         if self.seqEvent():
@@ -1165,6 +1196,17 @@ class AbstractionLayer:
             else:
                 #print("AVOIDED MAPPING")
                 pass
+        
+        if self.stoppedMovingFT:
+                self.stoppedMovingST = self.actualTime
+                self.stoppedMovingSP = self.globalPos
+                self.stoppedMovingFT = False
+
+        if self.isDistanceLessThan(self.globalPos, self.stoppedMovingSP, 1):
+            self.timeWithoutMoving = self.actualTime - self.stoppedMovingST
+        else:
+            self.timeWithoutMoving = 0
+            self.stoppedMovingFT = True
 
         if self.doTileMap:
             newTiles = self.doTileMapping()
@@ -1178,10 +1220,20 @@ class AbstractionLayer:
                 self.calculatePath()
                 self.doCalculatePath = False
             
-            for pos in self.calculatedPath:
-                if self.grid.getPosition(pos) == "occupied":
-                    self.calculatePath()
-                    break
+            if self.doAfterTimesteps(10):
+                try:
+                    nextPathPos = self.calculatedPath[self.followPathIndex]
+                    wallInBetween = self.getWallBetween(self.actualTileNode, self.grid.getTileNode(nextPathPos))
+                    if wallInBetween != "undefined":
+                        if self.grid.getValue(self.actualTileNode, wallInBetween) == "occupied":
+                            self.calculatePath()
+                except IndexError:
+                    pass
+
+                for pos in self.calculatedPath:
+                    if self.grid.getPosition(pos) == "occupied":
+                        self.calculatePath()
+                        break
 
         cv.waitKey(1)
 
@@ -1194,9 +1246,13 @@ r = AbstractionLayer(timeStep, "start")
 # Updates the global position, rotation, colorSensor position and colors, shows the grid and does mapping
 while r.update():
     # v Program v
-    #print(".")
     # --This are checks that need to happen on any state--
-    
+    for img in r.cameras["left"]["images"]:
+        print("Left cam shape: " + str(img.shape))
+
+    for img in r.cameras["right"]["images"]:
+        print("Right cam shape: " + str(img.shape))
+
     # Detects if the robot has teleported and changes to the corresponding state
     if r.diffInPos >= r.tileSize * 0.5:
         r.changeState("teleported")
@@ -1221,10 +1277,11 @@ while r.update():
         if r.seqEvent():
             r.doWallMap = True
             r.doTileMap = True
-            r.doAutoMapCalculating = True
+            
         r.seqDo360()
         if r.seqEvent():
             r.calculatePath()
+            r.doAutoMapCalculating = True
             r.changeState("main")
         
 
@@ -1232,10 +1289,13 @@ while r.update():
     elif r.isState("main"):
         # This happens in sequence (One order executes after the other)
         r.startSequence()
+        if r.seqEvent():
+            r.stoppedMovingFT = True
         r.seqFollowCalculatedPath()
         r.seqMove(0,0)
         if r.seqEvent():
             r.calculatePath()
+            print(r.calculatedPath)
             r.resetState()
 
         #This happens continously
@@ -1255,6 +1315,9 @@ while r.update():
         # It is in a tile with possible victims in it, changes to the corresponding state
         if r.movedInPath and r.grid.getPosition(r.globalPos) == "uncollectedVictim":
             r.changeState("analize")
+        
+        if r.timeWithoutMoving > 6:
+            r.changeState("stopped moving")
 
     #Trap state. It gets away from the detected trap and maps it on to the grid
     elif r.isState("trap"):
@@ -1297,7 +1360,7 @@ while r.update():
             if letter is not None:
                 r.sendMessage(letter)
             r.grid.setPosition(r.globalPos, "collectedVictim")
-            r.calculatePath()
+            #r.calculatePath()
             r.changeState("main")
         
     # Heated victim state
@@ -1336,6 +1399,16 @@ while r.update():
             r.doWallMap = True
             r.calculatePath()
             r.changeState("main")
+
+    elif r.isState("stopped moving"):
+        r.seqMove(-0.2, -0.2)
+        r.seqDelaySec(1)
+        r.seqMove(0,0)
+        r.seqDo360()
+        if r.seqEvent():
+            r.calculatePath()
+            r.changeState("main")
+        r.startSequence()
 
     #print("diff in pos: " + str(r.diffInPos))
     #print("Global position: " + str(r.globalPos))
