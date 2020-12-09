@@ -349,7 +349,7 @@ class DistanceSensor:
     def getDistance(self):
         val = self.sensor.getValue()
         if val < self.maxDetect * self.detectionLimit:
-            dist = mapVals(val, 0, self.maxDetect, 0, self.tileSize * 2.63)
+            dist = mapVals(val, 0, self.maxDetect, 0, self.tileSize * 2.7)
             dist += self.robotDiameter / 2
             dist += self.offset
             return dist
@@ -673,7 +673,7 @@ class RobotLayer:
         self.rightWheel = Wheel(self.robot.getMotor("right wheel motor"), self.maxVelocity)
         #Cameras
         self.cameras = {
-            "centre":Camera(self.robot.getCamera("camera_centre"), ((50, 105), ), self.timeStep),
+            "centre":Camera(self.robot.getCamera("camera_centre"), ((45, 105), ), self.timeStep),
             "right":Camera(self.robot.getCamera("camera_right"), ("undefied", (13, 32)), self.timeStep),
             "left":Camera(self.robot.getCamera("camera_left"), ("undefied", (13, 32)), self.timeStep)
         }
@@ -1093,6 +1093,7 @@ class AbstractionLayer:
             self.seqMg.resetSequence()
             #self.followPathIndex = 0
             self.do360FirstTime = True
+            self.seqRotateToDegsFirstTime = True
     
     def resetState(self):
         self.stMg.changeState(self.stMg.state)
