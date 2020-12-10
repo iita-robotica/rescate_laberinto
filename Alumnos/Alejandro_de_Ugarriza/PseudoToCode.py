@@ -621,6 +621,7 @@ class Emitter:
         self.divisor = coordsDivisor
     # Sends a message given a position and identifier
     def sendMessage(self,pos, identifier):
+        print("Sent message " + identifier + " with pos " + str(pos))
         message = struct.pack('i i c', int(pos[0] / self.divisor * 100), int(pos[1] / self.divisor * 100), identifier.encode())
         self.emitter.send(message)
 
@@ -673,7 +674,7 @@ class RobotLayer:
         self.rightWheel = Wheel(self.robot.getMotor("right wheel motor"), self.maxVelocity)
         #Cameras
         self.cameras = {
-            "centre":Camera(self.robot.getCamera("camera_centre"), ((45, 105), ), self.timeStep),
+            "centre":Camera(self.robot.getCamera("camera_centre"), ((50, 105), ), self.timeStep),
             "right":Camera(self.robot.getCamera("camera_right"), ("undefied", (13, 32)), self.timeStep),
             "left":Camera(self.robot.getCamera("camera_left"), ("undefied", (13, 32)), self.timeStep)
         }
@@ -1248,11 +1249,6 @@ r = AbstractionLayer(timeStep, "start")
 while r.update():
     # v Program v
     # --This are checks that need to happen on any state--
-    for img in r.cameras["left"]["images"]:
-        print("Left cam shape: " + str(img.shape))
-
-    for img in r.cameras["right"]["images"]:
-        print("Right cam shape: " + str(img.shape))
 
     # Detects if the robot has teleported and changes to the corresponding state
     if r.diffInPos >= r.tileSize * 0.5:
@@ -1272,9 +1268,14 @@ while r.update():
             r.doAutoMapCalculating = False
         if r.seqEvent():
             r.rotDetectMethod = "position"
-        if r.seqMoveDist(0.8, r.tileSize / 2):
+        r.seqMove(1, 1)
+        r.seqDelaySec(0.2)
+        if r.seqMove(0,0):
+            print("Initial Rotation: " + str(r.globalRot))
             r.rotDetectMethod = "velocity"
-        r.seqMoveDist(-0.8, r.tileSize / 2)
+        r.seqMove(-1, -1)
+        r.seqDelaySec(0.2)
+        r.seqMove(0,0)
         if r.seqEvent():
             r.doWallMap = True
             r.doTileMap = True
@@ -1338,6 +1339,7 @@ while r.update():
             r.changeState("main")
         
     elif r.isState("analize"):
+         # This happens in sequence (One order executes after the other)
         r.startSequence()
         r.seqMove(0,0)
         r.seqDo360(maxSpeed=0.5)
@@ -1352,21 +1354,32 @@ while r.update():
 
     # Visual victim state
     elif r.isState("visualVictim"):
-        #print("visualVictim state")
+         # This happens in sequence (One order executes after the other)
         r.startSequence()
         r.seqMove(0,0)
-        if r.seqDelaySec(3):
+        if r.seqEvent():
             letter = r.getVictimLetter("centre")
-            #print("Detected letter: " + str(letter))
+        """
+        r.seqMove(0.5, 0.5)
+        r.seqDelaySec(0.4)
+        r.seqMove(0,0)
+        """
+        if r.seqDelaySec(4):
             if letter is not None:
                 r.sendMessage(letter)
+                print("Detected letter: " + str(letter))
+        """
+        r.seqMove(-0.5, -0.5)
+        r.seqDelaySec(0.4)
+        r.seqMove(0,0)
+        """
+        if r.seqEvent():
             r.grid.setPosition(r.globalPos, "collectedVictim")
-            #r.calculatePath()
             r.changeState("main")
         
     # Heated victim state
     elif r.isState("heatVictim"):
-        #print("heatVictim state")
+         # This happens in sequence (One order executes after the other)
         r.startSequence()
         r.seqMove(0,0)
         if r.seqDelaySec(3):
@@ -1381,27 +1394,30 @@ while r.update():
 
     # Teleported state
     elif r.isState("teleported"):
-        #print("Teleported state")
+         # This happens in sequence (One order executes after the other)
         r.startSequence()
-        #r.seqMove(-0.5, -0.5)
-        #r.seqDelaySec(1)
         if r.seqEvent():
             r.doWallMap = False
             r.rotDetectMethod = "position"
             r.globalPitch = 0
             r.globalRoll = 0
-        r.seqMove(0,0)
+        r.seqMove(0, 0)
         r.seqDelaySec(0.4)
-        r.seqMove(0.1, 0.1)
-        r.seqDelaySec(0.4)
+        r.seqMove(1, 1)
+        r.seqDelaySec(0.2)
+        if r.seqMove(0,0):
+            print("Initial Rotation: " + str(r.globalRot))
+            r.rotDetectMethod = "velocity"
+        r.seqMove(-1, -1)
+        r.seqDelaySec(0.2)
         if r.seqMove(0,0):
             r.rotDetectMethod = "velocity"
-        if r.seqMoveDist(-0.8, 2):
             r.doWallMap = True
             r.calculatePath()
             r.changeState("main")
 
     elif r.isState("stopped moving"):
+         # This happens in sequence (One order executes after the other)
         r.seqMove(-0.2, -0.2)
         r.seqDelaySec(1)
         r.seqMove(0,0)
