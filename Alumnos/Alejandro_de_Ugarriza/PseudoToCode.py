@@ -621,7 +621,7 @@ class Emitter:
         self.divisor = coordsDivisor
     # Sends a message given a position and identifier
     def sendMessage(self,pos, identifier):
-        print("Sent message " + identifier + " with pos " + str(pos))
+        print("Sent message " + identifier + " with pos " + str((int(pos[0] / self.divisor * 100), int(pos[1] / self.divisor * 100))))
         message = struct.pack('i i c', int(pos[0] / self.divisor * 100), int(pos[1] / self.divisor * 100), identifier.encode())
         self.emitter.send(message)
 
@@ -1095,6 +1095,7 @@ class AbstractionLayer:
             #self.followPathIndex = 0
             self.do360FirstTime = True
             self.seqRotateToDegsFirstTime = True
+            self.delayFirstTime = True
     
     def resetState(self):
         self.stMg.changeState(self.stMg.state)
@@ -1352,27 +1353,16 @@ while r.update():
             
         #print("ANALIZING")
 
-    # Visual victim state
+    
     elif r.isState("visualVictim"):
          # This happens in sequence (One order executes after the other)
         r.startSequence()
         r.seqMove(0,0)
-        if r.seqEvent():
+        if r.seqDelaySec(3):
             letter = r.getVictimLetter("centre")
-        """
-        r.seqMove(0.5, 0.5)
-        r.seqDelaySec(0.4)
-        r.seqMove(0,0)
-        """
-        if r.seqDelaySec(4):
             if letter is not None:
                 r.sendMessage(letter)
-                print("Detected letter: " + str(letter))
-        """
-        r.seqMove(-0.5, -0.5)
-        r.seqDelaySec(0.4)
-        r.seqMove(0,0)
-        """
+        r.seqDelaySec(0.2)
         if r.seqEvent():
             r.grid.setPosition(r.globalPos, "collectedVictim")
             r.changeState("main")
