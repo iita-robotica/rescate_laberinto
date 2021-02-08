@@ -1,75 +1,42 @@
 
-# Flags
 
-mapear = True
 
 loop:
-    Obtiene los valores del gps, del gyro
-    Obtengo tiempo
-	tipo de casilla = Obtengo el tipo de casilla (undefined, normal, trap, swamp or checkpoint)
-	Actualizando los valores de distancia
-	cámaraVíctimaDetectada = detectCameraVictim (Las tres cámaras)
-	victimaDeCalor = DetectHeatVictim
+    si se movio mas de media baldosa en 1 timestep:
+		cambiar estado a "teleported"
+	
+	si el color de la baldosa es trampa:
+		cambiar estado a "trap"
+	
 
-    estado onStart:
-		mapear = False
-        Calibra la rotación y offsets para la grilla
-		mapear = True
-        estado = mainLoop
+	estado "start":
+		sequencia:
+			* desactivar Mapeo
+			* calibrar rotacion
+			* calibrar offsets de la grilla con respecto al mapa
+			* activar Mapeo
+			* girar 360 grados
+			* calcular camino
+			* cambiar estado a "main"
 
-    estado mainLoop:
-		si hay trampa:
-			estado = seguir navegación
-			continue
+	estado "main":
+		sequencia:
+			* sigo camino calculado
+			* calculo camino
+			* vuelvo al principio
+		
+		si estoy en la casilla de inicio y la flag r.ending es True:
+			cambiar estado a "exit"
+		
+		si hay victimas visuales en rango para registrar y no estoy en una casilla de victima ya documentada:
+			cambiar estado a "visualVictim"
+		
+		si detecta calor cerca:
+			cambiar estado a "heatVictim"
+		
+		si no se esta moviendo de una casilla a otra y esta en una casilla de victima no recolectada:
+			cambiar estado a "analyze"
 
-		si se teltrasportó:
-			estado = teletransportación
-			continue
-
-		si estoy en casilla de posible vícitima visual:
-			estado = 360
-			continue
-		si hay víctima de calor:
-			estado = detectando víctima de calor
-			continue	
-		si hay algo nuevo en grilla o llegué a destino previo:
-			estado = seguir navegación
-			continue
-		si no:
-			sigo nuevo camino
-
-	estado 360:
-		doy 360
-		si veo víctima cerca:
-			estado = detectando víctima visual
-			continue
-		si no:
-			marco casilla como víctima documentada
-			modo = mainLoop
-
-	estado detectando víctima visual:
-		paro 3 segundos
-		aviso al controlador
-		marco casilla como víctima documentada
-		estado = mainLoop
-
-	estado detectando víctima de calor:
-		paro 3 segundos
-		aviso al controlador
-		estado = mainLoop
-
-	estado seguir navegación:
-        veo bfs
-        comparo tiempo
-        Decido si uso casilla de bfs o la de inicio
-        Saco camino de Astar
-		estado = mainLoop
-
-	estado teletransportación:
-		mapear = False
-		Calibra la rotación
-		mapear = True
-		estado = mainLoop
-
-	si mapear:
-		Mapeo de paredes, obstáculos y casilla
+		si pasa mas de 6 segundos sin moverse:
+			cambiar estado a "stopped moving"
+	
