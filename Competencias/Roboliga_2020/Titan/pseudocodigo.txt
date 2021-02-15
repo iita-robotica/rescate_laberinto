@@ -35,8 +35,64 @@ loop:
 			cambiar estado a "heatVictim"
 		
 		si no se esta moviendo de una casilla a otra y esta en una casilla de victima no recolectada:
-			cambiar estado a "analyze"
+			cambiar estado a "analize"
 
 		si pasa mas de 6 segundos sin moverse:
 			cambiar estado a "stopped moving"
+
+	estado "trap":
+		sequencia:
+			* Parar
+			* Dejar de mapear paredes
+			* Registrar trampa en grilla
+			* Moverse para atrás
+			* Calcular camino
+			* Volver a mapear paredes
+			* Cambiar estado a "main"
+
+	estado "analize":
+		sequencia:
+			* parar
+			* Girar 360 grados lentamente
+			* Registrar casilla como victima recolectada
+			* calcular camino
+			* cambiar estado a "main"
+		
+		si hay victimas en rango de documetacion y no estoy en casilla de victima ya documentada:
+			cambiar estado a "visualVictim"
+
+	estado "visualVictim":
+		sequencia:
+			* Parar 3 segundos
+			* Clasificar victima en camara
+			* Si hay victima en camara enviar mensaje con letra de victima
+			* Parar por 0.2 segundos para asegurarse que fue registrada
+			* Registrar baldosa actual como victima recolectada
+			* Cambiar estado a "main"
+	
+	estado "heatVictim":
+		sequencia:
+			* Parar 3 segundos
+			* enviar mensaje con letra "T"
+			* Parar por 0.2 segundos para asegurarse que la victima desaparecio y no la cuente dos veces
+			* Cambiar estado a "main"
+	
+	estado "exit":
+		mandar mensaje "E" para terminar la ronda
+	
+	estado "telported":
+		sequencia:
+			* desactivar mapeo de paredes
+			* resetear pitch y roll
+			* calibrar rotacion
+			* activar mapeo de paredes
+			* calcular camino
+			* cambiar estado a "main"
+	
+	estado "stopped moving":
+		sequencia:
+			* Moverse hacia atras por 1 segundos
+			* girar 360 grados
+			* Calcular camino
+			* cambiar estado a "main"
 	
