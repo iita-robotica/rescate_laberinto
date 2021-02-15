@@ -1,4 +1,336 @@
 
+from controller import Robot
+import cv2 as cv
+import numpy as np
+import struct
+import math
+
+# Version de python 3.7.7 64-bit
+# Librerias necesarias:
+# Externas:
+# numpy
+# opencv
+# De Python:
+# struct
+# math
+# SIN API de deteccion  (NO DETECTION API)
+
+
+# Global time step
+timeStep = 16 * 1
+
+# Corrects the given angle to be in a range from 0 to 360
+función normalizeAngle (ang):
+
+
+# Converts a number from a range of value to another
+función mapVals (val, in_min, in_max, out_min, out_max):
+    
+
+# Gets x, y coordinates from a given angle and distance
+función getCoords (angle, distance):
+
+
+# Gets the distance to given coordinates
+función getDistance (position):
+    
+
+función isInRange (val, minVal, maxVal):
+    
+
+# aStarNode clase for A* pathfinding  (Not to be confused with the node grid)
+clase aStarNode ():
+
+    función __init__ ( parent=None, position=None):
+        
+
+    función __eq__ ( other):
+        
+
+# aStarNode grid clase for mapping
+clase NodeGrid:
+    # Creates grid and prepares it
+    función __init__ ( x, y, tileSize, nodeTypeDict, offsets=[0,0]):
+
+
+    # A Star algorithm
+    # Returns a list of tuples as a path from the given start to the given end in the given maze
+    función astar ( start, end):
+        
+    # Breath First Search algorithm
+    # Returns the tiles with the color given in objectives in order and with the distance of each one
+    función bfs ( start, objectives, limit="undefined"):
+        
+    # Prints the grid in the console
+    función printMap ():
+        
+
+    # Returns the grid
+    función getMap ():
+        
+
+    función setPosition ( position, val, orientation="centre"):
+        
+    
+    función getPosition ( position, orientation="centre"):
+        
+
+
+    función getTileNode ( pos):
+       
+    
+    función getPosfromTileNode ( tileNode):
+        
+
+    # Changes the value of a given node in the grid
+    función changeValue ( pos, val, orientation="centre"):
+        
+
+    # Gets the value of a given node of the grid
+    función getValue ( pos, orientation="centre"):
+    
+    # Gets the tile of the position in the actual maze
+    función getTile ( position):
+
+    # Gets the walls and obstacles given the global positions
+    función getOrientationInTile ( inputPos):
+
+
+clase Wheel:
+    función __init__ ( wheel, maxVelocity):
+       
+    # Moves the wheel at a ratio of the maximum speed
+    función move ( ratio):
+        
+
+# Manages a distance sensor
+clase DistanceSensor:
+    función __init__ ( sensor, sensorAngle, robotDiameter, tileSize, timeStep, detectionLimit=1):
+        
+    # Gets the distance from the sensor value
+    función getDistance ():
+        
+    # Gets the current rotation of the sensor
+    función __getAngle ( globalRotation):
+        
+    # Gets the global coordinates of the detection given the robot global rotation and position
+    función getGlobalDetection ( globalRotation, robotPos):
+        
+
+# Tracks global rotation
+clase Gyroscope:
+    función __init__ ( gyro, index, timeStep):
+        
+    # Do on every timestep
+    función update ( time, currentRotation):
+        
+     
+
+# Reads the heat sensor
+clase HeatSensor:
+    función __init__ ( sensor, thershold, timeStep):
+        
+    # Retuns True if it detects victim close
+    función isClose ():
+        
+
+# Reads the colour sensor
+clase ColourSensor:
+    función __init__ ( sensor, distancefromCenter, timeStep):
+        
+    
+    función getPosition ( robotGlobalPosition, robotGlobalRotation):
+        
+    función __update ():
+    
+    función __isTrap ():
+        
+    función __isSwamp ():
+        
+    función __isCheckpoint ():
+        
+    función __isNormal ():
+        
+    # Returns the type of tyle detected from the colour data
+    función getTileType ():
+       
+
+
+# Tracks global position
+clase Gps:
+    función __init__ ( gps,timeStep, coordsMultiplier=0):
+        
+    # Returns the global position
+    función getPosition ():
+        
+
+# Captures images and processes them
+clase Camera:
+    función __init__ ( camera, tileRanges, timeStep):
+
+    # Gets an image from the raw camera data
+    función getImg ():
+        
+
+    función getVictimImagesAndPositions ():
+        
+
+    # Requiere de argumentos provenientes del metodo getImagesAndPositions
+    función getVictimRange ( pos, img):
+        
+
+    función claseifyVictim ( img):
+        
+    
+    función getObstacleImagesAndPositions ():
+        
+
+# Sends messages
+clase Emitter:
+    función __init__ ( emmitter, coordsDivisor=0):
+        
+    # Sends a message given a position and identifier
+    función sendMessage (pos, identifier):
+
+
+clase StateManager:
+    función __init__ ( initialState):
+        
+    función changeState ( newState):
+        
+    función checkState ( state):
+        
+
+
+clase SequenceManager:
+    función __init__ ():
+
+    función resetSequence ():
+        
+    función startSequence ():
+        
+    función check ():
+        
+    función nextSeq ():
+        
+    función seqDone ():
+        
+    
+
+clase RobotLayer:
+    función __init__ ( timeStep, posMultiplier, maxVelocity, robotDiameter, tileSize, distSensorLimit=1):
+        
+    función step ():
+        
+
+    función getTime ():
+        
+    
+    función getRotationByPos ( prevGlobalPos, globalPos):
+     
+    
+    función move ( ratio1, ratio2):
+        
+    
+
+# Clase de capa de obstarccion
+# Abstraction layer clase
+clase AbstractionLayer:
+    función __init__ (timeStep, initialState):
+  
+
+    función doWallMapping ():
+    
+
+    función doTileMapping ():
+
+    función doAfterTimesteps ( nOfSteps):
+
+    función getAligment ( errorMargin):
+    
+    función isDistanceLessThan ( pos1, pos2, errorMargin):
+  
+
+    función isInCenter ( errorMargin):
+
+    función showGrid ():
+
+    
+    función getWallBetween ( tileNode1, tileNode2):
+
+    función getPassedWall ():
+
+        
+
+    función sendMessage ( indentifier):
+    
+    función seqFollowCalculatedPath ():
+
+    función calculatePath ():
+
+    función seqDo360 ( direction="right", maxSpeed=0.7):
+ 
+
+    función seqFollowPath ( path):
+
+    función areVictimsAtRange ( camera, inputRange):
+
+    
+    función getVictimLetter ( camera):
+
+
+        
+    función seqMove (ratio1, ratio2):
+    
+    # This function doesnt stop if the robot is blocked by an obstacle
+    función seqMoveDist ( ratio, dist):
+
+    función rotateToDegs ( degs, orientation="closest", maxSpeed=0.7):
+        
+
+    función seqRotateToDegs ( degs, orientation="closest", maxSpeed=0.7):
+        
+
+    función moveToCoords ( targetPos):
+
+    función seqMoveToCoords ( targetPos):
+        
+
+    # Poner antes de empezar una sequencia o de usar una funcion sequencial
+    # Put before starting a sequence or using a sequencial function
+    función startSequence ():
+        
+    
+    función changeState ( newState):
+        
+    
+    función resetState ():
+        
+    
+    función isState (state):
+        
+
+    función seqEvent ():
+        
+    
+    # Para la sequencia por la cantidad de segundos que uno le ponga
+    # Stops a sequence for the given amount of seconds 
+    función seqDelaySec ( delay):
+        
+        
+    # Hace un print en sequencia
+    # Prints something in sequence
+    función seqPrint ( text):
+        
+    
+    # returns True if simulation is running
+    función update ():
+        
+    
+    función topUpdate ():
+        
+    
+    función bottomUpdate ():
 
 
 loop:
