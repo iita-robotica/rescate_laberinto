@@ -1057,15 +1057,15 @@ class AbstractionLayer:
         return self.seqMg.seqDone()
 
     def moveToCoords(self, targetPos):
-        errorMargin = 0.1
-        descelerationStart = 0.8 * self.tileSize
+        errorMargin = 0.2
+        descelerationStart = 0.5 * self.tileSize
         diffX = targetPos[0] - self.globalPos[0]
         diffY = targetPos[1] - self.globalPos[1]
         #print("diff in pos: " + str(diffX) + " , " + str(diffY))
         dist = math.sqrt(diffX ** 2 + diffY ** 2)
         #print("Dist: "+ str(dist))
         if errorMargin * -1 < dist < errorMargin:
-            self.robot.move(0,0)
+            #self.robot.move(0,0)
             #print("FinisehedMove")
             return True
         else:
@@ -1075,7 +1075,7 @@ class AbstractionLayer:
             ang = normalizeAngle(ang)
             #print("traget ang: " + str(ang))
             ratio = min(mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
-            ratio = max(ratio, 0.3)
+            ratio = max(ratio, 0.8)
             if self.rotateToDegs(ang):
                 self.robot.move(ratio, ratio)
         return False
@@ -1195,10 +1195,9 @@ class AbstractionLayer:
 
         newWalls = False
         newTiles = False
-        if self.doAfterTimesteps(2):
+        if self.doAfterTimesteps(4):
             if self.doWallMap:
                 newWalls = self.doWallMapping()
-            
         
         if self.stoppedMovingFT:
                 self.stoppedMovingST = self.actualTime
@@ -1223,7 +1222,7 @@ class AbstractionLayer:
                 self.calculatePath()
                 self.doCalculatePath = False
             
-            if self.doAfterTimesteps(5):
+            if self.doAfterTimesteps(10):
                 try:
                     nextPathPos = self.calculatedPath[self.followPathIndex]
                     wallInBetween = self.getWallBetween(self.actualTileNode, self.grid.getTileNode(nextPathPos))
@@ -1419,7 +1418,7 @@ while r.update():
 
     #print("diff in pos: " + str(r.diffInPos))
     #print("Global position: " + str(r.globalPos))
-    #print("Global rotation: " + str(round(r.globalRot)))
+    print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
     #print("State: " + r.stMg.state)
     #print("-----------------")
