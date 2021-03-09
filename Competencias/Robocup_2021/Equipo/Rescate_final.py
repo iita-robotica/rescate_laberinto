@@ -16,7 +16,7 @@ import math
 
 
 # Global time step
-timeStep = 16 * 1
+timeStep = 16 * 2
 
 # Corrects the given angle to be in a range from 0 to 360
 def normalizeAngle(ang):
@@ -1195,13 +1195,10 @@ class AbstractionLayer:
 
         newWalls = False
         newTiles = False
-        if self.doAfterTimesteps(4):
-            if varInRoll < 3 and varInPitch < 3:
-                if self.doWallMap:
-                    newWalls = self.doWallMapping()
-            else:
-                #print("AVOIDED MAPPING")
-                pass
+        if self.doAfterTimesteps(2):
+            if self.doWallMap:
+                newWalls = self.doWallMapping()
+            
         
         if self.stoppedMovingFT:
                 self.stoppedMovingST = self.actualTime
@@ -1226,7 +1223,7 @@ class AbstractionLayer:
                 self.calculatePath()
                 self.doCalculatePath = False
             
-            if self.doAfterTimesteps(10):
+            if self.doAfterTimesteps(5):
                 try:
                     nextPathPos = self.calculatedPath[self.followPathIndex]
                     wallInBetween = self.getWallBetween(self.actualTileNode, self.grid.getTileNode(nextPathPos))
