@@ -438,8 +438,8 @@ class ColourSensor:
         elif self.__isCheckpoint():
             tileType = "checkpoint"
 
-        print("Color: " + tileType)
-        print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
+        #print("Color: " + tileType)
+        #print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
         return tileType
 
 
@@ -1406,7 +1406,8 @@ while r.update():
             r.changeState("main")
 
     elif r.isState("stopped moving"):
-         # This happens in sequence (One order executes after the other)
+        # This happens in sequence (One order executes after the other)
+        r.startSequence()
         r.seqMove(-0.2, -0.2)
         r.seqDelaySec(1)
         r.seqMove(0,0)
@@ -1414,11 +1415,11 @@ while r.update():
         if r.seqEvent():
             r.calculatePath()
             r.changeState("main")
-        r.startSequence()
+        
 
     #print("diff in pos: " + str(r.diffInPos))
     #print("Global position: " + str(r.globalPos))
-    print("Global rotation: " + str(round(r.globalRot)))
+    #print("Global rotation: " + str(round(r.globalRot)))
     #print("Tile type: " + str(r.colourSensor.getTileType()))
     #print("State: " + r.stMg.state)
     #print("-----------------")
