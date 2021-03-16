@@ -719,8 +719,14 @@ class RobotLayer:
         if prevGlobalPos == globalPos:
             return -1
         else:
-            posDiff = [globalPos[0] - prevGlobalPos[0], globalPos[1] - prevGlobalPos[1]]
+            posDiff = [(globalPos[0] - prevGlobalPos[0]), (globalPos[1] - prevGlobalPos[1])]
+
+            
             rads = math.atan2(posDiff[0], posDiff[1])
+            accuracy = math.sqrt(posDiff[0] ** 2 + posDiff[1] ** 2)
+            #print("accuracy: " + str(accuracy))
+            if accuracy < 0.1:
+                return -1
             degs = rads * 180 / math.pi
             degs = normalizeAngle(degs)
             return degs
@@ -1168,6 +1174,7 @@ class AbstractionLayer:
         elif self.rotDetectMethod == "position":
             rot = self.robot.getRotationByPos(self.prevGlobalPos, self.globalPos)
             if rot != -1:
+                #print("ROT: " + str(rot))
                 self.globalRot = rot
         self.isHot = self.robot.heatLeft.isClose() or self.robot.heatRight.isClose()
         self.colourTileType = self.robot.colourSensor.getTileType()
@@ -1387,20 +1394,24 @@ while r.update():
         r.startSequence()
         if r.seqEvent():
             r.doWallMap = False
-            r.rotDetectMethod = "position"
+            #r.rotDetectMethod = "position"
             r.globalPitch = 0
             r.globalRoll = 0
         r.seqMove(0, 0)
         r.seqDelaySec(0.4)
         r.seqMove(1, 1)
-        r.seqDelaySec(0.2)
+        if r.seqEvent():
+            r.rotDetectMethod = "position"
+        if r.seqDelaySec(0.19):
+            r.rotDetectMethod = "velocity"
+        r.seqDelaySec(0.01)
         if r.seqMove(0,0):
             print("Initial Rotation: " + str(r.globalRot))
-            r.rotDetectMethod = "velocity"
+            
         r.seqMove(-1, -1)
         r.seqDelaySec(0.2)
         if r.seqMove(0,0):
-            r.rotDetectMethod = "velocity"
+            #r.rotDetectMethod = "velocity"
             r.doWallMap = True
             r.calculatePath()
             r.changeState("main")
