@@ -57,16 +57,16 @@ class Obstacle:
         return self.__radious
 
 # Class that defines a tile node in the grid
-class Tile:
+class TileNode:
     
     # Tuple with all allowed tile types
     __allowedTypes = ("undefined", "normal", "hole", "swamp", "checkpoint", "start", "connection1-2", "connection2-3")
     
     def __init__(self):
-        self.__dimensions = [30, 30] # Dimensions of the tile
-        self.__type = "undefined" # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
-        self.__fixtures = [] # List of all fixtures in walls adjacent to tile
-        self.__obstacles = [] # List of obstacles in tile
+        self.dimensions = [30, 30] # Dimensions of the tile
+        self.type = "undefined" # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
+        self.fixtures = [] # List of all fixtures in walls adjacent to tile
+        self.obstacles = [] # List of obstacles in tile
 
     # returns the score of the tile, wich is defined as how convenient is the tile to traverse  between 0 and 1
     def getScore(self):
@@ -107,13 +107,14 @@ class Tile:
         return self.__dimensions[0]
 
 # Class that defines a wall node in the grid
-class Wall:
+class WallNode:
     def __init__(self):
-        self.__dimensions = [30, 1, 10] # Dimensions of the wall
-        self.__occupied = False # If there is a wall. Can be True or false.
-        self.__floating = False # If it is a floating wall
-        self.__curved = False # If it is a curved wall
-        self.__fixtures = [] # List of all fixtures in wall
+        self.dimensions = [30, 1, 10] # Dimensions of the wall
+        self.occupied = False # If there is a wall. Can be True or false.
+        self.isFloating = False # If it is a floating wall
+        self.isCurved = False # If it is a curved wall
+        self.fixtures = [] # List of all fixtures in wall
+
 
     def isOccupied(self):
         pass
@@ -229,7 +230,7 @@ class Analyzer:
     def setSensorDetections(self, detections):
         pass
 
-    def setTile(self, positions, type):
+    def setTile(self, position, type):
         pass
 
     def __isCurved(self):
