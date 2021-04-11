@@ -21,24 +21,26 @@ class WallNode:
         self.isCurved = False # If it is a curved wall
         self.fixtures = [] # List of all fixtures in wall
 
-class VertexNode:
+#Class that defines a vortex node in the grid
+class VortexNode:
     def __init__(self):
         self.dimensions = [1, 10, 1] # Dimensions of the vertex
         self.occupied = False # If there is a vertex. Can be True or false.
-        
+
+# Demo array
 array = np.array([
-                [WallNode(), VertexNode(), WallNode(), VertexNode(), WallNode(), VertexNode()],
+                [WallNode(), VortexNode(), WallNode(), VortexNode(), WallNode(), VortexNode()],
 
                 [TileNode(), WallNode()  , TileNode(), WallNode()  , TileNode(), WallNode()  ],
 
-                [WallNode(), VertexNode(), WallNode(), VertexNode(), WallNode(), VertexNode()],
+                [WallNode(), VortexNode(), WallNode(), VortexNode(), WallNode(), VortexNode()],
 
                 [TileNode(), WallNode()  , TileNode(), WallNode()  , TileNode(), WallNode()  ],
 
-                [WallNode(), VertexNode(), WallNode(), VertexNode(), WallNode(), VertexNode()],
+                [WallNode(), VortexNode(), WallNode(), VortexNode(), WallNode(), VortexNode()],
 
                 [TileNode(), WallNode()  , TileNode(), WallNode()  , TileNode(), WallNode()  ],
 
-                [WallNode(), VertexNode(), WallNode(), VertexNode(), WallNode(), VertexNode()]
+                [WallNode(), VortexNode(), WallNode(), VortexNode(), WallNode(), VortexNode()]
                   ])
 
