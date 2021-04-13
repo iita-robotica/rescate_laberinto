@@ -34,7 +34,9 @@ gps.enable(timeStep)
 
 start = robot.getTime()
 times = 0
+array = np.zeros((400, 400), dtype=np.uint8)
 
+scale = 150
 while robot.step(timeStep) != -1:
     
     # pre-set each wheel velocity
@@ -44,15 +46,17 @@ while robot.step(timeStep) != -1:
     gpsVals = gps.getValues()
     #print(gpsVals)
 
-    pos = [int(gpsVals[0] * 100), int(gpsVals[2] * 100)]
-    array = np.zeros((400, 400), dtype=np.uint8)
+    pos = [int(gpsVals[0] * scale * -1), int(gpsVals[2] * scale)]
+    
     if times < 100:
         pointCloud = lidar.getPointCloud()
         detections = []
+        #array[200 + pos[0]][200 + pos[1]] = 255
         for point in pointCloud:
-            if point.x != float("inf") and point.x != float("-inf"):
-                procesedPoint = [int(point.x * 100), int(point.y * 100), int(point.z * 100)]
-                array[procesedPoint[0] + 200 + pos[0], procesedPoint[2] + 200 + pos[1]] = 255
+            if point.x != float("inf") and point.x != float("-inf") and 0 < point.layer_id < 3:
+                procesedPoint = [int(point.x * scale), int(point.y * scale), int(point.z * scale)]
+                if array[procesedPoint[0] + 200 + pos[1], (procesedPoint[2] + 200 + pos[0]) * -1] != 255:
+                    array[procesedPoint[0] + 200 + pos[1], (procesedPoint[2] + 200 + pos[0]) * -1] += 1
                 if procesedPoint not in detections:
                     detections.append(procesedPoint)
                     
@@ -60,7 +64,7 @@ while robot.step(timeStep) != -1:
         print(detections)
         #times = times + 1
 
-    cv.imshow("grid", array)
+    cv.imshow("grid", cv.resize(array, (800, 800), interpolation=cv.INTER_AREA))
     cv.waitKey(1)
     
 

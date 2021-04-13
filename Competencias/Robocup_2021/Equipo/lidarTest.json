@@ -1,1 +1,67 @@
-{"Wheel 1":{"dictName":"Wheel 1","name":"Wheel","customName":"wheel1","type":"","x":260,"y":0,"z":0,"rx":0,"ry":0,"rz":-1,"a":1.57},"Wheel 2":{"dictName":"Wheel 2","name":"Wheel","customName":"wheel2","type":"","x":-260,"y":0,"z":0,"rx":0,"ry":0,"rz":1,"a":1.57},"lidar":{"dictName":"lidar","name":"Lidar","customName":"lidar","type":"add","x":0,"y":370,"z":0,"rx":0,"ry":0,"rz":0,"a":0},"gps":{"dictName":"gps","name":"GPS","customName":"gps","type":"add","x":0,"y":0,"z":0,"rx":0,"ry":0,"rz":0,"a":0}}
+{
+	"Wheel 1": {
+		"dictName": "Wheel 1",
+		"name": "Wheel",
+		"customName": "wheel1",
+		"type": "",
+		"x": 260,
+		"y": 15,
+		"z": 0,
+		"rx": 0,
+		"ry": 0,
+		"rz": -1,
+		"a": 1.57
+	},
+	"Wheel 2": {
+		"dictName": "Wheel 2",
+		"name": "Wheel",
+		"customName": "wheel2",
+		"type": "",
+		"x": -260,
+		"y": 15,
+		"z": 0,
+		"rx": 0,
+		"ry": 0,
+		"rz": -1,
+		"a": 1.57
+	},
+	"gyro": {
+		"dictName": "gyro",
+		"name": "Gyro",
+		"customName": "gyro",
+		"type": "add",
+		"x": 0,
+		"y": 0,
+		"z": 0,
+		"rx": 0,
+		"ry": 0,
+		"rz": 0,
+		"a": 0
+	},
+	"gps": {
+		"dictName": "gps",
+		"name": "GPS",
+		"customName": "gps",
+		"type": "add",
+		"x": 0,
+		"y": 0,
+		"z": 0,
+		"rx": 0,
+		"ry": 0,
+		"rz": 0,
+		"a": 0
+	},
+	"lidar": {
+		"dictName": "lidar",
+		"name": "Lidar",
+		"customName": "lidar",
+		"type": "add",
+		"x": 0,
+		"y": 370,
+		"z": 0,
+		"rx": 0,
+		"ry": 1,
+		"rz": 0,
+		"a": 1.5708
+	}
+}
