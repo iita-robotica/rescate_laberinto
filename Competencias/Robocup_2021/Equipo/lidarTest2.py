@@ -40,7 +40,7 @@ class Gyroscope:
         self.index = index
     # Do on every timestep
     def update(self, time, currentRotation):
-        #print("Gyro Vals: " + str(self.sensor.getValues()))
+        print("Gyro Vals: " + str(self.sensor.getValues()))
         timeElapsed = time - self.oldTime  # Time passed in time step
         radsInTimestep = (self.sensor.getValues())[self.index] * timeElapsed
         degsInTimestep = radsInTimestep * 180 / math.pi
@@ -70,12 +70,13 @@ lidar.enable(timeStep)
 gps = robot.getDevice("gps")
 gps.enable(timeStep)
 
-gyro = Gyroscope(robot.getDevice("gyro"), 0, timeStep)
+gyro = Gyroscope(robot.getDevice("gyro"), 1, timeStep)
 
 
 start = robot.getTime()
 array = np.zeros((400, 400), dtype=np.uint8)
-speed1 = speed2 = 0
+speed1 = -3
+speed2 = 3
 rot = 0
 times = 0
 fov = lidar.getFov()
@@ -89,23 +90,23 @@ while robot.step(timeStep) != -1:
     pos = [int(gpsVals[2] * scale * -1), int(gpsVals[0] * scale * -1)]
 
     rot = gyro.update(robot.getTime(), rot)
+    print(rot)
     
-    
-    actualDetectionRot = 1.5708 * 1.5
+    actualDetectionRot = (1.5708 * 1.5) + ((360 - rot) * math.pi / 180)
     rangeImage = lidar.getRangeImageArray()
 
     pointCloud = []
 
     for depthArray in rangeImage:
         
-        for item in depthArray:
-            if item != float("inf"):
+        for index, item in enumerate(depthArray):
+            if item != float("inf") and item != float("inf") * -1 and 0 < index < 3:
                 coords = getCoords(actualDetectionRot, item)
                 procesedPoint = [int(coords[0] * scale), int(coords[1] * scale)]
                 pointCloud.append(coords)
                 x = (procesedPoint[0] + 200 + pos[0]) * 1
                 y = (procesedPoint[1] + 200 + pos[1]) * 1
-                if array[x, y] != 100:
+                if array[x, y] != 200:
                     array[x, y] += 1
                 
         actualDetectionRot += radPerDetection
