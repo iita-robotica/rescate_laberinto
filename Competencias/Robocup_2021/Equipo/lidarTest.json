@@ -25,18 +25,18 @@
 		"rz": -1,
 		"a": 1.57
 	},
-	"gyro": {
-		"dictName": "gyro",
-		"name": "Gyro",
-		"customName": "gyro",
+	"lidar": {
+		"dictName": "lidar",
+		"name": "Lidar",
+		"customName": "lidar",
 		"type": "add",
 		"x": 0,
-		"y": 0,
+		"y": 370,
 		"z": 0,
 		"rx": 0,
-		"ry": 0,
+		"ry": 1,
 		"rz": 0,
-		"a": 0
+		"a": 1.5708
 	},
 	"gps": {
 		"dictName": "gps",
@@ -47,17 +47,17 @@
 		"y": 0,
 		"z": 0,
 		"rx": 0,
-		"ry": 0,
+		"ry": 1,
 		"rz": 0,
-		"a": 0
+		"a": 1.5708
 	},
-	"lidar": {
-		"dictName": "lidar",
-		"name": "Lidar",
-		"customName": "lidar",
+	"gyro": {
+		"dictName": "gyro",
+		"name": "Gyro",
+		"customName": "gyro",
 		"type": "add",
 		"x": 0,
-		"y": 370,
+		"y": 0,
 		"z": 0,
 		"rx": 0,
 		"ry": 1,
