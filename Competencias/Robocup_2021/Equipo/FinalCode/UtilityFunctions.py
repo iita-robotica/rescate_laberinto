@@ -9,14 +9,17 @@ def normalizeDegs(ang):
         ang = 0
     return ang
 
+# Corrects the given angle in radians to be in a range from 0 to a full rotaion
 def normalizeRads(rad):
     ang = radsToDegs(rad)
     normAng = normalizeDegs(ang)
     return degsToRads(normAng)
 
+# Converts from degrees to radians
 def degsToRads(deg):
     return deg * math.pi / 180
 
+# Converts from radians to degrees
 def radsToDegs(rad):
     return rad * 180 / math.pi
 
@@ -37,10 +40,18 @@ def getCoordsFromDegs(deg, distance):
     x = float(distance * math.sin(rad))
     return [x, y]
 
+def getRadsFromCoords(coords):
+    return math.atan2(coords[0], coords[1])
+
+
+def getDegsFromCoords(coords):
+    rads = math.atan2(coords[0], coords[1])
+    return radsToDegs(rads)
 
 # Gets the distance to given coordinates
 def getDistance(position):
     return math.sqrt((position[0] ** 2) + (position[1] ** 2))
 
+# Checks if a value is between two values
 def isInRange(val, minVal, maxVal):
     return minVal < val < maxVal
