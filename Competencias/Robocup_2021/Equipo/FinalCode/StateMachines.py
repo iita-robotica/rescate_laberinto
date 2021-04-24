@@ -23,6 +23,12 @@ class SequenceManager:
     def resetSequence(self):
         self.linePointer = 1
 
+    def seqResetSequence(self):
+        if self.check():
+            self.resetSequence()
+            return True
+        return False
+
     # This has to be at the start of any sequence of events
     def startSequence(self):
         self.lineIdentifier = 0
@@ -45,18 +51,18 @@ class SequenceManager:
         return self.done
 
     # Can be used to make a function sequential or used in an if statement to make a code block sequential
-    def simpleSeqEvent(self, function=None):
+    def simpleSeqEvent(self, function=None, *args, **kwargs):
         if self.check():
             if function is not None:
-                function()
-                self.nextSeq()
+                function(*args, **kwargs)
+            self.nextSeq()
             return True
         return False
 
     # The function inputted must return True when it ends
-    def complexSeqEvent(self, function):
+    def complexSeqEvent(self, function, *args, **kwargs):
         if self.check():
-            if function():
+            if function(*args, **kwargs):
                 self.nextSeq()
                 return True
         return False
