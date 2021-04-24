@@ -43,7 +43,7 @@ class Gyroscope:
 
 # Tracks global position
 class Gps:
-    def __init__(self, gps,timeStep, coordsMultiplier=0):
+    def __init__(self, gps,timeStep, coordsMultiplier=1):
         self.gps = gps
         self.gps.enable(timeStep)
         self.multiplier = coordsMultiplier
@@ -66,7 +66,7 @@ class Gps:
             posDiff = [(self.position[0] - self.__prevPosition[0]), (self.position[1] - self.__prevPosition[1])]
             accuracy = getDistance(posDiff)
             #print("accuracy: " + str(accuracy))
-            if accuracy > 0.1:
+            if accuracy > 0.001:
                 degs = getDegsFromCoords(posDiff)
                 return normalizeDegs(degs)
         return None
@@ -115,6 +115,7 @@ class Wheel:
         self.maxVelocity = maxVelocity
         self.wheel = wheel
         self.wheel.setPosition(float("inf"))
+        self.wheel.setVelocity(0)
 
     # Moves the wheel at a ratio of the maximum speed (between 0 and 1)
     def move(self, ratio):
@@ -128,18 +129,20 @@ class Wheel:
 # Abstraction layer for robot
 class RobotLayer:
     def __init__(self, timeStep):
-        
+        self.maxWheelSpeed = 6.28
         self.timeStep = timeStep
         self.robot = Robot()
         self.rotation = 0
         self.globalPosition = [0, 0]
         self.__useGyroForRoation = True
         self.time = 0
+        self.rotateToDegsFirstTime = True
+        self.delayFirstTime = True
         self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.timeStep)
         self.gps = Gps(self.robot.getDevice("gps"), self.timeStep)
         self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep)
-        self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.timeStep)
-        self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.timeStep) 
+        self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
+        self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed) 
 
     # Decides if the rotation detection is carried out by the gps or gyro
     @property
@@ -158,11 +161,88 @@ class RobotLayer:
             self.__useGyroForRoation = False
         else:
             raise ValueError("Invalid rotation detection type inputted")
+    
+    def delaySec(self, delay):
+        if self.delayFirstTime:
+            self.delayStart = self.robot.getTime()
+            self.delayFirstTime = False
+        else:
+            if self.time - self.delayStart >= delay:
+                self.delayFirstTime = True
+                return True
+        return False
 
     # Moves the wheels at the specified ratio
     def moveWheels(self, leftRatio, rightRatio):
         self.leftWheel.move(leftRatio)
         self.rightWheel.move(rightRatio)
+
+    def rotateToDegs(self, degs, orientation="closest", maxSpeed=0.7):
+        accuracy = 2
+        if self.rotateToDegsFirstTime:
+            #print("STARTED ROTATION")
+            self.seqRotateToDegsInitialRot = self.rotation
+            self.seqRotateToDegsinitialDiff = round(self.seqRotateToDegsInitialRot - degs)
+            self.rotateToDegsFirstTime = False
+        diff = self.rotation - degs
+        moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
+        if diff > 180 or diff < -180:
+            moveDiff = 360 - moveDiff
+        speedFract = min(mapVals(moveDiff, accuracy, 90, 0.2, 1), maxSpeed)
+        if accuracy  * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
+            self.rotateToDegsFirstTime = True
+            return True
+        else:
+            if orientation == "closest":
+                if 180 > self.seqRotateToDegsinitialDiff > 0 or self.seqRotateToDegsinitialDiff < -180:
+                    direction = "right"
+                else:
+                    direction = "left"
+            elif orientation == "farthest":
+                if 180 > self.seqRotateToDegsinitialDiff > 0 or self.seqRotateToDegsinitialDiff < -180:
+                    direction = "left"
+                else:
+                    direction = "right"
+            else:
+                direction = orientation
+            if direction == "right":
+                self.moveWheels(speedFract * -1, speedFract)
+            elif direction == "left":
+                self.moveWheels(speedFract, speedFract * -1)
+            #print("speed fract: " +  str(speedFract))
+            #print("target angle: " +  str(degs))
+            #print("moveDiff: " + str(moveDiff))
+            #print("diff: " + str(diff))
+            #print("orientation: " + str(orientation))
+            #print("direction: " + str(direction))
+            #print("initialDiff: " + str(self.rotateToDegsinitialDiff))
+
+        print("ROT IS FALSE")
+        return False
+
+    def moveToCoords(self, targetPos):
+        errorMargin = 0.002
+        descelerationStart = 0.5 * 0.12
+        diffX = targetPos[0] - self.globalPosition[0]
+        diffY = targetPos[1] - self.globalPosition[1]
+        print("diff in pos: " + str(diffX) + " , " + str(diffY))
+        dist = getDistance((diffX, diffY))
+        #print("Dist: "+ str(dist))
+        if errorMargin * -1 < dist < errorMargin:
+            #self.robot.move(0,0)
+            print("FinisehedMove")
+            return True
+        else:
+            
+            ang = getDegsFromCoords((diffX, diffY))
+            ang = normalizeDegs(ang)
+            print("traget ang: " + str(ang))
+            ratio = min(mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
+            ratio = max(ratio, 0.8)
+            if self.rotateToDegs(ang):
+                self.moveWheels(ratio, ratio)
+                print("Moving")
+        return False
     
     # Gets a point cloud with all the detections from lidar and distance sensorss
     def getDetectionPointCloud(self):
@@ -187,7 +267,9 @@ class RobotLayer:
         if self.__useGyroForRoation:
             self.rotation = self.gyroscope.getDegrees()
         else:
-            self.rotation = self.gps.getRotation()
+            val = self.gps.getRotation()
+            if val is not None:
+                self.rotation = val
 
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation)
