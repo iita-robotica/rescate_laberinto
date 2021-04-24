@@ -26,6 +26,7 @@ class WallNode:
         self.isFloating = False # If it is a floating wal
         self.fixtures = [] # List of all fixtures in wall
 
+
 #Class that defines a vortex node in the grid
 class VortexNode:
     def __init__(self):
