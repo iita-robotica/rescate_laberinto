@@ -109,7 +109,7 @@ class PointCloudToTileConverter:
             self.possibleGrid[point[0], point[1]].increaseCount()
             self.possibleGrid[point[0], point[1]].update(time)
 
-    def getPossiblePercenteges(self):
+    def getSimilarityWithTiles(self):
         accuracyDict = {}
         for key in self.__tilesDict.keys():
             accuracyDict[key] = 0
