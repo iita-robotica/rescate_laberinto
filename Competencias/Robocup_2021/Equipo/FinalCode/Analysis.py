@@ -1,6 +1,7 @@
 import numpy as np
 import cv2 as cv
 import sys
+import copy
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
 
@@ -10,46 +11,57 @@ class TileNode:
     # Tuple with all allowed tile types
     __allowedTypes = ("undefined", "normal", "hole", "swamp", "checkpoint", "start", "connection1-2", "connection2-3")
     __allowedCurvedWalls = ([1, 1], [-1, -1], [-1, 1], [-1, 1])
-    def __init__(self):
+    __typesToNumbers = {"undefined" : "0", "normal": "0", "hole":"2", "swamp":"3", "checkpoint":"4", "start":"5", "connection1-2":"6", "connection1-3":"7", "connection2-3":"8"}
+    def __init__(self, tileType="undefined", curvedWall=[0,0], fixtures=[], obstacles=[]):
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
-        self.type = "undefined" # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
-        self.curvedWall = [0, 0] # if it is a tile with curved walls and curved wall position
-        self.fixtures = [] # List of all fixtures in walls adjacent to tile
-        self.obstacles = [] # List of obstacles in tile
+        self.tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
+        self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
+        self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
+        self.obstacles = obstacles # List of obstacles in tile
+    
     
     # Defines what to print if I ask to print it
     def __repr__(self):
-        return "0"
+        return self.__typesToNumbers[self.tileType]
     def __str__(self):
-        return "0"
+        return self.__typesToNumbers[self.tileType]
+    
 
 # Class that defines a wall node in the grid
 class WallNode:
-    __wallFixtureTypes = ("harmed", "secure", "unharmed", "flammable_gas", "poison", "corrosive", "organic_proxide")
-    def __init__(self):
+    __wallFixtureTypes = ("H", "S", "U", "F", "P", "C", "O")
+    def __init__(self, occupied=False, fixtures=[]):
         self.dimensions = [0.06, 0.06, 0.01] # Dimensions of the wall
-        self.occupied = False # If there is a wall. Can be True or false.
+        self.occupied = occupied # If there is a wall. Can be True or false.
         self.isFloating = False # If it is a floating wal
-        self.fixtures = [] # List of all fixtures in wall
+        self.fixtures = fixtures # List of all fixtures in wall
     
      # Defines what to print if I ask to print it
     def __repr__(self):
-        return "1"
+        if len(self.fixtures):
+            returnString = "".join(self.fixtures)
+        elif self.occupied: returnString = "1"
+        else: returnString = "0"
+        return returnString
     def __str__(self):
-        return "1"
+        if len(self.fixtures):
+            returnString = "".join(self.fixtures)
+        elif self.occupied: returnString = "1"
+        else: returnString = "0"
+        return returnString
 
 
 #Class that defines a vortex node in the grid
 class VortexNode:
-    def __init__(self):
+    def __init__(self, occupied=False):
         self.dimensions = [0.01, 0.01, 0.06] # Dimensions of the vortex
-        self.occupied = False # If there is a vortex. Can be True or false.
+        self.occupied = occupied # If there is a vortex. Can be True or false.
     
      # Defines what to print if I ask to print it
     def __repr__(self):
-        return "1"
+        return str(int(self.occupied))
     def __str__(self):
-        return "1"
+        return str(int(self.occupied))
 
 # A virtual representation of the competition map
 class Grid:
@@ -60,6 +72,7 @@ class Grid:
         self.offsets = [0, 0] # Offsets of the grid to allow negative indexes
         self.grid = [[]] # The grid containing the data
         self.chunk = chunk # A chunk of nodes constituting the grid
+        self.chunkSize = (len(chunk), len(chunk[0]))
         self.__constructGrid()
         
     # Given a string indicating direction returns an array directing to that direction
@@ -86,75 +99,79 @@ class Grid:
 
     # Constructs the grid
     def __constructGrid(self):
-        self.grid = self.chunk.copy()
-        for _ in range((self.startingSize[0] // 2) - 1):
+        self.grid = copy.deepcopy(self.chunk)
+        for _ in range((self.startingSize[0] // self.chunkSize[0]) - 1):
             self.addColumnAtEnd()
-        for _ in range((self.startingSize[1] // 2) - 1):
+        for _ in range((self.startingSize[1] // self.chunkSize[1]) - 1):
             self.addRowAtEnd()
 
-        self.offsets[0] = self.startingSize[0] // 2
-        self.offsets[1] = self.startingSize[1] // 2
+        self.offsets[0] = self.startingSize[0] // self.chunkSize[0]
+        self.offsets[1] = self.startingSize[1] // self.chunkSize[1]
+        if not self.offsets[0] % self.chunkSize[0]:
+            self.offsets[0] -= 1
+        if not self.offsets[1] % self.chunkSize[1]:
+            self.offsets[1] -= 1
 
         self.size = self.startingSize
     
     # Adds a row at the end of the grid
     def addRowAtEnd(self):
-        row = self.chunk.copy()
+        row = copy.deepcopy(self.chunk)
         if self.size[0] > 1:
-            for _ in range((self.size[0] // 2) - 1):
-                row = np.hstack((row.copy(), self.chunk.copy()))
-            self.grid = np.vstack((self.grid.copy(), row.copy()))
-            self.size[1] += 2
+            for _ in range((self.size[0] // self.chunkSize[0]) - 1):
+                row = np.hstack((row.copy(), copy.deepcopy(self.chunk)))
+            self.grid = np.vstack((self.grid.copy(), copy.deepcopy(row)))
+            self.size[1] += self.chunkSize[0]
     
     # Adds a row at the start of the grid
     def addRowAtStart(self):
-        row = self.chunk.copy()
+        row = copy.deepcopy(self.chunk)
         if self.size[0] > 1:
-            for _ in range((self.size[0] // 2) - 1):
-                row = np.hstack((row.copy(), self.chunk.copy()))
-            self.grid = np.vstack((row.copy(), self.grid.copy()))
-            self.size[1] += 2
-            self.offsets[1] += 2
+            for _ in range((self.size[0] // self.chunkSize[0]) - 1):
+                row = np.hstack((row.copy(), copy.deepcopy(self.chunk)))
+            self.grid = np.vstack((copy.deepcopy(row), self.grid.copy()))
+            self.size[1] += self.chunkSize[0]
+            self.offsets[1] += self.chunkSize[0]
 
     # Adds a column at the end of the grid
     def addColumnAtEnd(self):
         column = self.chunk.copy()
         if self.size[1] > 1:
-            for _ in range((self.size[1] // 2) - 1):
-                column = np.vstack((column.copy(), self.chunk.copy()))
-            self.grid = np.hstack((self.grid.copy(), column.copy()))
-            self.size[0] += 2
+            for _ in range((self.size[1] // self.chunkSize[1]) - 1):
+                column = np.vstack((column.copy(), copy.deepcopy(self.chunk)))
+            self.grid = np.hstack((self.grid.copy(), copy.deepcopy(column)))
+            self.size[0] += self.chunkSize[1]
 
     # Adds a column at the start of the grid
     def addColumnAtStart(self):
-        column = self.chunk.copy()
+        column = copy.deepcopy(self.chunk)
         if self.size[1] > 1:
-            for _ in range((self.size[1] // 2) - 1):
-                column = np.vstack((column.copy(), self.chunk.copy()))
-            self.grid = np.hstack((column.copy(), self.grid.copy()))
-            self.size[0] += 2
-            self.offsets[0] += 2
+            for _ in range((self.size[1] // self.chunkSize[1]) - 1):
+                column = np.vstack((column.copy(), copy.deepcopy(self.chunk)))
+            self.grid = np.hstack((copy.deepcopy(column), self.grid.copy()))
+            self.size[0] += self.chunkSize[1]
+            self.offsets[0] += self.chunkSize[1]
     
     # returns the node in the position in the grid taking in to account offsets
     def getRawNode(self, position):
         x = position[0] + self.offsets[0]
         y = position[1] + self.offsets[1]
-        return self.grid[x][y]
+        return self.grid[y][x]
     
     # Sets a value in the position in the grid taking in to account offsets
     def setRawNode(self, position, value):
         x = position[0] + self.offsets[0]
         y = position[1] + self.offsets[1]
-        self.grid[x][y] = value
+        self.grid[y][x] = value
 
     # Returns a node given the position of a tile and directions to indicate walls and vertices
     def getNode(self, position, side=[0,0]):
         if isinstance(side, str):
-            x = position[0] * 2 + self.directionToNumber(side)[0]
-            y = position[1] * 2 + self.directionToNumber(side)[1]
+            x = position[0] * self.chunkSize[0] + self.directionToNumber(side)[0]
+            y = position[1] * self.chunkSize[1] + self.directionToNumber(side)[1]
         else:
-            x = position[0] * 2 + side[0]
-            y = position[1] * 2 + side[1]
+            x = position[0] * self.chunkSize[0] + side[0]
+            y = position[1] * self.chunkSize[1] + side[1]
         return self.getRawNode((x, y))
     
     # Sets a node given the position of a tile and directions to indicate walls and vertices
@@ -202,17 +219,25 @@ chunk1 = np.array([[0, 1],
                    [1, 3]])
 
 chunk2 = np.array([[VortexNode(), WallNode()],
-                   [WallNode()  , TileNode()]])
+                   [WallNode()  , TileNode(tileType="swamp")]])
 
 grid = Grid(chunk2, [10, 10])
 print("--------------")
 
-grid.addRowAtStart()
+#grid.addRowAtStart()
+
+
+#grid.getNode((0,0)).occupied = True
+grid.getNode((0,0)).tileType = "hole"
+
+for i in range(3):
+    grid.getNode((i, 0), "up").occupied = True
+
 print(grid.grid)
 print("Offsets: " + str(grid.offsets))
 
 
 print("--------------")
 
-#print(grid.getNode((2, 2), side="up").isCurved)
+
 
