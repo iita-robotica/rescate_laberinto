@@ -16,6 +16,12 @@ class TileNode:
         self.curvedWall = [0, 0] # if it is a tile with curved walls and curved wall position
         self.fixtures = [] # List of all fixtures in walls adjacent to tile
         self.obstacles = [] # List of obstacles in tile
+    
+    # Defines what to print if I ask to print it
+    def __repr__(self):
+        return "0"
+    def __str__(self):
+        return "0"
 
 # Class that defines a wall node in the grid
 class WallNode:
@@ -25,6 +31,12 @@ class WallNode:
         self.occupied = False # If there is a wall. Can be True or false.
         self.isFloating = False # If it is a floating wal
         self.fixtures = [] # List of all fixtures in wall
+    
+     # Defines what to print if I ask to print it
+    def __repr__(self):
+        return "1"
+    def __str__(self):
+        return "1"
 
 
 #Class that defines a vortex node in the grid
@@ -32,6 +44,12 @@ class VortexNode:
     def __init__(self):
         self.dimensions = [0.01, 0.01, 0.06] # Dimensions of the vortex
         self.occupied = False # If there is a vortex. Can be True or false.
+    
+     # Defines what to print if I ask to print it
+    def __repr__(self):
+        return "1"
+    def __str__(self):
+        return "1"
 
 # A virtual representation of the competition map
 class Grid:
@@ -186,7 +204,7 @@ chunk1 = np.array([[0, 1],
 chunk2 = np.array([[VortexNode(), WallNode()],
                    [WallNode()  , TileNode()]])
 
-grid = Grid(chunk1, [10, 10])
+grid = Grid(chunk2, [10, 10])
 print("--------------")
 
 grid.addRowAtStart()
