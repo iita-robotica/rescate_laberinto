@@ -36,6 +36,7 @@ class PointCloudToGridConverter:
         self.pointPermanenceThresh = pointPermanenceThresh
         # Defines the size of a tie in the scale of the original coordinates
         self.tileSize = tileSize
+        self.realTileSize = self.tileSize * self.pointMultiplier
         for _ in range(queSize):
             self.que.append([])
     
@@ -77,16 +78,24 @@ class PointCloudToGridConverter:
         self.que.pop(0)
         self.que.append(self.processPointCloud(pointCloud))
     
+    def getTile(self, position):
+        return [int(position[0] // self.realTileSize), int(position[1] // self.realTileSize)]
+    
+    def getPosInTile(self, position):
+        return [int(position[0] % self.realTileSize), int(position[1] % self.realTileSize)]
+    
     # Returns a list with dictionarys containing the tile number and the position iside of said tile
     def getTiles(self):
         tiles = []
-        inTiles = False
+        
         realTileSize = self.tileSize * self.pointMultiplier
         totalPointCloud = self.getTotalPointCloud()
+        print("Total Point Cloud: ", totalPointCloud)
         for item in totalPointCloud:
+            inTiles = False
             if item.count >= self.pointPermanenceThresh:
-                itemTile = [item.position[0] // realTileSize, item.position[1] // realTileSize]
-                itemPosInTile = [item.position[0] % realTileSize, item.position[1] % realTileSize]
+                itemTile = self.getTile(item.position)
+                itemPosInTile = self.getPosInTile(item.position)
                 for tile in tiles:
                     if tile["tile"] == itemTile:
                         inTiles = True
@@ -94,6 +103,7 @@ class PointCloudToGridConverter:
 
                 if not inTiles:
                     tiles.append({"tile":itemTile, "posInTile":[itemPosInTile]})
+        print("Tiles: ", tiles)
         return tiles
 
 # Uses a dict of tile templates to return the elements present in a tile given points inside that tile
@@ -117,81 +127,83 @@ class Classifier:
 
         for point in pointList:
             for key, modelGrid in self.tilesDict.items():
-                    elementsDict[key] += (modelGrid[point[0]][point[1]] * 100 // self.tilesDictPositivesCount[key])
+    
+                elementsDict[key] += (modelGrid[point[0]][point[1]] * 100 // self.tilesDictPositivesCount[key])
                     
         return elementsDict
 
 
-tilesDict = {
-    
-     "wallRight": np.array([[0, 0, 0, 0, 1, 1],
-                            [0, 0, 0, 0, 1, 1],
-                            [0, 0, 0, 0, 1, 1],
-                            [0, 0, 0, 0, 1, 1],
-                            [0, 0, 0, 0, 1, 1],
-                            [0, 0, 0, 0, 1, 1]]),
+if __name__ == "__main__":
+    tilesDict = {
+        
+        "wallRight": np.array([[0, 0, 0, 0, 1, 1],
+                                [0, 0, 0, 0, 1, 1],
+                                [0, 0, 0, 0, 1, 1],
+                                [0, 0, 0, 0, 1, 1],
+                                [0, 0, 0, 0, 1, 1],
+                                [0, 0, 0, 0, 1, 1]]),
 
-      "wallLeft": np.array([[1, 1, 0, 0, 0, 0],
-                            [1, 1, 0, 0, 0, 0],
-                            [1, 1, 0, 0, 0, 0],
-                            [1, 1, 0, 0, 0, 0],
-                            [1, 1, 0, 0, 0, 0],
-                            [1, 1, 0, 0, 0, 0]]),
-                            
-        "wallUp": np.array([[1, 1, 1, 1, 1, 1],
-                            [1, 1, 1, 1, 1, 1],
-                            [0, 0, 0, 0, 0, 0],
-                            [0, 0, 0, 0, 0, 0],
-                            [0, 0, 0, 0, 0, 0],
-                            [0, 0, 0, 0, 0, 0]]),
-                            
-      "wallDown": np.array([[0, 0, 0, 0, 0, 0],
-                            [0, 0, 0, 0, 0, 0],
-                            [0, 0, 0, 0, 0, 0],
-                            [0, 0, 0, 0, 0, 0],
-                            [1, 1, 1, 1, 1, 1],
-                            [1, 1, 1, 1, 1, 1]]),
-
-        "curvedRight-up": np.array([[1, 1, 1, 1, 0, 0],
-                                    [1, 1, 1, 1, 1, 0],
-                                    [0, 0, 0, 1, 1, 1],
-                                    [0, 0, 0, 0, 1, 1],
-                                    [0, 0, 0, 0, 1, 1],
-                                    [0, 0, 0, 0, 1, 1]]),
-
-     "curvedLeft-up": np.array([[0, 0, 1, 1, 1, 1],
-                                [0, 1, 1, 1, 1, 1],
-                                [1, 1, 1, 0, 0, 0],
+        "wallLeft": np.array([[1, 1, 0, 0, 0, 0],
+                                [1, 1, 0, 0, 0, 0],
+                                [1, 1, 0, 0, 0, 0],
                                 [1, 1, 0, 0, 0, 0],
                                 [1, 1, 0, 0, 0, 0],
                                 [1, 1, 0, 0, 0, 0]]),
-                            
-      "curvedRight-down": np.array([[0, 0, 0, 0, 1, 1],
-                                    [0, 0, 0, 0, 1, 1],
-                                    [0, 0, 0, 0, 1, 1],
-                                    [0, 0, 0, 1, 1, 1],
-                                    [1, 1, 1, 1, 1, 0],
-                                    [1, 1, 1, 1, 0, 0]]),
-                            
-       "curvedLeft-down": np.array([[1, 1, 0, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0],
-                                    [1, 1, 1, 0, 0, 0],
+                                
+            "wallUp": np.array([[1, 1, 1, 1, 1, 1],
+                                [1, 1, 1, 1, 1, 1],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0]]),
+                                
+        "wallDown": np.array([[0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [1, 1, 1, 1, 1, 1],
+                                [1, 1, 1, 1, 1, 1]]),
+
+            "curvedRight-up": np.array([[1, 1, 1, 1, 0, 0],
+                                        [1, 1, 1, 1, 1, 0],
+                                        [0, 0, 0, 1, 1, 1],
+                                        [0, 0, 0, 0, 1, 1],
+                                        [0, 0, 0, 0, 1, 1],
+                                        [0, 0, 0, 0, 1, 1]]),
+
+        "curvedLeft-up": np.array([[0, 0, 1, 1, 1, 1],
                                     [0, 1, 1, 1, 1, 1],
-                                    [0, 0, 1, 1, 1, 1]])
-        }
+                                    [1, 1, 1, 0, 0, 0],
+                                    [1, 1, 0, 0, 0, 0],
+                                    [1, 1, 0, 0, 0, 0],
+                                    [1, 1, 0, 0, 0, 0]]),
+                                
+        "curvedRight-down": np.array([[0, 0, 0, 0, 1, 1],
+                                        [0, 0, 0, 0, 1, 1],
+                                        [0, 0, 0, 0, 1, 1],
+                                        [0, 0, 0, 1, 1, 1],
+                                        [1, 1, 1, 1, 1, 0],
+                                        [1, 1, 1, 1, 0, 0]]),
+                                
+        "curvedLeft-down": np.array([[1, 1, 0, 0, 0, 0],
+                                        [1, 1, 0, 0, 0, 0],
+                                        [1, 1, 0, 0, 0, 0],
+                                        [1, 1, 1, 0, 0, 0],
+                                        [0, 1, 1, 1, 1, 1],
+                                        [0, 0, 1, 1, 1, 1]])
+            }
 
 
-conv = PointCloudToGridConverter(5, 100, 0.06, 2)
-classifier = Classifier(tilesDict)
+    conv = PointCloudToGridConverter(5, 100, 0.06, 2)
+    classifier = Classifier(tilesDict)
 
-#conv.update([[0.9, 0.6], [0.9, 0.21], [0.2, 0.3]])
-for _ in range(3):
-    conv.update([[0.1, 0.1], [0.1, 0.09], [0.2, 0.3]])
-print(conv.que)
-print(conv.getTotalPointCloud())
-print(conv.getTiles())
-    
-print(classifier.getCalsificationPercentages([[0,0], [0,1], [0,2], [0,3], [0,4], [0,5]]))
+    #conv.update([[0.9, 0.6], [0.9, 0.21], [0.2, 0.3]])
+    for _ in range(3):
+        conv.update([[0.1, 0.1], [0.1, 0.09], [0.2, 0.3]])
+    print(conv.que)
+    print(conv.getTotalPointCloud())
+    print(conv.getTiles())
+        
+    print(classifier.getCalsificationPercentages([[0,0], [0,1], [0,2], [0,3], [0,4], [0,5]]))
 
 

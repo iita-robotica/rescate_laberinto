@@ -43,7 +43,7 @@ class Gyroscope:
 
 # Tracks global position
 class Gps:
-    def __init__(self, gps,timeStep, coordsMultiplier=1):
+    def __init__(self, gps, timeStep, coordsMultiplier=1):
         self.gps = gps
         self.gps.enable(timeStep)
         self.multiplier = coordsMultiplier
@@ -58,7 +58,7 @@ class Gps:
     # Returns the global position
     def getPosition(self):
         vals = self.gps.getValues()
-        return [vals[0] * self.multiplier, vals[2] * self.multiplier]
+        return [(vals[0]  - 0.06) * self.multiplier, (vals[2]  - 0.06) * self.multiplier * -1]
 
     # Returns the global rotation according to gps
     def getRotation(self):
@@ -85,7 +85,7 @@ class Lidar():
         self.verticalFov = self.device.getVerticalFov()
         self.horizontalRes = self.device.getHorizontalResolution()
         self.radPerDetection = self.fov / self.horizontalRes
-        self.detectRotOffset = math.pi * 0.75
+        self.detectRotOffset = 0 #math.pi * 0.75
 
     # Does a detection pass and returns a point cloud with the results
     def getPointCloud(self, layers=range(3)):
@@ -246,7 +246,13 @@ class RobotLayer:
     
     # Gets a point cloud with all the detections from lidar and distance sensorss
     def getDetectionPointCloud(self):
-        return self.lidar.getPointCloud(layers=(1, 2))
+
+        rawPointCloud = self.lidar.getPointCloud(layers=(1, 2))
+        processedPointCloud = []
+        for point in rawPointCloud:
+            procPoint = point[0] + self.globalPosition[0], point[1] + self.globalPosition[1]
+            processedPointCloud.append(procPoint)
+        return processedPointCloud
     
     # Returns True if the simulation is running
     def doLoop(self):

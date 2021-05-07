@@ -2,25 +2,31 @@ from controller import Robot
 import sys
 import numpy as np
 import cv2 as cv
-import math
 #REMEMBER TO COPY-PASTE THIS FUNCTIONS ON TO FINAL CODE
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
-from UtilityFunctions import *
-from StateMachines import *
-from RobotLayer import RobotLayer
-
+from AbstractionLayer import AbstractionLayer
+from StateMachines import StateManager
 timeStep = 16 * 2 
 
 
-robot = RobotLayer(timeStep)
-seqMg = SequenceManager()
-seqPrint = seqMg.makeSimpleSeqEvent(print)
+stMg = StateManager("init")
+r = AbstractionLayer()
+
 
 # While the simulation is running
-while robot.doLoop():
+while r.doLoop():
     # Update the robot
-    robot.update()
+    r.update()
+    print("rotation: " + str(r.rotation))
+    print("position: " + str(r.position))
 
-    seqMg.startSequence()
-    seqPrint("Hello")
-    seqMg.resetSequence()
+    if stMg.checkState("init"):
+        if r.calibrate():
+            stMg.changeState("main")
+
+    if stMg.checkState("main"):
+        """
+        r.seqMg.startSequence()
+        print(r.seqMoveToCoords((-0.233, -0.36)))
+        r.seqMoveWheels(0, 0)
+        """

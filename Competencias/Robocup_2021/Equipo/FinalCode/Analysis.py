@@ -2,8 +2,10 @@ import numpy as np
 import cv2 as cv
 import sys
 import copy
+
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
+import PointCloudToGrid
 
 # Class that defines a tile node in the grid
 class TileNode:
@@ -80,13 +82,13 @@ class Grid:
         if direction == "center" or direction == "centre":
             n = [0, 0]
         elif direction == "right":
-            n = [1, 0]
-        elif direction == "left":
-            n = [-1, 0]
-        elif direction == "up":
-            n = [0, -1]
-        elif direction == "down":
             n = [0, 1]
+        elif direction == "left":
+            n = [0, -1]
+        elif direction == "up":
+            n = [-1, 0]
+        elif direction == "down":
+            n = [1, 0]
         elif direction == "right-up" or direction == "up-right":
             n = [1, -1]
         elif direction == "right-down" or direction == "down-right":
@@ -164,29 +166,43 @@ class Grid:
         y = position[1] + self.offsets[1]
         self.grid[y][x] = value
 
-    # Returns a node given the position of a tile and directions to indicate walls and vertices
-    def getNode(self, position, side=[0,0]):
+    def processedToRawNode(self, position, side=[0,0]):
         if isinstance(side, str):
             x = position[0] * self.chunkSize[0] + self.directionToNumber(side)[0]
             y = position[1] * self.chunkSize[1] + self.directionToNumber(side)[1]
         else:
             x = position[0] * self.chunkSize[0] + side[0]
             y = position[1] * self.chunkSize[1] + side[1]
-        return self.getRawNode((x, y))
+        if x < self.offsets[0] * -1:
+            raise IndexError("Index too small for list with min index " + str(self.offsets[0] * -1))
+        if y < self.offsets[1] * -1:
+            raise IndexError("Index too small for list with min index " + str(self.offsets[0] * -1))
+        return (x,y)
+
+    # Returns a node given the position of a tile and directions to indicate walls and vertices
+    def getNode(self, position, side=[0,0]):
+        return self.getRawNode(self.processedToRawNode(position, side))
     
     # Sets a node given the position of a tile and directions to indicate walls and vertices
     def setNode(self, position, value, side=[0,0]):
-        if isinstance(side, str):
-            x = position[0] * 2 + self.directionToNumber(side)[0]
-            y = position[1] * 2 + self.directionToNumber(side)[1]
-        else:
-            x = position[0] * 2 + side[0]
-            y = position[1] * 2 + side[1]
-        x1, y1 = self.getRawNode((x, y))
-        self.grid[x1, y1] = value
+        self.setRawNode(self.processedToRawNode(position, side), value)
     
-    def duplicate(self, node):
-        self.grid[node[0], node[1]] +=  10
+    def getNumpyPrintableArray(self):
+        printableArray = np.zeros(self.size, np.uint8)
+        for y in range(len(self.grid)):
+            for x, node in enumerate(self.grid[y]):
+                if isinstance(node, TileNode):
+                    if node.tileType == "hole":
+                        printableArray[x][y] = 100
+                else:
+                    if node.occupied:
+                        printableArray[x][y] = 255
+                    else:
+                        printableArray[x][y] = 50
+        
+        return printableArray
+                
+
 
 # Finds the best path to follow
 class PathFinder:
@@ -211,33 +227,74 @@ class PathFinder:
     def getBestPath(self):
         return []
     
+class Analyst:
+    def __init__(self, tileSize):
+        self.tileSize = tileSize
+        gridChunk = np.array([[VortexNode(), WallNode()],
+                              [WallNode()  , TileNode()]])
+        self.grid = Grid(gridChunk, (100, 100))
+        self.converter = PointCloudToGrid.PointCloudToGridConverter(queSize=20, pointMultiplier=100, tileSize=self.tileSize, pointPermanenceThresh=20)
+        from ClassifierTemplate import tilesDict as classifTemp
+        self.classifier = PointCloudToGrid.Classifier(classifTemp)
+    
+    def loadPointCloud(self, pointCloud):
+        self.converter.update(pointCloud)
+        tilesWithPoints = self.converter.getTiles()
+        print("tilesWithPoints: ", tilesWithPoints)
+        for item in tilesWithPoints:
+            percentages = self.classifier.getCalsificationPercentages(item["posInTile"])
+            for key, value in percentages.items():
+                wallType, orientation = key.split(" ")
+                if wallType == "straight":
+                    if value > 30:
+                        self.grid.getNode(item["tile"], orientation).occupied = True
+    
+    def setTileInGrid(self, position, value):
+        convPos  = [position[0] * self.converter.pointMultiplier, position[1] * self.converter.pointMultiplier]
+        convPos = self.converter.getTile(convPos)
+        self.grid.getNode(convPos).tileType = value
+
+
+    
+    def getGrid(self):
+        return self.grid.grid
+    
+    def showGrid(self):
+        cv.imshow("Analyst grid", cv.resize(self.grid.getNumpyPrintableArray(), (400, 400), interpolation=cv.INTER_NEAREST))
 
 
 
+if __name__ == "__main__":
 
-chunk1 = np.array([[0, 1],
-                   [1, 3]])
+    """
+    chunk1 = np.array([[0, 1],
+                    [1, 3]])
 
-chunk2 = np.array([[VortexNode(), WallNode()],
-                   [WallNode()  , TileNode(tileType="swamp")]])
+    chunk2 = np.array([[VortexNode(), WallNode()],
+                    [WallNode()  , TileNode(tileType="swamp")]])
 
-grid = Grid(chunk2, [10, 10])
-print("--------------")
+    grid = Grid(chunk2, [10, 10])
+    print("--------------")
 
-#grid.addRowAtStart()
-
-
-#grid.getNode((0,0)).occupied = True
-grid.getNode((0,0)).tileType = "hole"
-
-for i in range(3):
-    grid.getNode((i, 0), "up").occupied = True
-
-print(grid.grid)
-print("Offsets: " + str(grid.offsets))
+    #grid.addRowAtStart()
 
 
-print("--------------")
+    #grid.getNode((0,0)).occupied = True
+    grid.getNode((0,0)).tileType = "hole"
+
+    for i in range(grid.offsets[0] // 2 * -1, grid.size[0] // 2 - grid.offsets[0] // 2):
+        print(i)
+        grid.getNode((i, 0), "up").occupied = True
+
+    print(grid.grid)
+    print("Offsets: " + str(grid.offsets))
 
 
+    print("--------------")
+    """
+
+
+    analyst = Analyst(0.06)
+    pointCloud = [[0,0.02], [1.5, 1.12]]
+    analyst.loadPointCloud(pointCloud)
 
