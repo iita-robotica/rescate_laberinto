@@ -240,7 +240,7 @@ class Analyst:
     def loadPointCloud(self, pointCloud):
         self.converter.update(pointCloud)
         tilesWithPoints = self.converter.getTiles()
-        print("tilesWithPoints: ", tilesWithPoints)
+        #print("tilesWithPoints: ", tilesWithPoints)
         for item in tilesWithPoints:
             percentages = self.classifier.getCalsificationPercentages(item["posInTile"])
             for key, value in percentages.items():

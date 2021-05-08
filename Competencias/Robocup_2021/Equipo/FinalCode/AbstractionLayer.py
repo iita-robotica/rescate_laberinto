@@ -17,7 +17,10 @@ class AbstractionLayer():
     def __init__(self):
         #Variables
         self.tileSize = 0.06
-        self.gridPlottingArray= np.zeros((400, 400), np.uint8)
+        self.gridPlottingArray = np.zeros((400, 400), np.uint8)
+        self.positionOffsets = [0, 0]
+        self.doWallMapping = False
+
         # Components
         self.robot = RobotLayer(timeStep)
         self.seqMg = SequenceManager()
@@ -32,6 +35,13 @@ class AbstractionLayer():
 
     def calibrate(self):
         self.seqMg.startSequence()
+        self.seqDelaySec(0.5)
+        if self.seqMg.simpleSeqEvent(): 
+            roundedPos = [roundDecimal(self.robot.globalPosition[0], 100), roundDecimal(self.robot.globalPosition[0], 100)]
+            rp = [(roundDecimal(roundedPos[0] / self.tileSize, 100) - roundDecimal(roundedPos[0] // self.tileSize, 100)), (roundDecimal(roundedPos[1] / self.tileSize, 100) - roundDecimal(roundedPos[1] // self.tileSize, 100))]
+            self.positionOffsets = rp
+            print("positionOffsets: ", self.positionOffsets)
+        
         if self.seqMg.simpleSeqEvent(): self.robot.rotationDetectionType = "gps"
         self.seqMoveWheels(1, 1)
         self.seqDelaySec(0.2)
@@ -41,6 +51,7 @@ class AbstractionLayer():
         self.seqMoveWheels(-1, -1)
         self.seqDelaySec(0.4)
         self.seqMoveWheels(0, 0)
+        if self.seqMg.simpleSeqEvent(): self.doWallMapping = True
         return self.seqMg.seqResetSequence()
     
     @property
@@ -49,27 +60,31 @@ class AbstractionLayer():
     
     @property
     def position(self):
-        return self.robot.globalPosition
+        return [self.robot.globalPosition[0] + self.positionOffsets[0], self.robot.globalPosition[1] + self.positionOffsets[1]]
     
     def doLoop(self):
         return self.robot.doLoop()
     
+
+
     def update(self):
         self.robot.update()
-        pointCloud = self.robot.getDetectionPointCloud()
         
-        for point in pointCloud:
-            procPoint = [int(point[0] * 100), int(point[1] * 100)]
-            finalx = procPoint[0] - 100
-            finaly = procPoint[1] - 100
-            if self.gridPlottingArray[finalx][finaly] < 250:
-                self.gridPlottingArray[finalx][finaly] += 1
+        if self.doWallMapping:
+            pointCloud = self.robot.getDetectionPointCloud()
+            
+            for point in pointCloud:
+                procPoint = [int(point[0] * 100), int(point[1] * 100)]
+                finalx = procPoint[0] - 100
+                finaly = procPoint[1] - 100
+                if self.gridPlottingArray[finalx][finaly] < 250:
+                    self.gridPlottingArray[finalx][finaly] += 1
 
-        
-        self.analyst.loadPointCloud(pointCloud)
-        self.analyst.setTileInGrid(self.position, "hole")
-        print(self.analyst.getGrid())
+            
+            self.analyst.loadPointCloud(pointCloud)
+            self.analyst.setTileInGrid(self.position, "hole")
+
         self.analyst.showGrid()
         
         cv.imshow("raw detections", self.gridPlottingArray)
-        cv.waitKey(1)
+        cv.waitKey(0)

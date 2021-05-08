@@ -58,7 +58,7 @@ class Gps:
     # Returns the global position
     def getPosition(self):
         vals = self.gps.getValues()
-        return [(vals[0]  - 0.06) * self.multiplier, (vals[2]  - 0.06) * self.multiplier * -1]
+        return [vals[0] * self.multiplier, vals[2] * self.multiplier * -1]
 
     # Returns the global rotation according to gps
     def getRotation(self):

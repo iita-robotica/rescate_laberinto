@@ -87,10 +87,8 @@ class PointCloudToGridConverter:
     # Returns a list with dictionarys containing the tile number and the position iside of said tile
     def getTiles(self):
         tiles = []
-        
-        realTileSize = self.tileSize * self.pointMultiplier
         totalPointCloud = self.getTotalPointCloud()
-        print("Total Point Cloud: ", totalPointCloud)
+        #print("Total Point Cloud: ", totalPointCloud)
         for item in totalPointCloud:
             inTiles = False
             if item.count >= self.pointPermanenceThresh:
@@ -103,7 +101,7 @@ class PointCloudToGridConverter:
 
                 if not inTiles:
                     tiles.append({"tile":itemTile, "posInTile":[itemPosInTile]})
-        print("Tiles: ", tiles)
+        #print("Tiles: ", tiles)
         return tiles
 
 # Uses a dict of tile templates to return the elements present in a tile given points inside that tile

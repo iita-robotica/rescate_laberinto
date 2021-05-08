@@ -55,3 +55,6 @@ def getDistance(position):
 # Checks if a value is between two values
 def isInRange(val, minVal, maxVal):
     return minVal < val < maxVal
+
+def roundDecimal(number, decimal):
+    return (round(number * decimal) / decimal)
