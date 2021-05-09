@@ -86,17 +86,20 @@ class Lidar():
         self.horizontalRes = self.device.getHorizontalResolution()
         self.radPerDetection = self.fov / self.horizontalRes
         self.detectRotOffset = 0 #math.pi * 0.75
+        self.maxDetectionDistance = 0.06 * 10
 
     # Does a detection pass and returns a point cloud with the results
     def getPointCloud(self, layers=range(3)):
-        actualDetectionRot = self.detectRotOffset + (degsToRads(360 - radsToDegs(self.rotation)))
+        actualDetectionRot = self.detectRotOffset + ((2 * math.pi) - self.rotation)#(degsToRads(359 - radsToDegs(self.rotation)))
         rangeImage = self.device.getRangeImageArray()
         pointCloud = []
         for depthArray in rangeImage:
             for index, item in enumerate(depthArray):
                 if item != float("inf") and item != float("inf") * -1 and index in layers:
-                    coords = getCoordsFromRads(actualDetectionRot, item)
-                    pointCloud.append(coords)
+                    if item <= self.maxDetectionDistance:
+                        #item -= item * 0.1
+                        coords = getCoordsFromRads(actualDetectionRot, item)
+                        pointCloud.append([coords[0], coords[1]])
             actualDetectionRot += self.radPerDetection
         return pointCloud
 
@@ -134,6 +137,7 @@ class RobotLayer:
         self.robot = Robot()
         self.rotation = 0
         self.globalPosition = [0, 0]
+        self.positionOffsets = [0, 0]
         self.__useGyroForRoation = True
         self.time = 0
         self.rotateToDegsFirstTime = True
@@ -247,10 +251,11 @@ class RobotLayer:
     # Gets a point cloud with all the detections from lidar and distance sensorss
     def getDetectionPointCloud(self):
 
-        rawPointCloud = self.lidar.getPointCloud(layers=(1, 2))
+        rawPointCloud = self.lidar.getPointCloud(layers=(2,3))
         processedPointCloud = []
         for point in rawPointCloud:
-            procPoint = point[0] + self.globalPosition[0], point[1] + self.globalPosition[1]
+            procPoint = [point[0] + self.globalPosition[0], point[1] + self.globalPosition[1]]
+            #procPoint = [procPoint[0] + procPoint[0] * 0.1, procPoint[1] + procPoint[1] * 0.1]
             processedPointCloud.append(procPoint)
         return processedPointCloud
     
@@ -268,6 +273,8 @@ class RobotLayer:
 
         # Gets global position
         self.globalPosition = self.gps.getPosition()
+        self.globalPosition[0] += self.positionOffsets[0]
+        self.globalPosition[1] += self.positionOffsets[1]
 
         # Gets global rotation
         if self.__useGyroForRoation:
@@ -278,7 +285,7 @@ class RobotLayer:
                 self.rotation = val
 
         # Sets lidar rotation
-        self.lidar.setRotationDegrees(self.rotation)
+        self.lidar.setRotationDegrees(self.rotation + 0)
 
         
 
