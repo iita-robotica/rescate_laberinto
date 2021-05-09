@@ -233,7 +233,7 @@ class Analyst:
         gridChunk = np.array([[VortexNode(), WallNode()],
                               [WallNode()  , TileNode()]])
         self.grid = Grid(gridChunk, (100, 100))
-        self.converter = PointCloudToGrid.PointCloudToGridConverter(queSize=20, pointMultiplier=100, tileSize=self.tileSize, pointPermanenceThresh=20)
+        self.converter = PointCloudToGrid.PointCloudToGridConverter(queSize=20, pointMultiplier=100, tileSize=self.tileSize, pointPermanenceThresh=100, queStep=3)
         from ClassifierTemplate import tilesDict as classifTemp
         self.classifier = PointCloudToGrid.Classifier(classifTemp)
     
@@ -243,10 +243,11 @@ class Analyst:
         #print("tilesWithPoints: ", tilesWithPoints)
         for item in tilesWithPoints:
             percentages = self.classifier.getCalsificationPercentages(item["posInTile"])
+            print("percentages: ", percentages)
             for key, value in percentages.items():
                 wallType, orientation = key.split(" ")
                 if wallType == "straight":
-                    if value > 30:
+                    if value > 40:
                         self.grid.getNode(item["tile"], orientation).occupied = True
     
     def setTileInGrid(self, position, value):

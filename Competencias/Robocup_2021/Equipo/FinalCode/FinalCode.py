@@ -25,8 +25,8 @@ while r.doLoop():
             stMg.changeState("main")
 
     if stMg.checkState("main"):
-        """
+        
         r.seqMg.startSequence()
-        print(r.seqMoveToCoords((-0.233, -0.36)))
-        r.seqMoveWheels(0, 0)
-        """
+        #print(r.seqMoveToCoords((-0.233, -0.36)))
+        r.seqMoveWheels(0.2, -0.2)
+        

@@ -1,6 +1,7 @@
 import numpy as np
 import cv2 as cv
 import time
+from functools import lru_cache
 import sys
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
@@ -27,9 +28,11 @@ class PointCloudConverterPoint:
 # Converts a point cloud in to tiles with positions
 class PointCloudToGridConverter:
 
-    def __init__(self, queSize, pointMultiplier, tileSize, pointPermanenceThresh=1):
+    def __init__(self, queSize, pointMultiplier, tileSize, pointPermanenceThresh=1, queStep = 1):
         self.queSize = queSize # Defines the size of the point cloud que
         self.que = [] # A que of point clouds
+        self.queStep = queStep
+        self.queActualStep = 0
         # Defines the number to multiply the coordinates to convert them in to ints
         self.pointMultiplier = pointMultiplier
         # Defines the number of times a point has to repeat to be considered definitive
@@ -75,8 +78,12 @@ class PointCloudToGridConverter:
 
     # Adds a new point cloud to the que and removes the last element
     def update(self, pointCloud):
-        self.que.pop(0)
-        self.que.append(self.processPointCloud(pointCloud))
+        if self.queActualStep >= self.queStep:
+            self.que.pop(0)
+            self.que.append(self.processPointCloud(pointCloud))
+            self.queActualStep = 0
+        else:
+            self.queActualStep += 1
     
     def getTile(self, position):
         return [int(position[0] // self.realTileSize), int(position[1] // self.realTileSize)]
@@ -84,7 +91,8 @@ class PointCloudToGridConverter:
     def getPosInTile(self, position):
         return [int(position[0] % self.realTileSize), int(position[1] % self.realTileSize)]
     
-    # Returns a list with dictionarys containing the tile number and the position iside of said tile
+    # Returns a list with dictionarys containing the tile number and the position inside of said tile
+    @lru_cache(None)
     def getTiles(self):
         tiles = []
         totalPointCloud = self.getTotalPointCloud()
@@ -118,6 +126,7 @@ class Classifier:
             self.tilesDictPositivesCount[key] = count
 
     # Returns the similarity of the points imputted to the templates in percentages
+    @lru_cache(None)
     def getCalsificationPercentages(self, pointList):
         elementsDict = {}
         for key in self.validTileDictKeys:
@@ -126,7 +135,9 @@ class Classifier:
         for point in pointList:
             for key, modelGrid in self.tilesDict.items():
     
-                elementsDict[key] += (modelGrid[point[0]][point[1]] * 100 // self.tilesDictPositivesCount[key])
+                elementsDict[key] += (modelGrid[point[0]][point[1]] * (100 / self.tilesDictPositivesCount[key]))
+                if key == "straight left":
+                    print("Left positive counts : ", elementsDict[key])
                     
         return elementsDict
 
