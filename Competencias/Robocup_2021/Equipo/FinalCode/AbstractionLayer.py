@@ -12,13 +12,45 @@ import Analysis
 
 timeStep = 16 * 2
 
+class PlottingArray:
+    def __init__(self, size, offsets, scale, tileSize):
+        self.scale = scale
+        self.size = size
+        self.offsets = offsets
+        self.scale = scale
+        self.tileSize = tileSize
+        self.gridPlottingArray = np.zeros(self.size, np.uint8)
+        for y in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
+            for x in range(len(self.gridPlottingArray[0])):
+                self.gridPlottingArray[x][y] = 100
+        for x in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
+            for y in range(len(self.gridPlottingArray[0])):
+                self.gridPlottingArray[x][y] = 100
+    
+    def plotPoint(self, point, value):
+        procPoint = [int(point[0] * self.scale), int(point[1] * self.scale)]
+        finalx = procPoint[0] + int(self.offsets[0] * self.tileSize)
+        finaly = procPoint[1] + int(self.offsets[1] * self.tileSize)
+                
+        if self.size[0] * -1 < finalx < self.size[0] and self.size[0] * -1 < finaly < self.size[1]:
+            self.gridPlottingArray[finalx][finaly] = value
+    
+    def getPoint(self, point):
+        procPoint = [int(point[0] * self.scale), int(point[1] * self.scale)]
+        finalx = procPoint[0] + int(self.offsets[0] * self.tileSize)
+        finaly = procPoint[1] + int(self.offsets[1] * self.tileSize)
+                
+        if self.size[0] * -1 < finalx < self.size[0] and self.size[0] * -1 < finaly < self.size[1]:
+            return self.gridPlottingArray[finalx][finaly]
+
+
+
 class AbstractionLayer():
 
     def __init__(self):
         #Variables
         self.tileSize = 0.06
-        self.gridPlottingArray = np.zeros((400, 400), np.uint8)
-        self.positionOffsets = [0, 0]
+        self.gridPlotter = PlottingArray((600, 600), [3000, 3000], 300, self.tileSize)
         self.doWallMapping = False
 
         # Components
@@ -37,10 +69,12 @@ class AbstractionLayer():
         self.seqMg.startSequence()
         self.seqDelaySec(0.5)
         if self.seqMg.simpleSeqEvent(): 
-            roundedPos = [roundDecimal(self.robot.globalPosition[0], 100), roundDecimal(self.robot.globalPosition[0], 100)]
-            rp = [(roundDecimal(roundedPos[0] / self.tileSize, 100) - roundDecimal(roundedPos[0] // self.tileSize, 100)), (roundDecimal(roundedPos[1] / self.tileSize, 100) - roundDecimal(roundedPos[1] // self.tileSize, 100))]
-            self.positionOffsets = rp
-            print("positionOffsets: ", self.positionOffsets)
+            actualTile = [self.position[0] // self.tileSize, self.position[1] // self.tileSize]
+            self.robot.positionOffsets =  [round((actualTile[0] * self.tileSize) - self.position[0]) + self.tileSize // 2, round((actualTile[1] * self.tileSize) - self.position[1]) + self.tileSize // 2]
+            self.robot.positionOffsets = [self.robot.positionOffsets[0] % self.tileSize, self.robot.positionOffsets[1] % self.tileSize]
+
+            print("positionOffsets: ", self.robot.positionOffsets)
+        self.seqDelaySec(0.5)
         
         if self.seqMg.simpleSeqEvent(): self.robot.rotationDetectionType = "gps"
         self.seqMoveWheels(1, 1)
@@ -60,7 +94,7 @@ class AbstractionLayer():
     
     @property
     def position(self):
-        return [self.robot.globalPosition[0] + self.positionOffsets[0], self.robot.globalPosition[1] + self.positionOffsets[1]]
+        return self.robot.globalPosition
     
     def doLoop(self):
         return self.robot.doLoop()
@@ -71,20 +105,32 @@ class AbstractionLayer():
         self.robot.update()
         
         if self.doWallMapping:
+            print("Doing wall mapping")
             pointCloud = self.robot.getDetectionPointCloud()
             
+            
             for point in pointCloud:
-                procPoint = [int(point[0] * 100), int(point[1] * 100)]
-                finalx = procPoint[0] - 100
-                finaly = procPoint[1] - 100
-                if self.gridPlottingArray[finalx][finaly] < 250:
-                    self.gridPlottingArray[finalx][finaly] += 1
-
+                
+                if self.gridPlotter.getPoint(point) < 250:
+                    self.gridPlotter.plotPoint(point, self.gridPlotter.getPoint(point) + 5)
+            
             
             self.analyst.loadPointCloud(pointCloud)
             self.analyst.setTileInGrid(self.position, "hole")
 
+            """
+            for point in self.analyst.converter.getTotalPointCloud():
+                ppoint = [point.position[0] / 100, point.position[1] / 100]
+
+                self.gridPlotter.plotPoint(ppoint, 100)
+            """
+            
+
+        
+        self.gridPlotter.plotPoint(self.position, 255) 
+
         self.analyst.showGrid()
         
-        cv.imshow("raw detections", self.gridPlottingArray)
-        cv.waitKey(0)
+        
+        cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (400, 400), interpolation=cv.INTER_NEAREST))
+        cv.waitKey(1)
