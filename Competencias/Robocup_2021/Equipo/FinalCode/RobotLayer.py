@@ -58,12 +58,12 @@ class Gps:
     # Returns the global position
     def getPosition(self):
         vals = self.gps.getValues()
-        return [vals[0] * self.multiplier, vals[2] * self.multiplier * -1]
+        return [vals[0] * self.multiplier, vals[2] * self.multiplier]
 
     # Returns the global rotation according to gps
     def getRotation(self):
         if self.__prevPosition != self.position:
-            posDiff = [(self.position[0] - self.__prevPosition[0]), (self.position[1] - self.__prevPosition[1])]
+            posDiff = ((self.position[0] - self.__prevPosition[0]), (self.position[1] - self.__prevPosition[1]))
             accuracy = getDistance(posDiff)
             #print("accuracy: " + str(accuracy))
             if accuracy > 0.001:
@@ -84,23 +84,31 @@ class Lidar():
         self.fov = device.getFov()
         self.verticalFov = self.device.getVerticalFov()
         self.horizontalRes = self.device.getHorizontalResolution()
-        self.radPerDetection = self.fov / self.horizontalRes
+        self.verticalRes = self.device.getNumberOfLayers()
+        self.hRadPerDetection = self.fov / self.horizontalRes
+        self.vRadPerDetection = self.verticalFov / self.verticalRes
         self.detectRotOffset = 0 #math.pi * 0.75
         self.maxDetectionDistance = 0.06 * 10
 
     # Does a detection pass and returns a point cloud with the results
     def getPointCloud(self, layers=range(3)):
-        actualDetectionRot = self.detectRotOffset + ((2 * math.pi) - self.rotation)#(degsToRads(359 - radsToDegs(self.rotation)))
-        rangeImage = self.device.getRangeImageArray()
+        #(degsToRads(359 - radsToDegs(self.rotation)))
+        #rangeImage = self.device.getRangeImageArray()
+        print("Lidar vFov: ", self.verticalFov/ self.verticalRes)
         pointCloud = []
-        for depthArray in rangeImage:
-            for index, item in enumerate(depthArray):
-                if item != float("inf") and item != float("inf") * -1 and index in layers:
-                    if item <= self.maxDetectionDistance:
-                        #item -= item * 0.1
-                        coords = getCoordsFromRads(actualDetectionRot, item)
-                        pointCloud.append([coords[0], coords[1]])
-            actualDetectionRot += self.radPerDetection
+        
+        for layer in layers:
+            actualVDetectionRot = (layer * self.vRadPerDetection) + self.verticalFov / 2
+            depthArray = self.device.getLayerRangeImage(layer)
+            actualHDetectionRot = self.detectRotOffset + ((2 * math.pi) - self.rotation)
+            for item in depthArray:
+                if item <= self.maxDetectionDistance:
+                    if item != float("inf") and item != float("inf") * -1 and item != 0:
+                        x = item * math.cos(actualVDetectionRot)
+                        x += 0.06 * 0.2
+                        coords = getCoordsFromRads(actualHDetectionRot, x)
+                        pointCloud.append([coords[0] - 0, (coords[1] * -1) - 0])
+                actualHDetectionRot += self.hRadPerDetection
         return pointCloud
 
     # Sets the rotation of the sensors in radians
@@ -192,7 +200,7 @@ class RobotLayer:
         moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
         if diff > 180 or diff < -180:
             moveDiff = 360 - moveDiff
-        speedFract = min(mapVals(moveDiff, accuracy, 90, 0.2, 1), maxSpeed)
+        speedFract = min(mapVals(moveDiff, accuracy, 90, 0.1, 0.8), maxSpeed)
         if accuracy  * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
             self.rotateToDegsFirstTime = True
             return True
@@ -217,21 +225,23 @@ class RobotLayer:
             #print("target angle: " +  str(degs))
             #print("moveDiff: " + str(moveDiff))
             #print("diff: " + str(diff))
-            #print("orientation: " + str(orientation))
-            #print("direction: " + str(direction))
-            #print("initialDiff: " + str(self.rotateToDegsinitialDiff))
+            print("orientation: " + str(orientation))
+            print("direction: " + str(direction))
+            #print("initialDiff: " + str(self.seqRotateToDegsinitialDiff))
 
         print("ROT IS FALSE")
         return False
 
     def moveToCoords(self, targetPos):
-        errorMargin = 0.002
+        errorMargin = 0.01
         descelerationStart = 0.5 * 0.12
         diffX = targetPos[0] - self.globalPosition[0]
         diffY = targetPos[1] - self.globalPosition[1]
+        print("Target Pos: ", targetPos)
+        print("Used global Pos: ", self.globalPosition)
         print("diff in pos: " + str(diffX) + " , " + str(diffY))
         dist = getDistance((diffX, diffY))
-        #print("Dist: "+ str(dist))
+        print("Dist: "+ str(dist))
         if errorMargin * -1 < dist < errorMargin:
             #self.robot.move(0,0)
             print("FinisehedMove")

@@ -31,14 +31,14 @@ def mapVals(val, in_min, in_max, out_min, out_max):
 def getCoordsFromRads(rad, distance):
     y = float(distance * math.cos(rad))
     x = float(distance * math.sin(rad))
-    return [x, y]
+    return (x, y)
 
 # Gets x, y coordinates from a given angle in degrees and distance
 def getCoordsFromDegs(deg, distance):
     rad = degsToRads(deg)
     y = float(distance * math.cos(rad))
     x = float(distance * math.sin(rad))
-    return [x, y]
+    return (x, y)
 
 def getRadsFromCoords(coords):
     return math.atan2(coords[0], coords[1])

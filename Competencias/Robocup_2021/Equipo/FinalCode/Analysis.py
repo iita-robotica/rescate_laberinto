@@ -200,7 +200,7 @@ class Grid:
                     else:
                         printableArray[x][y] = 50
         
-        return printableArray
+        return np.flip(printableArray, 1)
                 
 
 
@@ -233,26 +233,29 @@ class Analyst:
         gridChunk = np.array([[VortexNode(), WallNode()],
                               [WallNode()  , TileNode()]])
         self.grid = Grid(gridChunk, (100, 100))
-        self.converter = PointCloudToGrid.PointCloudToGridConverter(queSize=20, pointMultiplier=100, tileSize=self.tileSize, pointPermanenceThresh=100, queStep=3)
+        self.queManager = PointCloudToGrid.PointCloudQueManager(queSize=5, pointMultiplier=100, queStep=1)
+        self.divider = PointCloudToGrid.PointCloudDivider(tileSize=0.06, pointMultiplier=100, pointPermanenceThresh=30)
         from ClassifierTemplate import tilesDict as classifTemp
         self.classifier = PointCloudToGrid.Classifier(classifTemp)
+        self.totalPointCloud = []
     
     def loadPointCloud(self, pointCloud):
-        self.converter.update(pointCloud)
-        tilesWithPoints = self.converter.getTiles()
+        self.queManager.update(pointCloud)
+        self.totalPointCloud = self.queManager.getTotalPointCloud()
+        tilesWithPoints = self.divider.getTiles(self.totalPointCloud)
         #print("tilesWithPoints: ", tilesWithPoints)
         for item in tilesWithPoints:
             percentages = self.classifier.getCalsificationPercentages(item["posInTile"])
-            print("percentages: ", percentages)
+            #print("percentages: ", percentages)
             for key, value in percentages.items():
-                wallType, orientation = key.split(" ")
+                wallType, orientation = key
                 if wallType == "straight":
-                    if value > 40:
+                    if value >= 5:
                         self.grid.getNode(item["tile"], orientation).occupied = True
     
     def setTileInGrid(self, position, value):
-        convPos  = [position[0] * self.converter.pointMultiplier, position[1] * self.converter.pointMultiplier]
-        convPos = self.converter.getTile(convPos)
+        convPos  = (position[0] * self.divider.pointMultiplier, position[1] * self.divider.pointMultiplier)
+        convPos = self.divider.getTile(convPos)
         self.grid.getNode(convPos).tileType = value
 
 

@@ -28,7 +28,7 @@ class PlottingArray:
                 self.gridPlottingArray[x][y] = 100
     
     def plotPoint(self, point, value):
-        procPoint = [int(point[0] * self.scale), int(point[1] * self.scale)]
+        procPoint = [int(point[0] * self.scale), int(point[1] * self.scale * -1)]
         finalx = procPoint[0] + int(self.offsets[0] * self.tileSize)
         finaly = procPoint[1] + int(self.offsets[1] * self.tileSize)
                 
@@ -36,12 +36,21 @@ class PlottingArray:
             self.gridPlottingArray[finalx][finaly] = value
     
     def getPoint(self, point):
-        procPoint = [int(point[0] * self.scale), int(point[1] * self.scale)]
+        procPoint = [int(point[0] * self.scale), int(point[1] * self.scale * -1)]
         finalx = procPoint[0] + int(self.offsets[0] * self.tileSize)
         finaly = procPoint[1] + int(self.offsets[1] * self.tileSize)
                 
         if self.size[0] * -1 < finalx < self.size[0] and self.size[0] * -1 < finaly < self.size[1]:
             return self.gridPlottingArray[finalx][finaly]
+    
+    def reset(self):
+        self.gridPlottingArray = np.zeros(self.size, np.uint8)
+        for y in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+            for x in range(len(self.gridPlottingArray[0])):
+                self.gridPlottingArray[x][y] = 100
+        for x in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+            for y in range(len(self.gridPlottingArray[0])):
+                self.gridPlottingArray[x][y] = 100
 
 
 
@@ -108,22 +117,27 @@ class AbstractionLayer():
             print("Doing wall mapping")
             pointCloud = self.robot.getDetectionPointCloud()
             
-            
+            """
             for point in pointCloud:
                 
                 if self.gridPlotter.getPoint(point) < 250:
                     self.gridPlotter.plotPoint(point, self.gridPlotter.getPoint(point) + 5)
+            """
+            
+            
             
             
             self.analyst.loadPointCloud(pointCloud)
             self.analyst.setTileInGrid(self.position, "hole")
 
-            """
-            for point in self.analyst.converter.getTotalPointCloud():
-                ppoint = [point.position[0] / 100, point.position[1] / 100]
-
-                self.gridPlotter.plotPoint(ppoint, 100)
-            """
+            self.gridPlotter.reset()
+            for point in self.analyst.totalPointCloud:
+                if point[2] > 30:
+                    ppoint = [point[0] / 100, point[1] / 100]
+                    self.gridPlotter.plotPoint(ppoint, 255)
+            
+            
+            
             
 
         

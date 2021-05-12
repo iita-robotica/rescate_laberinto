@@ -28,5 +28,11 @@ while r.doLoop():
         
         r.seqMg.startSequence()
         #print(r.seqMoveToCoords((-0.233, -0.36)))
-        r.seqMoveWheels(0.2, -0.2)
+        #r.seqMoveWheels(0.2, -0.2)
+        #r.seqRotateToDegs(90)
+        r.seqMoveToCoords([-0.48, -0.48])
+        r.seqMoveWheels(0, 0)
+        r.seqMoveToCoords([-0.48, 0.3])
+        r.seqMoveWheels(0, 0)
+        r.seqMg.seqResetSequence()
         

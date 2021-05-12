@@ -26,40 +26,38 @@ class PointCloudConverterPoint:
 
 
 # Converts a point cloud in to tiles with positions
-class PointCloudToGridConverter:
+class PointCloudQueManager:
 
-    def __init__(self, queSize, pointMultiplier, tileSize, pointPermanenceThresh=1, queStep = 1):
+    def __init__(self, queSize, pointMultiplier, queStep = 1):
         self.queSize = queSize # Defines the size of the point cloud que
         self.que = [] # A que of point clouds
         self.queStep = queStep
         self.queActualStep = 0
-        # Defines the number to multiply the coordinates to convert them in to ints
         self.pointMultiplier = pointMultiplier
-        # Defines the number of times a point has to repeat to be considered definitive
-        self.pointPermanenceThresh = pointPermanenceThresh
-        # Defines the size of a tie in the scale of the original coordinates
-        self.tileSize = tileSize
-        self.realTileSize = self.tileSize * self.pointMultiplier
         for _ in range(queSize):
             self.que.append([])
     
     # Converts the point coords in to ints and multiplies it with the point multiplier
     def processPointCloud(self, pointCloud):
+        #processedPointCloud = [PointCloudConverterPoint((int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier))) for point in pointCloud]
+        """
         processedPointCloud = []
         for point in pointCloud:
-            p = [int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier)]
+            p = (int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier))
             procPoint = PointCloudConverterPoint(p)
             processedPointCloud.append(procPoint)
+        """
 
         finalPointCloud = []
-        for point in processedPointCloud:
+        for point in pointCloud:
+            fpoint = [int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier), 1]
             alreadyInFinal = False
             for finalPoint in finalPointCloud:
-                if point == finalPoint:
-                    finalPoint.count += 1
+                if fpoint[:2] == finalPoint[:2]:
+                    finalPoint[2] += 1
                     alreadyInFinal = True
             if not alreadyInFinal:
-                finalPointCloud.append(point)
+                finalPointCloud.append(fpoint)
         return finalPointCloud
     
     # Merges all the point clouds in the que and returns them
@@ -69,11 +67,12 @@ class PointCloudToGridConverter:
         for pointCloud in self.que:
             for item in pointCloud:
                 for totalItem in totalPointCloud:
-                    if item == totalItem:
+                    if item[:2] == totalItem[:2]:
                         isInFinal = True
-                        totalItem.count += item.count
+                        totalItem[2] += item[2]
                 if not isInFinal:
                     totalPointCloud.append(item)
+        #print("total point cloud: ", totalPointCloud)
         return totalPointCloud
 
     # Adds a new point cloud to the que and removes the last element
@@ -85,23 +84,34 @@ class PointCloudToGridConverter:
         else:
             self.queActualStep += 1
     
+    
+
+class PointCloudDivider:
+    def __init__(self, tileSize, pointMultiplier, pointPermanenceThresh):
+        # Defines the size of a tie in the scale of the original coordinates
+        self.tileSize = tileSize
+         # Defines the number to multiply the coordinates to convert them in to ints
+        self.pointMultiplier = pointMultiplier
+        # Defines the number of times a point has to repeat to be considered definitive
+        self.pointPermanenceThresh = pointPermanenceThresh
+        self.realTileSize = self.tileSize * self.pointMultiplier
+    
     def getTile(self, position):
-        return [int(position[0] // self.realTileSize), int(position[1] // self.realTileSize)]
+        return (int(position[0] // self.realTileSize), int(position[1] // self.realTileSize))
     
     def getPosInTile(self, position):
-        return [int(position[0] % self.realTileSize), int(position[1] % self.realTileSize)]
+        return (int(position[0] % self.realTileSize), int(position[1] % self.realTileSize))
     
     # Returns a list with dictionarys containing the tile number and the position inside of said tile
-    @lru_cache(None)
-    def getTiles(self):
+    def getTiles(self, totalPointCloud):
         tiles = []
-        totalPointCloud = self.getTotalPointCloud()
         #print("Total Point Cloud: ", totalPointCloud)
         for item in totalPointCloud:
             inTiles = False
-            if item.count >= self.pointPermanenceThresh:
-                itemTile = self.getTile(item.position)
-                itemPosInTile = self.getPosInTile(item.position)
+            if item[2] >= self.pointPermanenceThresh:
+                #print(item[:2])
+                itemTile = self.getTile(item[:2])
+                itemPosInTile = self.getPosInTile(item[:2])
                 for tile in tiles:
                     if tile["tile"] == itemTile:
                         inTiles = True
@@ -126,7 +136,6 @@ class Classifier:
             self.tilesDictPositivesCount[key] = count
 
     # Returns the similarity of the points imputted to the templates in percentages
-    @lru_cache(None)
     def getCalsificationPercentages(self, pointList):
         elementsDict = {}
         for key in self.validTileDictKeys:
@@ -134,85 +143,6 @@ class Classifier:
 
         for point in pointList:
             for key, modelGrid in self.tilesDict.items():
-    
-                elementsDict[key] += (modelGrid[point[0]][point[1]] * (100 / self.tilesDictPositivesCount[key]))
-                if key == "straight left":
-                    print("Left positive counts : ", elementsDict[key])
+                elementsDict[key] += modelGrid[point[0]][point[1]]
                     
         return elementsDict
-
-
-if __name__ == "__main__":
-    tilesDict = {
-        
-        "wallRight": np.array([[0, 0, 0, 0, 1, 1],
-                                [0, 0, 0, 0, 1, 1],
-                                [0, 0, 0, 0, 1, 1],
-                                [0, 0, 0, 0, 1, 1],
-                                [0, 0, 0, 0, 1, 1],
-                                [0, 0, 0, 0, 1, 1]]),
-
-        "wallLeft": np.array([[1, 1, 0, 0, 0, 0],
-                                [1, 1, 0, 0, 0, 0],
-                                [1, 1, 0, 0, 0, 0],
-                                [1, 1, 0, 0, 0, 0],
-                                [1, 1, 0, 0, 0, 0],
-                                [1, 1, 0, 0, 0, 0]]),
-                                
-            "wallUp": np.array([[1, 1, 1, 1, 1, 1],
-                                [1, 1, 1, 1, 1, 1],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0]]),
-                                
-        "wallDown": np.array([[0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [1, 1, 1, 1, 1, 1],
-                                [1, 1, 1, 1, 1, 1]]),
-
-            "curvedRight-up": np.array([[1, 1, 1, 1, 0, 0],
-                                        [1, 1, 1, 1, 1, 0],
-                                        [0, 0, 0, 1, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1]]),
-
-        "curvedLeft-up": np.array([[0, 0, 1, 1, 1, 1],
-                                    [0, 1, 1, 1, 1, 1],
-                                    [1, 1, 1, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0]]),
-                                
-        "curvedRight-down": np.array([[0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 1, 1, 1],
-                                        [1, 1, 1, 1, 1, 0],
-                                        [1, 1, 1, 1, 0, 0]]),
-                                
-        "curvedLeft-down": np.array([[1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 1, 0, 0, 0],
-                                        [0, 1, 1, 1, 1, 1],
-                                        [0, 0, 1, 1, 1, 1]])
-            }
-
-
-    conv = PointCloudToGridConverter(5, 100, 0.06, 2)
-    classifier = Classifier(tilesDict)
-
-    #conv.update([[0.9, 0.6], [0.9, 0.21], [0.2, 0.3]])
-    for _ in range(3):
-        conv.update([[0.1, 0.1], [0.1, 0.09], [0.2, 0.3]])
-    print(conv.que)
-    print(conv.getTotalPointCloud())
-    print(conv.getTiles())
-        
-    print(classifier.getCalsificationPercentages([[0,0], [0,1], [0,2], [0,3], [0,4], [0,5]]))
-
-
