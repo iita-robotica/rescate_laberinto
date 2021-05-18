@@ -1,3 +1,4 @@
+from Competencias.Robocup_2021.Equipo.FinalCode.UtilityFunctions import getDistance
 import numpy as np
 import cv2 as cv
 import sys
@@ -17,6 +18,7 @@ class TileNode:
     def __init__(self, tileType="undefined", curvedWall=[0,0], fixtures=[], obstacles=[]):
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
         self.tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
+        self.traversed = False
         self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
         self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
         self.obstacles = obstacles # List of obstacles in tile
@@ -36,6 +38,7 @@ class WallNode:
         self.dimensions = [0.06, 0.06, 0.01] # Dimensions of the wall
         self.occupied = occupied # If there is a wall. Can be True or false.
         self.isFloating = False # If it is a floating wal
+        self.traversed = False
         self.fixtures = fixtures # List of all fixtures in wall
     
      # Defines what to print if I ask to print it
@@ -58,6 +61,7 @@ class VortexNode:
     def __init__(self, occupied=False):
         self.dimensions = [0.01, 0.01, 0.06] # Dimensions of the vortex
         self.occupied = occupied # If there is a vortex. Can be True or false.
+        self.traversed = False
     
      # Defines what to print if I ask to print it
     def __repr__(self):
@@ -203,29 +207,181 @@ class Grid:
         return np.flip(printableArray, 1)
                 
 
+# aStarNode class for A* pathfinding (Not to be confused with the node grid)
+class aStarNode():
+    def __init__(self, parent=None, position=None):
+        self.parent = parent
+        self.position = position
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.position == other.position
+
 
 # Finds the best path to follow
 class PathFinder:
+    def __init__(self, vortexNode, wallNode, tileNode, grid, searchLimit):
+        self.grid = grid
+        self.startVortex = [0, 0]
+        self.objectiveVortex = [0, 0]
+        self.vortexNode = vortexNode
+        self.wallNode = wallNode
+        self.tileNode = tileNode
+        self.searchLimit = searchLimit
 
-    def __init__(self):
-        self.grid = None
-        self.start = [0, 0]
-        self.objective = [0, 0]
+    def isTraversable(self, index):
+        node = self.grid.getRawNode(index)
+        if isinstance(node, TileNode):
+            return node.tileType != "hole"
+        if isinstance(node, WallNode):
+            return not node.occupied
+        if isinstance(node, VortexNode):
+            if node.occupied:
+                return False
+            for adjacentIndex in ((-1, 1), (1, -1), (1, -1), (-1, 1), (0, 1), (0, -1), (1, 0), (-1, 0)):
+                adjacent = node = self.grid.getRawNode((index[0] + adjacentIndex[0], index[1] + adjacentIndex[0]))
+                if isinstance(adjacent, TileNode):
+                    return node.tileType != "hole"
+                elif isinstance(node, WallNode):
+                    return not node.occupied
+            return True
+        return False
+        
 
-    def isTraversble(self, node):
-        return True
+    # Returns a list of tuples as a path from the given start to the given end in the given maze
+    def aStar(self, start, end):
+        # Create start and end node
+        startNode = aStarNode(None, (start[0], start[1]))
+        startNode.g = startNode.h = startNode.f = 0
+        endNode = aStarNode(None, (end[0], end[1]))
+        endNode.g = endNode.h = endNode.f = 0
+        # Initialize open and closed list
+        openList = []
+        closedList = []
+        # Add the start node
+        openList.append(startNode)
+        # Loop until end
+        while len(openList) > 0:
+            # Get the current node
+            currentNode = openList[0]
+            currentIndex = 0
+            for index, item in enumerate(openList):
+                if item.f < currentNode.f:
+                    currentNode = item
+                    currentIndex = index
+            # Pop current off open list, add to closed list
+            openList.pop(currentIndex)
+            closedList.append(currentNode)
+            # If found the goal
+            if currentNode == endNode:
+                path = []
+                current = currentNode
+                while current is not None:
+                    path.append(current.position)
+                    current = current.parent
+                return path[::-1]  # Return reversed path
+            # Generate children
+            children = []
+            for newOrientation in ((0, 1), (0, -1), (-1, 0), (1, 0)):  # Adjacent squares
+                newPosition = self.orientations[newOrientation]
+                # Get node position
+                nodePosition = (currentNode.position[0] + (newPosition[0] * 2), currentNode.position[1] + (newPosition[1] * 2))
+                # Make sure walkable terrain
+                if not self.isTraversable(nodePosition):
+                    continue
+                # Create new node
+                newNode = aStarNode(currentNode, nodePosition)
+                # Append
+                children.append(newNode)
+            # Loop through children
+            for child in children:
+                continueLoop = False
+                # Child is on the closed list
+                for closedChild in closedList:
+                    if child == closedChild:
+                        continueLoop = True
+                        break
+                # Create the f, g, and h values
+                child.g = currentNode.g + 1
+                child.h = ((child.position[0] - endNode.position[0]) ** 2) + (
+                            (child.position[1] - endNode.position[1]) ** 2)
+                child.f = child.g + child.h
+                # Child is already in the open list
+                for openNode in openList:
+                    if child == openNode and child.g > openNode.g:
+                        continueLoop = True
+                        break
+                if continueLoop:
+                    continue
+                # Add the child to the open list
+                openList.append(child)
+    
+    def isBfsAddable(self, index):
+        """
+        if not self.isTraversable(index):
+            return False
+        """
+        node = self.grid.getRawNode(index)
+        if isinstance(node, self.vortexNode):
+            return not node.traversed
+        else:
+            return False
 
-    def AStar(self):
-        pass
+    # Breath First Search algorithm
+    # Returns the tiles with in order and with the distance of each one
+    def bfs(self, start, limit="undefined"):
+        visited = []
+        queue = []
+        found = []
+        start = [start[0], start[1], 0]
+        visited.append(start)
+        queue.append(start)
+        while queue:
+            coords = queue.pop(0)
+            x = coords[0]
+            y = coords[1]
+            dist = coords[2]
+            if limit != "undefined":
+                if dist > limit:
+                    break
+            
+            if self.isBfsAddable(coords):
+                found.append(coords)
+            for newPosition in (0, 1), (0, -1), (-1, 0), (1, 0):
+                neighbour = [x + newPosition[0] * 2, y + newPosition[1] * 2, dist + 1]
+                inList = False
+                for node in visited:
+                    if node[0] == neighbour[0] and node[1] == neighbour[1]:
+                        inList = True
+                        break
+                if inList:
+                    continue
 
-    def bfs(self):
-        pass
+                # Make sure walkable terrain
+                try:
+                    if self.isTraversable(neighbour):
+                        visited.append(neighbour)
+                        queue.append(neighbour)
+                except IndexError:
+                    pass
+        return found
 
     def getPreferabilityScore(self, node):
         pass
 
+    def setStartVortex(self, startRawVortexPos):
+        if not isinstance(self.grid.getRawNode(startRawVortexPos), self.vortexNode):
+            raise ValueError("Inputed position does not correspond to a vortex node")
+        self.startVortex = startRawVortexPos
+    
+    def setGrid(self, grid):
+        self.grid = grid
+
     def getBestPath(self):
-        return []
+        possibleNodes = self.bfs(self.startVortex, self.searchLimit)
+        return possibleNodes[1]
     
 class Analyst:
     def __init__(self, tileSize):
@@ -237,7 +393,15 @@ class Analyst:
         self.divider = PointCloudToGrid.PointCloudDivider(tileSize=0.06, pointMultiplier=100, pointPermanenceThresh=30)
         from ClassifierTemplate import tilesDict as classifTemp
         self.classifier = PointCloudToGrid.Classifier(classifTemp)
+        self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 50)
+        self.pathFinder.setStartVortex((1, 1))
+        self.pathFinder.getBestPath()
         self.totalPointCloud = []
+        self.actualRawNode = []
+        self.__bestPath = []
+        self.calculatePath = True
+        self.pathIndex = 0
+        self.positionReachedThresh = 1
     
     def loadPointCloud(self, pointCloud):
         self.queManager.update(pointCloud)
@@ -253,12 +417,55 @@ class Analyst:
                     if value >= 5:
                         self.grid.getNode(item["tile"], orientation).occupied = True
     
-    def setTileInGrid(self, position, value):
-        convPos  = (position[0] * self.divider.pointMultiplier, position[1] * self.divider.pointMultiplier)
+    def loadColorDetection(self, colorSensorPosition, tileType):
+        convPos  = self.multiplyPos(colorSensorPosition)
         convPos = self.divider.getTile(convPos)
-        self.grid.getNode(convPos).tileType = value
+        self.grid.getNode(convPos).tileType = tileType
+
+    def getQuadrant(self, posInTile):
+        if posInTile[0] > self.tileSize / 2: x = 1
+        else: x = -1
+        if posInTile[1] > self.tileSize / 2: y = 1
+        else: y = -1
+        return [x, y]
+    
+    def getVortexPosInTile(self, quadrant):
+        return [(self.tileSize / 2) + (quadrant[0] * self.tileSize // 2), (self.tileSize / 2) + (quadrant[1] * self.tileSize // 2)]
 
 
+    def multiplyPos(self, position):
+        return (position[0] * self.divider.pointMultiplier, position[1] * self.divider.pointMultiplier)
+
+        
+    def update(self, position):
+        convPos = self.multiplyPos(position)
+        tile = self.divider.getTile(convPos)
+        posInTile = self.divider.getPosInTile(convPos)
+        quadrant = self.getQuadrant(posInTile)
+        startRawNode = self.grid.processedToRawNode(tile, quadrant)
+
+        self.pathFinder.setStartVortex(startRawNode)
+
+        vortexPos = self.multiplyPos(self.getVortexPosInTile(quadrant))
+        diff = [vortexPos[0] - posInTile[0], vortexPos[1] - posInTile[1]]
+        distToVortex = getDistance(diff)
+
+        if distToVortex < self.positionReachedThresh and startRawNode == self.__bestPath[self.pathIndex]:
+            self.pathIndex += 1
+
+        if self.pathIndex >= len(len(self.__bestPath)):
+            self.calculatePath = True
+
+    
+        if self.calculatePath:
+            self.__bestPath = self.pathFinder.getBestPath()
+            self.pathIndex = 0
+            self.calculatePath = False
+    
+    def getBestNodeToMove(self):
+        return self.__bestPath[self.pathIndex]
+
+        
     
     def getGrid(self):
         return self.grid.grid

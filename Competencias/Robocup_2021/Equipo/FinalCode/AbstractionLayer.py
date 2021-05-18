@@ -104,6 +104,10 @@ class AbstractionLayer():
     @property
     def position(self):
         return self.robot.globalPosition
+
+    
+    def getBestPos(self):
+        return self.
     
     def doLoop(self):
         return self.robot.doLoop()
@@ -124,20 +128,14 @@ class AbstractionLayer():
                     self.gridPlotter.plotPoint(point, self.gridPlotter.getPoint(point) + 5)
             """
             
-            
-            
-            
             self.analyst.loadPointCloud(pointCloud)
-            self.analyst.setTileInGrid(self.position, "hole")
+            self.analyst.loadColorDetection(self.position, "hole")
 
             self.gridPlotter.reset()
             for point in self.analyst.totalPointCloud:
                 if point[2] > 30:
                     ppoint = [point[0] / 100, point[1] / 100]
                     self.gridPlotter.plotPoint(ppoint, 255)
-            
-            
-            
             
 
         
