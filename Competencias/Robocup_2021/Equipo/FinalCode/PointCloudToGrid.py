@@ -39,14 +39,6 @@ class PointCloudQueManager:
     
     # Converts the point coords in to ints and multiplies it with the point multiplier
     def processPointCloud(self, pointCloud):
-        #processedPointCloud = [PointCloudConverterPoint((int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier))) for point in pointCloud]
-        """
-        processedPointCloud = []
-        for point in pointCloud:
-            p = (int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier))
-            procPoint = PointCloudConverterPoint(p)
-            processedPointCloud.append(procPoint)
-        """
 
         finalPointCloud = []
         for point in pointCloud:
@@ -96,6 +88,8 @@ class PointCloudDivider:
         self.pointPermanenceThresh = pointPermanenceThresh
         self.realTileSize = self.tileSize * self.pointMultiplier
     
+    
+
     def getTile(self, position):
         return (int(position[0] // self.realTileSize), int(position[1] // self.realTileSize))
     
@@ -121,6 +115,23 @@ class PointCloudDivider:
                     tiles.append({"tile":itemTile, "posInTile":[itemPosInTile]})
         #print("Tiles: ", tiles)
         return tiles
+
+class PointCloudConverter:
+
+    def __init__(self, tileSize, pointMultiplier):
+        self.queManager = PointCloudQueManager(queSize=5, pointMultiplier=pointMultiplier)
+        self.divider = PointCloudDivider(tileSize, pointMultiplier, pointPermanenceThresh=30)
+        self.totalPointCloud = []
+    
+
+    def loadPointCloud(self, pointCloud):
+        self.queManager.update(pointCloud)
+        
+    
+    def getTilesWithPoints(self):
+        self.totalPointCloud = self.queManager.getTotalPointCloud()
+        return (self.divider.getTiles(self.totalPointCloud))
+    
 
 # Uses a dict of tile templates to return the elements present in a tile given points inside that tile
 class Classifier:

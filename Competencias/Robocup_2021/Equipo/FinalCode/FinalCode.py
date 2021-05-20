@@ -22,7 +22,19 @@ while r.doLoop():
 
     if stMg.checkState("init"):
         if r.calibrate():
-            stMg.changeState("main")
+            stMg.changeState("followBest")
+    
+    if stMg.checkState("stop"):
+        r.seqMg.startSequence()
+        r.seqMoveWheels(0, 0)
+    
+    if stMg.checkState("followBest"):
+        r.seqMg.startSequence()
+        bestPos = r.getBestPos()
+        if bestPos is not None:
+            r.seqMoveToCoords(bestPos)
+        r.seqMg.seqResetSequence()
+
 
     if stMg.checkState("main"):
         

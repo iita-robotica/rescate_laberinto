@@ -1,8 +1,8 @@
-from Competencias.Robocup_2021.Equipo.FinalCode.UtilityFunctions import getDistance
 import numpy as np
 import cv2 as cv
 import sys
 import copy
+
 
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
@@ -182,6 +182,18 @@ class Grid:
         if y < self.offsets[1] * -1:
             raise IndexError("Index too small for list with min index " + str(self.offsets[0] * -1))
         return (x,y)
+    
+    def rawToProcessedNode(self, rawNode):
+        x = rawNode[0] // self.chunkSize[0]
+        y = rawNode[1] // self.chunkSize[1]
+        sideX = rawNode[0] % self.chunkSize[0]
+        sideY = rawNode[1] % self.chunkSize[1]
+        quadrant = [0, 0]
+        if sideX > 0: quadrant[0] = 1
+        if sideY > 0: quadrant[1] = 1
+        return (x, y), quadrant
+
+
 
     # Returns a node given the position of a tile and directions to indicate walls and vertices
     def getNode(self, position, side=[0,0]):
@@ -234,19 +246,26 @@ class PathFinder:
     def isTraversable(self, index):
         node = self.grid.getRawNode(index)
         if isinstance(node, TileNode):
+            raise ValueError("Invalid instance")
             return node.tileType != "hole"
         if isinstance(node, WallNode):
+            raise ValueError("Invalid instance")
             return not node.occupied
         if isinstance(node, VortexNode):
             if node.occupied:
                 return False
+            traversable = True
             for adjacentIndex in ((-1, 1), (1, -1), (1, -1), (-1, 1), (0, 1), (0, -1), (1, 0), (-1, 0)):
-                adjacent = node = self.grid.getRawNode((index[0] + adjacentIndex[0], index[1] + adjacentIndex[0]))
+                adjacent = self.grid.getRawNode((index[0] + adjacentIndex[0], index[1] + adjacentIndex[1]))
                 if isinstance(adjacent, TileNode):
-                    return node.tileType != "hole"
-                elif isinstance(node, WallNode):
-                    return not node.occupied
-            return True
+                    if adjacent.tileType == "hole":
+                        traversable = False
+                elif isinstance(adjacent, WallNode):
+                    if adjacent.occupied:
+                        traversable = False
+                else:
+                    raise ValueError(("invalid instance: " + str(type(adjacent))))
+            return traversable
         return False
         
 
@@ -284,8 +303,7 @@ class PathFinder:
                 return path[::-1]  # Return reversed path
             # Generate children
             children = []
-            for newOrientation in ((0, 1), (0, -1), (-1, 0), (1, 0)):  # Adjacent squares
-                newPosition = self.orientations[newOrientation]
+            for newPosition in ((0, 1), (0, -1), (-1, 0), (1, 0)):  # Adjacent squares
                 # Get node position
                 nodePosition = (currentNode.position[0] + (newPosition[0] * 2), currentNode.position[1] + (newPosition[1] * 2))
                 # Make sure walkable terrain
@@ -340,8 +358,8 @@ class PathFinder:
         queue.append(start)
         while queue:
             coords = queue.pop(0)
-            x = coords[0]
             y = coords[1]
+            x = coords[0]
             dist = coords[2]
             if limit != "undefined":
                 if dist > limit:
@@ -349,23 +367,23 @@ class PathFinder:
             
             if self.isBfsAddable(coords):
                 found.append(coords)
-            for newPosition in (0, 1), (0, -1), (-1, 0), (1, 0):
-                neighbour = [x + newPosition[0] * 2, y + newPosition[1] * 2, dist + 1]
-                inList = False
-                for node in visited:
-                    if node[0] == neighbour[0] and node[1] == neighbour[1]:
-                        inList = True
-                        break
-                if inList:
-                    continue
+                for newPosition in (0, 1), (0, -1), (-1, 0), (1, 0):
+                    neighbour = [x + newPosition[0] * 2, y + newPosition[1] * 2, dist + 1]
+                    inList = False
+                    for node in visited:
+                        if node[0] == neighbour[0] and node[1] == neighbour[1]:
+                            inList = True
+                            break
+                    if inList:
+                        continue
 
-                # Make sure walkable terrain
-                try:
-                    if self.isTraversable(neighbour):
-                        visited.append(neighbour)
-                        queue.append(neighbour)
-                except IndexError:
-                    pass
+                    # Make sure walkable terrain
+                    try:
+                        if self.isTraversable(neighbour):
+                            visited.append(neighbour)
+                            queue.append(neighbour)
+                    except IndexError:
+                        pass
         return found
 
     def getPreferabilityScore(self, node):
@@ -374,39 +392,57 @@ class PathFinder:
     def setStartVortex(self, startRawVortexPos):
         if not isinstance(self.grid.getRawNode(startRawVortexPos), self.vortexNode):
             raise ValueError("Inputed position does not correspond to a vortex node")
-        self.startVortex = startRawVortexPos
+        if self.isTraversable(startRawVortexPos):
+            self.startVortex = startRawVortexPos
+        else:
+            print("INITIAL VORTEX NOT TRAVERSABLE")
     
     def setGrid(self, grid):
         self.grid = grid
 
     def getBestPath(self):
         possibleNodes = self.bfs(self.startVortex, self.searchLimit)
-        return possibleNodes[1]
+        if len(possibleNodes) > 1:
+            bestNode = possibleNodes[1]
+            bestPath = self.aStar(self.startVortex ,bestNode)
+            print("BFS NODES: ", possibleNodes[0:50])
+            print("AStar PATH: ", bestPath)
+            print("Start Vortex: ", self.startVortex)
+            """
+            if self.startVortex == bestPath[0]:
+                return bestPath[1:]
+            """
+            return bestPath#[1:]
+        return []
     
 class Analyst:
     def __init__(self, tileSize):
+        # Important variables
         self.tileSize = tileSize
+        self.posMultiplier = 100
+        #Grid
         gridChunk = np.array([[VortexNode(), WallNode()],
                               [WallNode()  , TileNode()]])
         self.grid = Grid(gridChunk, (100, 100))
-        self.queManager = PointCloudToGrid.PointCloudQueManager(queSize=5, pointMultiplier=100, queStep=1)
-        self.divider = PointCloudToGrid.PointCloudDivider(tileSize=0.06, pointMultiplier=100, pointPermanenceThresh=30)
+        # Converter
+        self.converter = PointCloudToGrid.PointCloudConverter(self.tileSize, pointMultiplier=self.posMultiplier)
+        # Classifier
         from ClassifierTemplate import tilesDict as classifTemp
         self.classifier = PointCloudToGrid.Classifier(classifTemp)
+        # Path finder
         self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 50)
         self.pathFinder.setStartVortex((1, 1))
-        self.pathFinder.getBestPath()
-        self.totalPointCloud = []
+        #self.pathFinder.getBestPath()
+        # Variables
         self.actualRawNode = []
         self.__bestPath = []
         self.calculatePath = True
         self.pathIndex = 0
-        self.positionReachedThresh = 1
+        self.positionReachedThresh = 0.02
     
     def loadPointCloud(self, pointCloud):
-        self.queManager.update(pointCloud)
-        self.totalPointCloud = self.queManager.getTotalPointCloud()
-        tilesWithPoints = self.divider.getTiles(self.totalPointCloud)
+        self.converter.loadPointCloud(pointCloud)
+        tilesWithPoints = self.converter.getTilesWithPoints()
         #print("tilesWithPoints: ", tilesWithPoints)
         for item in tilesWithPoints:
             percentages = self.classifier.getCalsificationPercentages(item["posInTile"])
@@ -418,94 +454,103 @@ class Analyst:
                         self.grid.getNode(item["tile"], orientation).occupied = True
     
     def loadColorDetection(self, colorSensorPosition, tileType):
-        convPos  = self.multiplyPos(colorSensorPosition)
-        convPos = self.divider.getTile(convPos)
+        convPos = self.getTile(colorSensorPosition)
         self.grid.getNode(convPos).tileType = tileType
 
     def getQuadrant(self, posInTile):
-        if posInTile[0] > self.tileSize / 2: x = 1
-        else: x = -1
+        if posInTile[0] > self.tileSize / 2: x = -1
+        else: x = 1
         if posInTile[1] > self.tileSize / 2: y = 1
         else: y = -1
         return [x, y]
+
+    
+    def getTile(self, position):
+        return (int(position[0] // self.tileSize), int(position[1] // self.tileSize))
+    
+    def getPosInTile(self, position):
+        return ((position[0] % self.tileSize), (position[1] % self.tileSize))
     
     def getVortexPosInTile(self, quadrant):
-        return [(self.tileSize / 2) + (quadrant[0] * self.tileSize // 2), (self.tileSize / 2) + (quadrant[1] * self.tileSize // 2)]
+        return [(self.tileSize / 2) + ((quadrant[0] * self.tileSize) / 2), (self.tileSize / 2) + ((quadrant[1] * self.tileSize) / 2)]
 
+    def getTilePos(self, tile):
+        return (tile[0] * self.tileSize, tile[1] * self.tileSize)
 
     def multiplyPos(self, position):
-        return (position[0] * self.divider.pointMultiplier, position[1] * self.divider.pointMultiplier)
-
-        
+        return (position[0] * self.posMultiplier, position[1] * self.posMultiplier)
+  
     def update(self, position):
-        convPos = self.multiplyPos(position)
-        tile = self.divider.getTile(convPos)
-        posInTile = self.divider.getPosInTile(convPos)
+        posInTile = self.getPosInTile(position)
         quadrant = self.getQuadrant(posInTile)
+        tile = self.getTile(position)
         startRawNode = self.grid.processedToRawNode(tile, quadrant)
-
+        print("startRawNode: ", startRawNode)
         self.pathFinder.setStartVortex(startRawNode)
+        self.pathFinder.setGrid(self.grid)
 
-        vortexPos = self.multiplyPos(self.getVortexPosInTile(quadrant))
-        diff = [vortexPos[0] - posInTile[0], vortexPos[1] - posInTile[1]]
+        vortexPosInTile = self.getVortexPosInTile(quadrant)
+        diff = [vortexPosInTile[0] - posInTile[0], vortexPosInTile[1] - posInTile[1]]
         distToVortex = getDistance(diff)
 
-        if distToVortex < self.positionReachedThresh and startRawNode == self.__bestPath[self.pathIndex]:
-            self.pathIndex += 1
+        if len(self.__bestPath):
+            print("Dist to Vortex: ", distToVortex)
+            if distToVortex < self.positionReachedThresh and startRawNode == self.__bestPath[self.pathIndex]:
+                self.pathIndex += 1
 
-        if self.pathIndex >= len(len(self.__bestPath)):
+            bestNode = self.getBestRawNodeToMove()
+            if bestNode is not None:
+                if not self.pathFinder.isTraversable(bestNode):
+                    self.calculatePath = True
+
+        if self.pathIndex >= len(self.__bestPath):
             self.calculatePath = True
 
-    
         if self.calculatePath:
             self.__bestPath = self.pathFinder.getBestPath()
             self.pathIndex = 0
             self.calculatePath = False
     
-    def getBestNodeToMove(self):
-        return self.__bestPath[self.pathIndex]
+    def getBestRawNodeToMove(self):
+        print("Best path: ", self.__bestPath)
+        print("Index: ", self.pathIndex)
+        if len(self.__bestPath):
+            return self.__bestPath[self.pathIndex]
+        else:
+            return None
+    
+    def getBestPosToMove(self):
+        bestRawNode = self.getBestRawNodeToMove()
+        print("BEST PATH: ", bestRawNode)
+        if bestRawNode is None:
+            return None
+        node, quadrant = self.grid.rawToProcessedNode(bestRawNode)
+        
+        nodePos = self.getTilePos(node)
+        
+        vortexPos = self.getVortexPosInTile(quadrant)
+        return [nodePos[0] + vortexPos[0], nodePos[1] + vortexPos[1]]
+        #return nodePos
+    
+    def getBestPoses(self):
+        bestPoses = []
+        for bestRawNode in self.__bestPath:
+            node, quadrant = self.grid.rawToProcessedNode(bestRawNode)
+        
+            nodePos = self.getTilePos(node)
+        
+            vortexPos = self.getVortexPosInTile(quadrant)
+            print("Vortex pos: ", vortexPos)
+            #return 
+            bestPoses.append([nodePos[0] + vortexPos[0], nodePos[1] + vortexPos[1]])
+        return bestPoses
+
+
 
         
-    
     def getGrid(self):
         return self.grid.grid
     
     def showGrid(self):
         cv.imshow("Analyst grid", cv.resize(self.grid.getNumpyPrintableArray(), (400, 400), interpolation=cv.INTER_NEAREST))
-
-
-
-if __name__ == "__main__":
-
-    """
-    chunk1 = np.array([[0, 1],
-                    [1, 3]])
-
-    chunk2 = np.array([[VortexNode(), WallNode()],
-                    [WallNode()  , TileNode(tileType="swamp")]])
-
-    grid = Grid(chunk2, [10, 10])
-    print("--------------")
-
-    #grid.addRowAtStart()
-
-
-    #grid.getNode((0,0)).occupied = True
-    grid.getNode((0,0)).tileType = "hole"
-
-    for i in range(grid.offsets[0] // 2 * -1, grid.size[0] // 2 - grid.offsets[0] // 2):
-        print(i)
-        grid.getNode((i, 0), "up").occupied = True
-
-    print(grid.grid)
-    print("Offsets: " + str(grid.offsets))
-
-
-    print("--------------")
-    """
-
-
-    analyst = Analyst(0.06)
-    pointCloud = [[0,0.02], [1.5, 1.12]]
-    analyst.loadPointCloud(pointCloud)
 

@@ -94,7 +94,7 @@ class Lidar():
     def getPointCloud(self, layers=range(3)):
         #(degsToRads(359 - radsToDegs(self.rotation)))
         #rangeImage = self.device.getRangeImageArray()
-        print("Lidar vFov: ", self.verticalFov/ self.verticalRes)
+        #print("Lidar vFov: ", self.verticalFov/ self.verticalRes)
         pointCloud = []
         
         for layer in layers:
@@ -225,11 +225,11 @@ class RobotLayer:
             #print("target angle: " +  str(degs))
             #print("moveDiff: " + str(moveDiff))
             #print("diff: " + str(diff))
-            print("orientation: " + str(orientation))
-            print("direction: " + str(direction))
+            #print("orientation: " + str(orientation))
+            #print("direction: " + str(direction))
             #print("initialDiff: " + str(self.seqRotateToDegsinitialDiff))
 
-        print("ROT IS FALSE")
+        #print("ROT IS FALSE")
         return False
 
     def moveToCoords(self, targetPos):
@@ -237,25 +237,25 @@ class RobotLayer:
         descelerationStart = 0.5 * 0.12
         diffX = targetPos[0] - self.globalPosition[0]
         diffY = targetPos[1] - self.globalPosition[1]
-        print("Target Pos: ", targetPos)
-        print("Used global Pos: ", self.globalPosition)
-        print("diff in pos: " + str(diffX) + " , " + str(diffY))
+        #print("Target Pos: ", targetPos)
+        #print("Used global Pos: ", self.globalPosition)
+        #print("diff in pos: " + str(diffX) + " , " + str(diffY))
         dist = getDistance((diffX, diffY))
-        print("Dist: "+ str(dist))
+        #print("Dist: "+ str(dist))
         if errorMargin * -1 < dist < errorMargin:
             #self.robot.move(0,0)
-            print("FinisehedMove")
+            #print("FinisehedMove")
             return True
         else:
             
             ang = getDegsFromCoords((diffX, diffY))
             ang = normalizeDegs(ang)
-            print("traget ang: " + str(ang))
+            #print("traget ang: " + str(ang))
             ratio = min(mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
             ratio = max(ratio, 0.8)
             if self.rotateToDegs(ang):
                 self.moveWheels(ratio, ratio)
-                print("Moving")
+                #print("Moving")
         return False
     
     # Gets a point cloud with all the detections from lidar and distance sensorss
