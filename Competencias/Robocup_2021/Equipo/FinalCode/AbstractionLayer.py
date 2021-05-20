@@ -131,16 +131,24 @@ class AbstractionLayer():
                 if self.gridPlotter.getPoint(point) < 250:
                     self.gridPlotter.plotPoint(point, self.gridPlotter.getPoint(point) + 5)
             """
-            
+            #tileType = self.robot.get
             self.analyst.loadPointCloud(pointCloud)
-            self.analyst.loadColorDetection(self.position, "hole")
+            #self.analyst.loadColorDetection(self.position, "hole")
             self.analyst.update(self.position)
 
             self.gridPlotter.reset()
             for point in self.analyst.converter.totalPointCloud:
                 if point[2] > 30:
                     ppoint = [point[0] / 100, point[1] / 100]
-                    self.gridPlotter.plotPoint(ppoint, 150)
+                    self.gridPlotter.plotPoint(ppoint, 100)
+            
+            bestPos = self.analyst.getStartRawNodePos()
+            if bestPos is not None:
+                self.gridPlotter.plotPoint(bestPos, 255)
+            
+            bestPos = self.analyst.getBestPosToMove()
+            if bestPos is not None:
+                self.gridPlotter.plotPoint(bestPos, 200)
         
         self.gridPlotter.plotPoint(self.position, 150)
 
@@ -149,11 +157,9 @@ class AbstractionLayer():
         for bestPos in bestPoses:
             self.gridPlotter.plotPoint(bestPos, 255)
         """
-        bestPos = self.analyst.getBestPosToMove()
-        if bestPos is not None:
-            self.gridPlotter.plotPoint(bestPos, 255)
+        
 
-        self.analyst.showGrid()
+        #self.analyst.showGrid()
         
         
         cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (400, 400), interpolation=cv.INTER_NEAREST))
