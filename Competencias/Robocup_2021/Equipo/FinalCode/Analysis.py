@@ -433,7 +433,7 @@ class Analyst:
         from ClassifierTemplate import tilesDict as classifTemp
         self.classifier = PointCloudToGrid.Classifier(classifTemp)
         # Path finder
-        self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 50)
+        self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 10)
         self.pathFinder.setStartVortex((1, 1))
         #self.pathFinder.getBestPath()
         # Variables

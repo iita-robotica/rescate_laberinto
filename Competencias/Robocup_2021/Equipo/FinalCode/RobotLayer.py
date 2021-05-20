@@ -196,11 +196,12 @@ class RobotLayer:
             self.seqRotateToDegsInitialRot = self.rotation
             self.seqRotateToDegsinitialDiff = round(self.seqRotateToDegsInitialRot - degs)
             self.rotateToDegsFirstTime = False
+        
         diff = self.rotation - degs
         moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
         if diff > 180 or diff < -180:
             moveDiff = 360 - moveDiff
-        speedFract = min(mapVals(moveDiff, accuracy, 90, 0.1, 0.8), maxSpeed)
+        speedFract = min(mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
         if accuracy  * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
             self.rotateToDegsFirstTime = True
             return True

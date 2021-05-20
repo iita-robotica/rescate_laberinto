@@ -136,6 +136,7 @@ class AbstractionLayer():
             #self.analyst.loadColorDetection(self.position, "hole")
             self.analyst.update(self.position)
 
+            
             self.gridPlotter.reset()
             for point in self.analyst.converter.totalPointCloud:
                 if point[2] > 30:
@@ -149,14 +150,15 @@ class AbstractionLayer():
             bestPos = self.analyst.getBestPosToMove()
             if bestPos is not None:
                 self.gridPlotter.plotPoint(bestPos, 200)
+            
         
-        self.gridPlotter.plotPoint(self.position, 150)
+        #self.gridPlotter.plotPoint(self.position, 150)
 
-        """
+        
         bestPoses = self.analyst.getBestPoses()
         for bestPos in bestPoses:
             self.gridPlotter.plotPoint(bestPos, 255)
-        """
+        
         
 
         #self.analyst.showGrid()
