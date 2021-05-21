@@ -35,16 +35,17 @@ while r.doLoop():
             r.seqMoveToCoords(bestPos)
         r.seqMg.seqResetSequence()
 
-
-    if stMg.checkState("main"):
+        if r.actualTileType == "hole":
+            r.seqMg.resetSequence()
+            stMg.changeState("hole")
         
+    
+    if stMg.checkState("hole"):
         r.seqMg.startSequence()
-        #print(r.seqMoveToCoords((-0.233, -0.36)))
-        #r.seqMoveWheels(0.2, -0.2)
-        #r.seqRotateToDegs(90)
-        r.seqMoveToCoords([-0.48, -0.48])
+        r.seqMoveWheels(-0.5, -0.5)
+        r.seqDelaySec(0.5)
         r.seqMoveWheels(0, 0)
-        r.seqMoveToCoords([-0.48, 0.3])
-        r.seqMoveWheels(0, 0)
+        if r.seqMg.simpleSeqEvent(): r.recalculatePath()
         r.seqMg.seqResetSequence()
+        stMg.changeState("followBest")
         

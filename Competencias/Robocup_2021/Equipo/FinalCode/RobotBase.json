@@ -73,8 +73,34 @@
 		"y": -100,
 		"z": -370,
 		"rx": 0,
+		"ry": 0,
+		"rz": -1,
+		"a": 1.5708
+	},
+	"camera1": {
+		"dictName": "camera1",
+		"name": "Camera",
+		"customName": "camera1",
+		"type": "add",
+		"x": -271,
+		"y": 145,
+		"z": -289,
+		"rx": 0,
 		"ry": 1,
 		"rz": 0,
-		"a": 1.5708
+		"a": 1.27
+	},
+	"camera2": {
+		"dictName": "camera2",
+		"name": "Camera",
+		"customName": "camera2",
+		"type": "add",
+		"x": 264,
+		"y": 143,
+		"z": -289,
+		"rx": 0,
+		"ry": 1,
+		"rz": 0,
+		"a": 2.07
 	}
 }

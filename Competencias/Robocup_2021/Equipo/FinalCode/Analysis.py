@@ -261,7 +261,7 @@ class PathFinder:
             for adjacentIndex in ((-1, 1), (1, -1), (1, -1), (-1, 1), (0, 1), (0, -1), (1, 0), (-1, 0)):
                 adjacent = self.grid.getRawNode((index[0] + adjacentIndex[0], index[1] + adjacentIndex[1]))
                 if isinstance(adjacent, TileNode):
-                    if adjacent.tileType == "":
+                    if adjacent.tileType == "hole":
                         traversable = False
                 elif isinstance(adjacent, WallNode):
                     if adjacent.occupied:

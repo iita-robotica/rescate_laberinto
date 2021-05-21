@@ -10,8 +10,6 @@ from RobotLayer import RobotLayer
 import Analysis
 
 
-timeStep = 16 * 2
-
 class PlottingArray:
     def __init__(self, size, offsets, scale, tileSize):
         self.scale = scale
@@ -63,11 +61,13 @@ class AbstractionLayer():
     def __init__(self):
         #Variables
         self.tileSize = 0.06
+        self.timeStep = 32
         self.gridPlotter = PlottingArray((300, 300), [1500, 1500], 150, self.tileSize)
         self.doWallMapping = False
+        self.actualTileType = "undefined"
 
         # Components
-        self.robot = RobotLayer(timeStep)
+        self.robot = RobotLayer(self.timeStep)
         self.seqMg = SequenceManager()
         self.analyst = Analysis.Analyst(self.tileSize)
 
@@ -116,7 +116,8 @@ class AbstractionLayer():
     def doLoop(self):
         return self.robot.doLoop()
     
-
+    def recalculatePath(self):
+        self.analyst.calculatePath = True
 
     def update(self):
         self.robot.update()
@@ -133,7 +134,10 @@ class AbstractionLayer():
             """
             #tileType = self.robot.get
             self.analyst.loadPointCloud(pointCloud)
-            #self.analyst.loadColorDetection(self.position, "hole")
+            
+            colorPos, self.actualTileType = self.robot.getColorDetection()
+            print("Tile type: ", self.actualTileType)
+            self.analyst.loadColorDetection(colorPos, self.actualTileType)
             self.analyst.update(self.position)
 
             
