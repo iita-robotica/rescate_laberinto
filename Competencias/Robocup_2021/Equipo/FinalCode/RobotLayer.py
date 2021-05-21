@@ -136,6 +136,50 @@ class Wheel:
             ratio = -1
         self.wheel.setVelocity(ratio * self.maxVelocity)
 
+# Reads the colour sensor
+class ColourSensor:
+    def __init__(self, sensor, distancefromCenter, timeStep):
+        self.distance = distancefromCenter
+        self.sensor = sensor
+        self.sensor.enable(timeStep)
+        self.r = 0
+        self.g = 0
+        self.b = 0
+    
+    def getPosition(self, robotGlobalPosition, robotGlobalRotation):
+        realPosition = getCoordsFromDegs(robotGlobalRotation, self.distance)
+        return [robotGlobalPosition[0] + realPosition[0], robotGlobalPosition[1] + realPosition[1]]
+    
+    def __update(self):
+        colour = self.sensor.getImage()
+        self.r = colour[0]
+        self.g = colour[1]
+        self.b = colour[2]
+    
+    def __isTrap(self):
+        return (57 < self.r < 61 and 57 < self.g < 61) or (self.r == 111 and self.g == 111)
+    def __isSwamp(self):
+        return (144 > self.r > 140 and 225 > self.g > 220 and self.b == 246)
+    def __isCheckpoint(self):
+        return (self.r == 255 and self.g == 255 and self.b == 255)
+    def __isNormal(self):
+        return self.r == 252 and self.g == 252
+    # Returns the type of tyle detected from the colour data
+    def getTileType(self):
+        self.__update()
+        tileType = "undefined"
+        if self.__isNormal():
+            tileType = "normal"
+        elif self.__isTrap():
+            tileType = "hole"
+        elif self.__isSwamp():
+            tileType = "swamp"
+        elif self.__isCheckpoint():
+            tileType = "checkpoint"
+
+        #print("Color: " + tileType)
+        #print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
+        return tileType
 
 # Abstraction layer for robot
 class RobotLayer:
@@ -155,6 +199,7 @@ class RobotLayer:
         self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep)
         self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
         self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed) 
+        self.colorSensor = ColourSensor(self.robot.getDevice("colour_sensor"), 0.037, 32)
 
     # Decides if the rotation detection is carried out by the gps or gyro
     @property
@@ -270,6 +315,11 @@ class RobotLayer:
             processedPointCloud.append(procPoint)
         return processedPointCloud
     
+    def getColorDetection(self):
+        pos = self.colorSensor.getPosition(self.globalPosition, self.rotation)
+        detection = self.colorSensor.getTileType()
+        return pos, detection
+    
     # Returns True if the simulation is running
     def doLoop(self):
         return self.robot.step(self.timeStep) != -1
@@ -297,6 +347,7 @@ class RobotLayer:
 
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation + 0)
+
 
         
 
