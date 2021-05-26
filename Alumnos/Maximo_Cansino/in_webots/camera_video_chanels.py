@@ -3,7 +3,7 @@ import cv2 # Include OpenCV library
 import numpy as np # For python, include numpy as well
 
 robot = Robot()
-camera = robot.getDevice("cameraName")
+camera = robot.getDevice("camera1")
 timestep = int(robot.getBasicTimeStep())
 camera.enable(timestep)
 
