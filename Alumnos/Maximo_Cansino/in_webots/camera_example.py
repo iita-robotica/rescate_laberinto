@@ -2,6 +2,10 @@ from controller import Robot
 import cv2
 import numpy as np
 
+
+def getCameraSize(camera):
+	print(f"Camera Width --> {camera.getWidth()}\t Camera Height--> {camera.getHeight()}")
+
 def detectVisualSimple(image_data, camera):
 
 	coords_list = []
@@ -39,6 +43,7 @@ while robot.step(timeStep) != -1:
 	camera1Visual = np.frombuffer(camera1Visual, np.uint8).reshape((camera1.getHeight(), camera1.getWidth(), 4))
 	camera1Visual = np.array(camera1Visual ,dtype=np.uint8)
 	#panel =cv2.hconcat(camera1Visual, camera2Visual)
+	getCameraSize(camera1)
 	cv2.imshow("panel", camera1Visual)
 
 	

@@ -23,6 +23,12 @@ class TitanVision:
                         pass
 
 
+    def victimHeight(self, image):
+        for i in image:
+            for a in i:
+                if a == 255:
+                    print(a)
+
     def redListener(self, camera1, camera2):
         image1 = camera1.getImage()
         image1 = np.frombuffer(image1, np.uint8).reshape((camera1.getHeight(), camera1.getWidth(), 4))
@@ -55,8 +61,9 @@ class TitanVision:
         panelMask = cv.hconcat([mask1,mask2])
         panelRedListener = cv.hconcat([imgResult1, imgResult2])
         cv.imshow("RedPanel", panelRedListener)
-        cv.imshow("RedPanelMask", panelMask)
-        self.victimSpotCall(panelMask, self.redHazzardFlag ,"red hazzard warning!" )
+        #cv.imshow("RedPanelMask", panelMask) #panel with white were are red.
+
+        #self.victimSpotCall(panelMask, self.redHazzardFlag ,"red hazzard warning!" )
         
 
     def yellowListener(self, camera1, camera2):
@@ -92,7 +99,7 @@ class TitanVision:
         panelMask = cv.hconcat([mask1, mask2])
         panelYellowListener = cv.hconcat([imgResult1, imgResult2])
         cv.imshow("yellowPanel", panelYellowListener)
-        self.victimSpotCall(panelMask, self.yellowHazzardFlag,"Yellow hazzard warning!" )
+        #self.victimSpotCall(panelMask, self.yellowHazzardFlag,"Yellow hazzard warning!" )
 
     def whiteListener(self, camera1, camera2):
         image1 = camera1.getImage()
@@ -126,7 +133,7 @@ class TitanVision:
         panelMask = cv.hconcat([mask1, mask2])
         panelWhiteListener = cv.hconcat([imgResult1, imgResult2])
         cv.imshow("whitePanel", panelWhiteListener)
-        self.victimSpotCall(panelMask, self.whiteCharacterVictim ,"white character victim!" )
+        #self.victimSpotCall(panelMask, self.whiteCharacterVictim ,"white character victim!" )
 
                 
 robot = Robot()
