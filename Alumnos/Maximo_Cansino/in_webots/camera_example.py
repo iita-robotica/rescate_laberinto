@@ -1,4 +1,5 @@
 from controller import Robot
+from time import sleep
 import cv2
 import numpy as np
 
@@ -37,14 +38,26 @@ camera1 = robot.getDevice("camera1")
 #camera2 = robot.getDevice("camera2")
 camera1.enable(timeStep)
 #camera2.enable(timeStep)
+
+def alertDistance(source):
+	for i in source:
+		for lists in i:
+			for elements in lists:
+				if elements == 255:
+					break
+
+print("starting in 5 seconds")
+sleep(5)
 while robot.step(timeStep) != -1:
 	camera1Visual = camera1.getImage()
 	#camera2Visual = camera2.getImage()
 	camera1Visual = np.frombuffer(camera1Visual, np.uint8).reshape((camera1.getHeight(), camera1.getWidth(), 4))
 	camera1Visual = np.array(camera1Visual ,dtype=np.uint8)
 	#panel =cv2.hconcat(camera1Visual, camera2Visual)
-	getCameraSize(camera1)
+	#getCameraSize(camera1)
 	cv2.imshow("panel", camera1Visual)
+	alertDistance(camera1Visual)
+
 
 	
 	

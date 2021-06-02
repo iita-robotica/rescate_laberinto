@@ -62,7 +62,6 @@ class TitanVision:
         panelRedListener = cv.hconcat([imgResult1, imgResult2])
         cv.imshow("RedPanel", panelRedListener)
         #cv.imshow("RedPanelMask", panelMask) #panel with white were are red.
-
         #self.victimSpotCall(panelMask, self.redHazzardFlag ,"red hazzard warning!" )
         
 
