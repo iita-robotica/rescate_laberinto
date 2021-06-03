@@ -405,6 +405,8 @@ class PathFinder:
 
     def getBestPath(self):
         possibleNodes = self.bfs(self.startVortex, self.searchLimit)
+        if len(possibleNodes) < 1:
+            possibleNodes = self.bfs(self.startVortex, 50)
         if len(possibleNodes) > 1:
             bestNode = possibleNodes[0]
             bestPath = self.aStar(self.startVortex ,bestNode)
@@ -499,7 +501,7 @@ class Analyst:
         tile = self.getTile(position)
         startRawNode = self.grid.processedToRawNode(tile, quadrant)
         self.startRawNode = startRawNode
-        print("startRawNode: ", startRawNode)
+        #print("startRawNode: ", startRawNode)
         self.pathFinder.setStartVortex(startRawNode)
         self.pathFinder.setGrid(self.grid)
 
@@ -514,13 +516,13 @@ class Analyst:
             
 
         if len(self.__bestPath):
-            print("Dist to Vortex: ", distToVortex)
+            #print("Dist to Vortex: ", distToVortex)
             if distToVortex < self.positionReachedThresh and startRawNode == self.__bestPath[self.pathIndex]:
                 self.pathIndex += 1
 
             
 
-        print("PathLenght: ", len(self.__bestPath))
+        #print("PathLenght: ", len(self.__bestPath))
         if self.pathIndex >= len(self.__bestPath):
             self.calculatePath = True
 
@@ -531,14 +533,14 @@ class Analyst:
                     self.calculatePath = True
 
         if self.calculatePath:
-            print("Calculating path")
+            #print("Calculating path")
             self.__bestPath = self.pathFinder.getBestPath()
             self.pathIndex = 0
             self.calculatePath = False
     
     def getBestRawNodeToMove(self):
-        print("Best path: ", self.__bestPath)
-        print("Index: ", self.pathIndex)
+        #print("Best path: ", self.__bestPath)
+        #print("Index: ", self.pathIndex)
         if len(self.__bestPath):
             return self.__bestPath[self.pathIndex]
         else:

@@ -165,10 +165,10 @@ class AbstractionLayer():
         
         
 
-        #self.analyst.showGrid()
+        self.analyst.showGrid()
         
         
         cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (400, 400), interpolation=cv.INTER_NEAREST))
         cv.waitKey(1)
 
-        print("--------------------------------------------------------------------")
+        

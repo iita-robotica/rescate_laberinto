@@ -27,6 +27,15 @@ while r.doLoop():
     if stMg.checkState("stop"):
         r.seqMg.startSequence()
         r.seqMoveWheels(0, 0)
+
+    if stMg.checkState("moveForward"):
+        r.seqMg.startSequence()
+        r.seqMoveWheels(0.5, -0.5)
+        r.seqDelaySec(0.1)
+        r.seqMoveWheels(-0.5, 0.5)
+        r.seqDelaySec(0.1)
+        r.seqMg.seqResetSequence()
+
     
     if stMg.checkState("followBest"):
         r.seqMg.startSequence()
@@ -48,4 +57,5 @@ while r.doLoop():
         if r.seqMg.simpleSeqEvent(): r.recalculatePath()
         r.seqMg.seqResetSequence()
         stMg.changeState("followBest")
-        
+    
+    print("--------------------------------------------------------------------")
