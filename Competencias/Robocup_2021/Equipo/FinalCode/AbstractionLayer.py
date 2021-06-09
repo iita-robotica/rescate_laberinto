@@ -18,14 +18,14 @@ class PlottingArray:
         self.scale = scale
         self.tileSize = tileSize
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
-        """
+        
         for y in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
             for x in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
+                self.gridPlottingArray[x][y] = 50
         for x in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
             for y in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
-        """
+                self.gridPlottingArray[x][y] = 50
+        
     
     def plotPoint(self, point, value):
         procPoint = [int(point[0] * self.scale), int(point[1] * self.scale * -1)]
@@ -45,14 +45,13 @@ class PlottingArray:
     
     def reset(self):
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
-        """
+
         for y in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
             for x in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
+                self.gridPlottingArray[x][y] = 50
         for x in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
             for y in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
-        """
+                self.gridPlottingArray[x][y] = 50
 
 
 
@@ -65,6 +64,8 @@ class AbstractionLayer():
         self.gridPlotter = PlottingArray((300, 300), [1500, 1500], 150, self.tileSize)
         self.doWallMapping = False
         self.actualTileType = "undefined"
+        self.timeWithoutMoving = 0
+        self.__timeWithoutMovingStart = 0
 
         # Components
         self.robot = RobotLayer(self.timeStep)
@@ -108,6 +109,10 @@ class AbstractionLayer():
     @property
     def position(self):
         return self.robot.globalPosition
+    
+    @property
+    def prevPosition(self):
+        return self.robot.prevGlobalPosition
 
     
     def getBestPos(self):
@@ -121,9 +126,29 @@ class AbstractionLayer():
 
     def update(self):
         self.robot.update()
-        
+
+        print("time without moving: ", self.timeWithoutMoving)
+        diff = [self.position[0] - self.prevPosition[0], self.position[1] - self.prevPosition[1]]
+        if self.robot.getWheelDirection() < 0.1:
+            self.timeWithoutMoving = 0
+        elif -0.0001 < getDistance(diff) < 0.0001:
+            if self.timeWithoutMoving == 0:
+                self.__timeWithoutMovingStart = self.robot.time
+                self.timeWithoutMoving = 0.000000001
+            else:
+                self.timeWithoutMoving = self.robot.time - self.__timeWithoutMovingStart
+        else:
+            self.timeWithoutMoving = 0
+
         if self.doWallMapping:
             print("Doing wall mapping")
+
+            if self.timeWithoutMoving > 1:
+                self.analyst.stoppedMoving = True
+            else:
+                self.analyst.stoppedMoving = False
+
+
             pointCloud = self.robot.getDetectionPointCloud()
             
             """
@@ -135,25 +160,25 @@ class AbstractionLayer():
             #tileType = self.robot.get
             self.analyst.loadPointCloud(pointCloud)
             
-            colorPos, self.actualTileType = self.robot.getColorDetection()
-            print("Tile type: ", self.actualTileType)
-            self.analyst.loadColorDetection(colorPos, self.actualTileType)
-            self.analyst.update(self.position)
+        colorPos, self.actualTileType = self.robot.getColorDetection()
+        print("Tile type: ", self.actualTileType)
+        self.analyst.loadColorDetection(colorPos, self.actualTileType)
+        self.analyst.update(self.position, self.rotation)
 
             
-            self.gridPlotter.reset()
-            for point in self.analyst.converter.totalPointCloud:
-                if point[2] > 30:
-                    ppoint = [point[0] / 100, point[1] / 100]
-                    self.gridPlotter.plotPoint(ppoint, 100)
+        self.gridPlotter.reset()
+        for point in self.analyst.converter.totalPointCloud:
+            if point[2] > 20:
+                ppoint = [point[0] / 100, point[1] / 100]
+                self.gridPlotter.plotPoint(ppoint, 100)
             
-            bestPos = self.analyst.getStartRawNodePos()
-            if bestPos is not None:
-                self.gridPlotter.plotPoint(bestPos, 255)
+        bestPos = self.analyst.getStartRawNodePos()
+        if bestPos is not None:
+            self.gridPlotter.plotPoint(bestPos, 255)
             
-            bestPos = self.analyst.getBestPosToMove()
-            if bestPos is not None:
-                self.gridPlotter.plotPoint(bestPos, 200)
+        bestPos = self.analyst.getBestPosToMove()
+        if bestPos is not None:
+            self.gridPlotter.plotPoint(bestPos, 200)        
             
         
         #self.gridPlotter.plotPoint(self.position, 150)

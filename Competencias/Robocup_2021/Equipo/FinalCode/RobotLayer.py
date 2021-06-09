@@ -360,6 +360,7 @@ class RobotLayer:
         self.prevRotation = 0
         self.rotation = 0
         self.globalPosition = [0, 0]
+        self.prevGlobalPosition = [0, 0]
         self.positionOffsets = [0, 0]
         self.__useGyroForRotation = True
         self.time = 0
@@ -390,7 +391,7 @@ class RobotLayer:
             self.__useGyroForRotation = False
         else:
             raise ValueError("Invalid rotation detection type inputted")
-    
+
     def delaySec(self, delay):
         if self.delayFirstTime:
             self.delayStart = self.robot.getTime()
@@ -548,7 +549,9 @@ class RobotLayer:
         return self.robot.step(self.timeStep) != -1
     
     def getWheelDirection(self):
-        return self.rightWheel.velocity + self.leftWheel.velocity
+        if self.rightWheel.velocity + self.leftWheel.velocity == 0:
+            return 0
+        return (self.rightWheel.velocity + self.leftWheel.velocity) / 2
     
     # Must run every TimeStep
     def update(self):
@@ -559,6 +562,7 @@ class RobotLayer:
         self.gyroscope.update(self.time)
 
         # Gets global position
+        self.prevGlobalPosition = self.globalPosition
         self.globalPosition = self.gps.getPosition()
         self.globalPosition[0] += self.positionOffsets[0]
         self.globalPosition[1] += self.positionOffsets[1]

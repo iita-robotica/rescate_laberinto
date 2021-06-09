@@ -58,3 +58,27 @@ def isInRange(val, minVal, maxVal):
 
 def roundDecimal(number, decimal):
     return (round(number * decimal) / decimal)
+
+def multiplyLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 * item2)
+    return finalList
+
+def sumLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 + item2)
+    return finalList
+
+def substractLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 - item2)
+    return finalList
+
+def divideLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 / item2)
+    return finalList
