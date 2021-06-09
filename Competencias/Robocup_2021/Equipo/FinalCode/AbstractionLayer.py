@@ -18,14 +18,14 @@ class PlottingArray:
         self.scale = scale
         self.tileSize = tileSize
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
-        """
+        
         for y in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
             for x in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
+                self.gridPlottingArray[x][y] = 50
         for x in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
             for y in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
-        """
+                self.gridPlottingArray[x][y] = 50
+        
     
     def plotPoint(self, point, value):
         procPoint = [int(point[0] * self.scale), int(point[1] * self.scale * -1)]
@@ -45,14 +45,13 @@ class PlottingArray:
     
     def reset(self):
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
-        """
+
         for y in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
             for x in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
+                self.gridPlottingArray[x][y] = 50
         for x in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
             for y in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
-        """
+                self.gridPlottingArray[x][y] = 50
 
 
 
@@ -161,25 +160,25 @@ class AbstractionLayer():
             #tileType = self.robot.get
             self.analyst.loadPointCloud(pointCloud)
             
-            colorPos, self.actualTileType = self.robot.getColorDetection()
-            print("Tile type: ", self.actualTileType)
-            self.analyst.loadColorDetection(colorPos, self.actualTileType)
-            self.analyst.update(self.position, self.rotation)
+        colorPos, self.actualTileType = self.robot.getColorDetection()
+        print("Tile type: ", self.actualTileType)
+        self.analyst.loadColorDetection(colorPos, self.actualTileType)
+        self.analyst.update(self.position, self.rotation)
 
             
-            self.gridPlotter.reset()
-            for point in self.analyst.converter.totalPointCloud:
-                if point[2] > 20:
-                    ppoint = [point[0] / 100, point[1] / 100]
-                    self.gridPlotter.plotPoint(ppoint, 100)
+        self.gridPlotter.reset()
+        for point in self.analyst.converter.totalPointCloud:
+            if point[2] > 20:
+                ppoint = [point[0] / 100, point[1] / 100]
+                self.gridPlotter.plotPoint(ppoint, 100)
             
-            bestPos = self.analyst.getStartRawNodePos()
-            if bestPos is not None:
-                self.gridPlotter.plotPoint(bestPos, 255)
+        bestPos = self.analyst.getStartRawNodePos()
+        if bestPos is not None:
+            self.gridPlotter.plotPoint(bestPos, 255)
             
-            bestPos = self.analyst.getBestPosToMove()
-            if bestPos is not None:
-                self.gridPlotter.plotPoint(bestPos, 200)
+        bestPos = self.analyst.getBestPosToMove()
+        if bestPos is not None:
+            self.gridPlotter.plotPoint(bestPos, 200)        
             
         
         #self.gridPlotter.plotPoint(self.position, 150)

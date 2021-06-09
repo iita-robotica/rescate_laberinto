@@ -119,8 +119,8 @@ class PointCloudDivider:
 class PointCloudConverter:
 
     def __init__(self, tileSize, pointMultiplier):
-        self.queManager = PointCloudQueManager(queSize=2, pointMultiplier=pointMultiplier)
-        self.divider = PointCloudDivider(tileSize, pointMultiplier, pointPermanenceThresh=20)
+        self.queManager = PointCloudQueManager(queSize=5, pointMultiplier=pointMultiplier)
+        self.divider = PointCloudDivider(tileSize, pointMultiplier, pointPermanenceThresh=30)
         self.totalPointCloud = []
     
 
