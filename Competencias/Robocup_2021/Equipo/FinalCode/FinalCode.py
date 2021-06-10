@@ -22,7 +22,7 @@ while r.doLoop():
 
     if stMg.checkState("init"):
         if r.calibrate():
-            stMg.changeState("followBest")
+            stMg.changeState("stop")
     
     if stMg.checkState("stop"):
         r.seqMg.startSequence()
