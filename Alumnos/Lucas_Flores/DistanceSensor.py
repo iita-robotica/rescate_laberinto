@@ -47,4 +47,3 @@ class Hole_Detector:
             else:
                 hole_location = False
         return hole_location
-#hola
