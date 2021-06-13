@@ -38,7 +38,6 @@ class Classifier:
 
 
     def getSumedFilters(self, images):
-        
         finalImg = images[0]
         for index, image in enumerate(images):
             finalImg += image
@@ -57,7 +56,6 @@ class Classifier:
         return finalPoses, finalImages
 
     def getVictimImagesAndPositions(self, image):
-        
         binaryImages = [self.redListener.getFiltered(image), 
                         self.yellowListener.getFiltered(image), 
                         self.whiteListener.getFiltered(image), 
@@ -85,8 +83,65 @@ class Classifier:
             finalPoses.append((y, x))
         
         return self.filterVictims(finalPoses, finalImages)
-    
 
+    def isPoison(self, blackPoints, whitePoints):
+        return blackPoints < 80 and whitePoints > 700 and whitePoints < 4000
+    
+    def isVictim(self, blackPoints, whitePoints):
+        return whitePoints > 5000 and 1500 > blackPoints > 450
+    
+    def isCorrosive(self, blackPoints, whitePoints):
+        return 1000 < whitePoints < 2500 and 1000 < blackPoints < 2500
+    
+    def isFlammable(self, redPoints, whitePoints):
+        return redPoints and whitePoints
+    
+    def isOrganicPeroxide(self, redPoints, yellowPoints):
+        return redPoints and yellowPoints
+
+    def classifyVictim(self, img):
+        letter = "N"
+        image = cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
+        colorImgs = {
+        "red" : self.redListener.getFiltered(image),
+        "yellow" : self.yellowListener.getFiltered(image), 
+        "white" : self.whiteListener.getFiltered(image),
+        "black" : self.blackListener.getFiltered(image)}
+
+        colorPointCounts = {}
+        for key, img in colorImgs.items():
+            print("Shpae idisjfdj:", img.shape)
+            sought = 255
+            all_points = np.where(img == 255)
+            all_points = all_points[0]
+            count = len(all_points)
+            
+            colorPointCounts[key] = count
+        
+        print(colorPointCounts)
+        if self.isPoison(colorPointCounts["black"], colorPointCounts["white"]):
+            print("Poison!")
+            letter = "P"
+        
+        if self.isVictim(colorPointCounts["black"], colorPointCounts["white"]):
+            print("Victim!")
+            letter = "H"
+        
+        if self.isCorrosive(colorPointCounts["black"], colorPointCounts["white"]):
+            print("Corroive!")
+            letter = "C"
+        
+        if self.isOrganicPeroxide(colorPointCounts["red"], colorPointCounts["yellow"]):
+            print("organic peroxide!")
+            letter = "O"
+        
+        if self.isFlammable(colorPointCounts["red"], colorPointCounts["white"]):
+            print("Flammable!")
+            letter = "F"
+
+        return letter
+
+    
 
 def blackAndWhiteCases(panels_of_values):
     blacks = 0
