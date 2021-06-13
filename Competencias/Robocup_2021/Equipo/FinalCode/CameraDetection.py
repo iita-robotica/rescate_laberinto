@@ -41,7 +41,7 @@ class Classifier:
         finalImg = images[0]
         for index, image in enumerate(images):
             finalImg += image
-            cv.imshow(str(index), image)
+            #cv.imshow(str(index), image)
         return finalImg
 
 
@@ -62,7 +62,7 @@ class Classifier:
                         self.blackListener.getFiltered(image)]
 
         binaryImage = self.getSumedFilters(binaryImages)
-        cv.imshow("binaryImage", binaryImage)
+        #cv.imshow("binaryImage", binaryImage)
         
         # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
         contours, _ = cv.findContours(binaryImage, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -71,7 +71,7 @@ class Classifier:
         for c0 in contours:
             x, y, w, h = cv.boundingRect(c0)
             cv.rectangle(binaryImage, (x, y), (x + w, y + h), (225, 255, 255), -1)
-        cv.imshow("thresh2", binaryImage)
+        #cv.imshow("thresh2", binaryImage)
         contours, _ = cv.findContours(binaryImage, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         # saca las medidas y la posicion de los contornos y agrega a la lista de imagenes la parte esa de la imagen original
         # Tambien anade la posicion de cada recuadro en la imagen original
@@ -83,6 +83,71 @@ class Classifier:
             finalPoses.append((y, x))
         
         return self.filterVictims(finalPoses, finalImages)
+    
+    def classifyHSU(self, img):
+        gray = img[20:90][10:90]
+        threshVal1 = 25
+        threshVal2 = 100
+        thresh1 = cv.threshold(gray, threshVal1, 255, cv.THRESH_BINARY_INV)[1]
+        thresh2 = cv.threshold(gray, threshVal2, 255, cv.THRESH_BINARY_INV)[1]
+        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        white = 255
+        #print(conts)
+        maxX = 0
+        maxY = 0
+        minX = thresh1.shape[0]
+        minY = thresh1.shape[1]
+        for yIndex, row in enumerate(thresh1):
+            for xIndex, pixel in enumerate(row):
+                if pixel == white:
+                    maxX = max(maxX, xIndex)
+                    maxY = max(maxY, yIndex)
+                    minX = min(minX, xIndex)
+                    minY = min(minY, yIndex)
+
+        letter = thresh2[minY:maxY, minX:maxX]
+        letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
+        cv.imshow("letra", letter)
+        cv.imshow("thresh", thresh1)
+        letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
+        areaWidth = 20
+        areaHeight = 30
+        areas = {
+            "top": ((0, areaHeight),(50 - areaWidth // 2, 50 + areaWidth // 2)),
+            "middle": ((50 - areaHeight // 2, 50 + areaHeight // 2), (50 - areaWidth // 2, 50 + areaWidth // 2)),
+            "bottom": ((100 - areaHeight, 100), (50 - areaWidth // 2, 50 + areaWidth // 2 ))
+            }
+        images = {
+            "top": letter[areas["top"][0][0]:areas["top"][0][1], areas["top"][1][0]:areas["top"][1][1]],
+            "middle": letter[areas["middle"][0][0]:areas["middle"][0][1], areas["middle"][1][0]:areas["middle"][1][1]],
+            "bottom": letter[areas["bottom"][0][0]:areas["bottom"][0][1], areas["bottom"][1][0]:areas["bottom"][1][1]]
+            }
+        cv.rectangle(letterColor,(areas["top"][1][0], areas["top"][0][0]), (areas["top"][1][1], areas["top"][0][1]), (0, 255, 0), 1)
+        cv.rectangle(letterColor, (areas["middle"][1][0], areas["middle"][0][0]), (areas["middle"][1][1], areas["middle"][0][1]), (0, 0, 255), 1)
+        cv.rectangle(letterColor,(areas["bottom"][1][0], areas["bottom"][0][0]), (areas["bottom"][1][1], areas["bottom"][0][1]), (225, 0, 255), 1)
+        counts = {}
+        for key in images.keys():
+            count = 0
+            for row in images[key]:
+                for pixel in row:
+                    if pixel == white:
+                        count += 1
+            counts[key] = count > 20
+        letters = {
+            "H":{'top': False, 'middle': True, 'bottom': False},
+            "S":{'top': True, 'middle': True, 'bottom': True},
+            "U":{'top': False, 'middle': False, 'bottom': True}
+            }
+
+        finalLetter = "N"
+        for letterKey in letters.keys():
+            if counts == letters[letterKey]:
+                finalLetter = letterKey
+                break
+        
+        #print(counts)
+        #print(finalLetter)
+        return finalLetter
 
     def isPoison(self, blackPoints, whitePoints):
         return blackPoints < 80 and whitePoints > 700 and whitePoints < 4000
@@ -124,8 +189,9 @@ class Classifier:
             letter = "P"
         
         if self.isVictim(colorPointCounts["black"], colorPointCounts["white"]):
-            print("Victim!")
-            letter = "H"
+            letter = self.classifyHSU(colorImgs["white"])
+            print("Victim:", letter)
+            
         
         if self.isCorrosive(colorPointCounts["black"], colorPointCounts["white"]):
             print("Corroive!")
