@@ -82,26 +82,26 @@
 		"name": "Camera",
 		"customName": "camera1",
 		"type": "add",
-		"x": 100,
+		"x": -370,
 		"y": 143,
-		"z": -370,
+		"z": 0,
 		"rx": 0,
 		"ry": 1,
 		"rz": 0,
-		"a": 1.27
+		"a": 3.14
 	},
 	"camera2": {
 		"dictName": "camera2",
 		"name": "Camera",
 		"customName": "camera2",
 		"type": "add",
-		"x": -100,
+		"x": 370,
 		"y": 143,
-		"z": -370,
+		"z": 0,
 		"rx": 0,
 		"ry": 1,
 		"rz": 0,
-		"a": 2.07
+		"a": 0
 	},
 	"Distance Sensor 1": {
 		"dictName": "Distance Sensor 1",

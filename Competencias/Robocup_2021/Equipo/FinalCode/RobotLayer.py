@@ -1,7 +1,9 @@
+from numpy.lib.type_check import imag
 from controller import Robot
 import sys
 import math
 import numpy as np
+import struct
 import cv2 as cv
 
 #REMEMBER TO COPY-PASTE THIS FUNCTIONS ON TO FINAL CODE
@@ -209,6 +211,99 @@ class ColourSensor:
         #print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
         return tileType
 
+
+class Comunicator:
+    def __init__(self, emmiter, receiver, timeStep):
+        self.receiver = receiver
+        self.emmiter = emmiter
+        self.receiver.enable(timeStep)
+        self.lackOfProgress = False
+        self.doGetWordInfo = True
+        self.gameScore = 0
+        self.remainingTime = 0
+    
+    def sendVictim(self, position, victimtype):
+        self.doGetWordInfo = False
+        letter = bytes(victimtype, "utf-8")
+        position = multiplyLists(position, [100, 100])
+        position = [int(position[0]), int(position[1])]
+        message = struct.pack("i i c", position[0], position[1], letter)
+        self.emmiter.send(message)
+        
+    
+    def sendLackOfProgress(self):
+        self.doGetWordInfo = False
+        message = struct.pack('c', 'L'.encode()) # message = 'L' to activate lack of progress
+        self.emmiter.send(message)
+        
+    
+    def sendEndOfPlay(self):
+        self.doGetWordInfo = False
+        exit_mes = struct.pack('c', b'E')
+        self.emmiter.send(exit_mes)
+        
+        
+        print("Ended!!!!!")
+    
+    def sendMap(self, npArray):
+         ## Get shape
+        print(npArray)
+        s = npArray.shape
+        ## Get shape as bytes
+        s_bytes = struct.pack('2i',*s)
+        ## Flattening the matrix and join with ','
+        flatMap = ','.join(npArray.flatten())
+        ## Encode
+        sub_bytes = flatMap.encode('utf-8')
+        ## Add togeather, shape + map
+        a_bytes = s_bytes + sub_bytes
+        ## Send map data
+        self.emmiter.send(a_bytes)
+        #STEP3 Send map evaluate request
+        map_evaluate_request = struct.pack('c', b'M')
+        self.emmiter.send(map_evaluate_request)
+        self.doGetWordInfo = False
+    
+    def requestGameData(self):
+        if self.doGetWordInfo:
+            message = struct.pack('c', 'G'.encode()) # message = 'G' for game information
+            self.emmiter.send(message) # send message
+
+    def update(self):
+        
+        if self.doGetWordInfo:
+            """
+            self.requestGameData()
+            if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
+                receivedData = self.receiver.getData()
+                if len(receivedData) > 2:
+                    tup = struct.unpack('c f i', receivedData) # Parse data into char, float, int
+                    if tup[0].decode("utf-8") == 'G':
+                        self.gameScore = tup[1]
+                        self.remainingTime = tup[2]
+                        self.receiver.nextPacket() # Discard the current data packet
+            """
+
+            #print("Remaining time:", self.remainingTime)
+            self.lackOfProgress = False
+            if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
+                receivedData = self.receiver.getData()
+                print(receivedData)
+                if len(receivedData) < 2:
+                    tup = struct.unpack('c', receivedData) # Parse data into character
+                    if tup[0].decode("utf-8") == 'L': # 'L' means lack of progress occurred
+                        print("Detected Lack of Progress!")
+                        self.lackOfProgress = True
+                    self.receiver.nextPacket() # Discard the current data packetelse:
+        else:
+            self.doGetWordInfo = True
+        
+
+        
+        
+        
+
+        
 # Abstraction layer for robot
 class RobotLayer:
     def __init__(self, timeStep):
@@ -230,13 +325,34 @@ class RobotLayer:
         self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
         self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed) 
         self.colorSensor = ColourSensor(self.robot.getDevice("colour_sensor"), 0.037, 32)
-        
-        self.camera = Camera(self.robot.getDevice("camera1"), self.timeStep)
+        self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
+        self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
+        self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
         self.victimClasifier = Classifier()
 
     def getVictims(self):
-        print("Victims: ", self.victimClasifier.getVictimImagesAndPositions(self.camera.getImg())[0])
-
+        poses = []
+        imgs = []
+        for camera in (self.rightCamera, self.leftCamera):
+            cposes, cimgs = self.victimClasifier.getVictimImagesAndPositions(camera.getImg())
+            poses += cposes
+            imgs += cimgs
+        print("Victim Poses: ",poses)
+        for img in imgs:
+            print("Victim shape:", img.shape)
+        closeVictims = self.victimClasifier.getCloseVictims(poses, imgs)
+        return closeVictims
+    
+    def reportVictims(self):
+        self.comunicator.sendVictim(self.globalPosition, "H")
+    
+    def sendArray(self, array):
+        self.comunicator.sendMap(array)
+    
+    def sendEnd(self):
+        print("End sended")
+        self.comunicator.sendEndOfPlay()
+        
 
     # Decides if the rotation detection is carried out by the gps or gyro
     @property
@@ -431,9 +547,6 @@ class RobotLayer:
         self.globalPosition[0] += self.positionOffsets[0]
         self.globalPosition[1] += self.positionOffsets[1]
 
-        print("Gyro diff: ", self.gyroscope.getDiff())
-        print("Gyro ROT: ", self.gyroscope.getDegrees())
-
         if self.gyroscope.getDiff() < 0.00001 and self.getWheelDirection() >= 0:
             self.rotationDetectionType = "gps"
             
@@ -447,19 +560,18 @@ class RobotLayer:
             self.rotation = self.gyroscope.getDegrees()
             print("USING GYRO")
         else:
-            print("USING GPS_____________")
+            print("USING GPS")
             val = self.gps.getRotation()
             if val is not None:
                 self.rotation = val
             self.gyroscope.setDegrees(self.rotation)
         
-        
-
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation + 0)
-
-
         self.getVictims()
+
+        self.comunicator.update()
+
         #victims = self.camera.getVictims()
         #print("Victims: ", victims)
 

@@ -19,10 +19,22 @@ class Classifier:
         self.redListener = Listener(lowerHSV=(73, 157, 127), upperHSV=(179, 255, 255))
         self.yellowListener = Listener(lowerHSV=(0, 157, 82), upperHSV=(40, 255, 255))
         self.whiteListener = Listener(lowerHSV=(0, 0, 200), upperHSV=(0, 255, 255))
-        self.blackListener = Listener(lowerHSV=(0, 0, 0), upperHSV=(0, 0, 0))
+        self.blackListener = Listener(lowerHSV=(0, 0, 0), upperHSV=(0, 255, 10))
 
-    def getVictims(self, VictimImage):
-        return "H"
+    def isClose(self, height):
+        return height > 45
+    
+    def isInCenter(self, pos):
+        return 15 < pos[1] < 70
+
+    def getCloseVictims(self, victimPoses, victimImages):
+        finalVictims = []
+        for pos, img in zip(victimPoses, victimImages):
+            height = img.shape[0]
+            if self.isClose(height) and self.isInCenter(pos):
+                finalVictims.append(img)
+        return finalVictims
+
 
 
     def getSumedFilters(self, images):
@@ -34,6 +46,15 @@ class Classifier:
         return finalImg
 
 
+    def filterVictims(self, poses, images):
+        finalPoses = []
+        finalImages = []
+        for pos, img in zip(poses, images):
+            if 25 < pos[0] < 60:
+                finalPoses.append(pos)
+                finalImages.append(img)
+
+        return finalPoses, finalImages
 
     def getVictimImagesAndPositions(self, image):
         
@@ -62,7 +83,9 @@ class Classifier:
             x, y, w, h = cv.boundingRect(c)
             finalImages.append(image[y:y + h, x:x + w])
             finalPoses.append((y, x))
-        return finalPoses, finalImages
+        
+        return self.filterVictims(finalPoses, finalImages)
+    
 
 
 def blackAndWhiteCases(panels_of_values):

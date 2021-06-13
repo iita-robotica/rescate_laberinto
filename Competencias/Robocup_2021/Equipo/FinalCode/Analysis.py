@@ -17,17 +17,22 @@ class TileNode:
     __typesToNumbers = {"undefined" : "0", "normal": "0", "hole":"2", "swamp":"3", "checkpoint":"4", "start":"5", "connection1-2":"6", "connection1-3":"7", "connection2-3":"8"}
     def __init__(self, tileType="undefined", curvedWall=[0,0], fixtures=[], obstacles=[]):
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
-        self.tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
+        self.__tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
         self.traversed = False
         self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
         self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
         self.obstacles = obstacles # List of obstacles in tile
     
-    
-    # Defines what to print if I ask to print it
-    def __repr__(self):
-        return self.__typesToNumbers[self.tileType]
-    def __str__(self):
+    @property
+    def tileType(self):
+        return self.__tileType
+
+    @tileType.setter
+    def tileType(self, value):
+        if self.__tileType in ("normal", "undefined"):
+            self.__tileType = value
+
+    def getString(self):
         return self.__typesToNumbers[self.tileType]
     
 
@@ -36,19 +41,23 @@ class WallNode:
     __wallFixtureTypes = ("H", "S", "U", "F", "P", "C", "O")
     def __init__(self, occupied=False, fixtures=[]):
         self.dimensions = [0.06, 0.06, 0.01] # Dimensions of the wall
-        self.occupied = occupied # If there is a wall. Can be True or false.
+        self.__occupied = occupied # If there is a wall. Can be True or false.
         self.isFloating = False # If it is a floating wal
         self.traversed = False
         self.fixtures = fixtures # List of all fixtures in wall
     
-     # Defines what to print if I ask to print it
-    def __repr__(self):
-        if len(self.fixtures):
-            returnString = "".join(self.fixtures)
-        elif self.occupied: returnString = "1"
-        else: returnString = "0"
-        return returnString
-    def __str__(self):
+    @property
+    def occupied(self):
+        return self.__occupied
+
+    @occupied.setter
+    def occupied(self, value):
+        if value and not self.traversed:
+            self.__occupied = True
+        else:
+            self.__occupied = False
+    
+    def getString(self):
         if len(self.fixtures):
             returnString = "".join(self.fixtures)
         elif self.occupied: returnString = "1"
@@ -62,11 +71,21 @@ class VortexNode:
         self.dimensions = [0.01, 0.01, 0.06] # Dimensions of the vortex
         self.occupied = occupied # If there is a vortex. Can be True or false.
         self.traversed = False
-    
-     # Defines what to print if I ask to print it
-    def __repr__(self):
-        return str(int(self.occupied))
-    def __str__(self):
+        self.victimDetected = False
+        self.tileType = "undefined"
+
+    @property
+    def occupied(self):
+        return self.__occupied
+        
+    @occupied.setter
+    def occupied(self, value):
+        if value and not self.traversed:
+            self.__occupied = True
+        else:
+            self.__occupied = False
+
+    def getString(self):
         return str(int(self.occupied))
 
 # A virtual representation of the competition map
@@ -203,23 +222,40 @@ class Grid:
     def setNode(self, position, value, side=[0,0]):
         self.setRawNode(self.processedToRawNode(position, side), value)
     
+    def getArrayRepresentation(self):
+        grid = []
+        for y in self.grid:
+            row = []
+            for node in y:
+                row.append(node.getString())
+            grid.append(row)
+        return np.array(grid)
+                
+
     def getNumpyPrintableArray(self):
         printableArray = np.zeros(self.size, np.uint8)
         for y in range(len(self.grid)):
             for x, node in enumerate(self.grid[y]):
+
                 if isinstance(node, TileNode):
-                    if node.tileType == "hole":
+                    if node.tileType == "start":
+                        printableArray[x][y] = 100
+                    elif node.tileType == "hole":
                         print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 255
                     elif node.traversed:
                         printableArray[x][y] = 150
+
                 elif isinstance(node, VortexNode):
-                    if node.occupied:
+                    if node.tileType == "start":
+                        printableArray[x][y] = 100
+                    elif node.occupied:
                         printableArray[x][y] = 255
                     elif node.traversed:
                         printableArray[x][y] = 150
                     else:
                         printableArray[x][y] = 50
+
                 elif isinstance(node, WallNode):
                     if node.occupied:
                         printableArray[x][y] = 255
@@ -246,7 +282,7 @@ class aStarNode():
 
 # Finds the best path to follow
 class PathFinder:
-    def __init__(self, vortexNode, wallNode, tileNode, grid, searchLimit):
+    def __init__(self, vortexNode, wallNode, tileNode, grid, searchLimit, startNode):
         self.grid = grid
         self.startVortex = [0, 0]
         self.objectiveVortex = [0, 0]
@@ -254,6 +290,7 @@ class PathFinder:
         self.wallNode = wallNode
         self.tileNode = tileNode
         self.searchLimit = searchLimit
+        self.startNode = startNode
 
     def isTraversable(self, index):
         node = self.grid.getRawNode(index)
@@ -369,6 +406,8 @@ class PathFinder:
         visited.append(start)
         queue.append(start)
         while queue:
+            if len(found) > 3:
+                break
             coords = queue.pop(0)
             y = coords[1]
             x = coords[0]
@@ -413,35 +452,34 @@ class PathFinder:
         self.grid = grid
 
     def getBestPath(self, orientation):
-        bfsLimits = (5, 50, "undefined")
+        bfsLimits = ("undefined",)
         possibleNodes = []
         for limit in bfsLimits:
             possibleNodes = self.bfs(self.startVortex, limit)
-            if len(possibleNodes) > 1:
+            if len(possibleNodes) > 0:
                 break
         
-        if len(possibleNodes) > 1:
+        if len(possibleNodes) > 0:
             bestNode = possibleNodes[0]
             for posNode in possibleNodes:
                 diff = substractLists(self.startVortex, posNode[:2])
-                print("Diff:", diff)
-                print("Multiplied orientation: ", multiplyLists(orientation, [-2, -2]))
+                #print("Diff:", diff)
+                #print("Multiplied orientation: ", multiplyLists(orientation, [-2, -2]))
                 if posNode[2] > 1:
                     break
                 
                 elif diff == multiplyLists(orientation, [-2, -2]):
                     bestNode = posNode
                     break
-            bestPath = self.aStar(self.startVortex, bestNode)
-            #print("BFS NODES: ", possibleNodes[0:50])
-            #print("AStar PATH: ", bestPath)
-            #print("Start Vortex: ", self.startVortex)
-            """
-            if self.startVortex == bestPath[0]:
-                return bestPath[1:]
-            """
-            return bestPath#[1:]
-        return []
+        else:
+            bestNode = self.startNode
+
+
+        bestPath = self.aStar(self.startVortex, bestNode)
+        #print("BFS NODES: ", possibleNodes[0:50])
+        #print("AStar PATH: ", bestPath)
+        #print("Start Vortex: ", self.startVortex)
+        return bestPath#[1:]
     
 class Analyst:
     def __init__(self, tileSize):
@@ -458,7 +496,7 @@ class Analyst:
         from ClassifierTemplate import tilesDict as classifTemp
         self.classifier = PointCloudToGrid.Classifier(classifTemp)
         # Path finder
-        self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 10)
+        self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 10, [0, 0])
         self.pathFinder.setStartVortex((1, 1))
         #self.pathFinder.getBestPath()
         # Variables
@@ -470,7 +508,15 @@ class Analyst:
         self.pathIndex = 0
         self.positionReachedThresh = 0.02
         self.startRawNode = [0 ,0]
-    
+        self.ended = False
+
+    def getRawAdjacents(self, node, side):
+        rawNode = self.grid.processedToRawNode(node, side)
+        adjacents = []
+        for i in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+            adjacents.append(sumLists(rawNode, i))
+        return adjacents
+
     def loadPointCloud(self, pointCloud):
         self.converter.loadPointCloud(pointCloud)
         tilesWithPoints = self.converter.getTilesWithPoints()
@@ -483,14 +529,21 @@ class Analyst:
                 if wallType == "straight":
                     if value >= 5:
                         self.grid.getNode(item["tile"], orientation).occupied = True
+                        for adjacent in self.getRawAdjacents(item["tile"], orientation):
+                            adjNode = self.grid.getRawNode(adjacent)
+                            if isinstance(adjNode, VortexNode):
+                                adjNode.occupied = True
+
                 elif wallType == "curved":
                     if value > 0:
-                        print("Robot tile", self.tile)
-                        print("Curved", orientation, "in sight at", item["tile"])
+                        #print("Robot tile", self.tile)
+                        #print("Curved", orientation, "in sight at", item["tile"])
                         if percentages[("curvedwall", orientation)] > 2:
                             walls = orientation.split("-")
                             for wall in walls:
                                 self.grid.getNode(item["tile"], wall).occupied = True
+    
+    
     
     def loadColorDetection(self, colorSensorPosition, tileType):
         convPos = self.getTile(colorSensorPosition)
@@ -544,6 +597,21 @@ class Analyst:
         front = [self.startRawNode[0] + (self.direction[0] * 2), self.startRawNode[1] + (self.direction[1] * 2)]
         self.grid.getRawNode(front).occupied = True
 
+    def registerStart(self):
+        self.pathFinder.startNode = self.startRawNode
+        self.grid.getRawNode(self.startRawNode).tileType = "start"
+        for i in ((1, 1), (-1, -1), (-1, 1), (1, -1)):
+            adjacent = sumLists(self.startRawNode, i)
+            self.grid.getRawNode(adjacent).tileType = "start"
+
+    def registerVictim(self):
+        self.grid.getRawNode(self.startRawNode).victimDetected = True
+    
+    def isRegisteredVictim(self):
+        return self.grid.getRawNode(self.startRawNode).victimDetected
+    
+    def getArrayRepresentation(self):
+        return self.grid.getArrayRepresentation()
 
     def update(self, position, rotation):
         self.direction = self.getQuadrantFromDegs(rotation)
@@ -563,7 +631,7 @@ class Analyst:
         distToVortex = getDistance(diff)
         if distToVortex < self.positionReachedThresh:
             self.grid.getRawNode(self.startRawNode).traversed = True
-            for adjacentPos in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+            for adjacentPos in ((1, 1), (-1, 1), (1, -1), (-1, -1), (0, 1), (1, 0), (-1, 0), (0, -1)):
                 adjacent = [self.startRawNode[0] + adjacentPos[0], self.startRawNode[1] + adjacentPos[1]]
                 self.grid.getRawNode(adjacent).traversed = True
  
@@ -590,7 +658,10 @@ class Analyst:
             #print("Calculating path")
             self.__bestPath = self.pathFinder.getBestPath(self.direction)
             self.pathIndex = 0
+            if len(self.__bestPath) < 2:
+                self.ended = True
             self.calculatePath = False
+
     
     def getBestRawNodeToMove(self):
         #print("Best path: ", self.__bestPath)

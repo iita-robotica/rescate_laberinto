@@ -64,6 +64,7 @@ class AbstractionLayer():
         self.gridPlotter = PlottingArray((300, 300), [1500, 1500], 150, self.tileSize)
         self.doWallMapping = False
         self.actualTileType = "undefined"
+        self.timeInRound = 8 * 60
         self.timeWithoutMoving = 0
         self.__timeWithoutMovingStart = 0
 
@@ -88,6 +89,7 @@ class AbstractionLayer():
             self.robot.positionOffsets = [self.robot.positionOffsets[0] % self.tileSize, self.robot.positionOffsets[1] % self.tileSize]
 
             print("positionOffsets: ", self.robot.positionOffsets)
+        if self.seqMg.simpleSeqEvent(): self.analyst.registerStart()
         self.seqDelaySec(0.5)
         
         if self.seqMg.simpleSeqEvent(): self.robot.rotationDetectionType = "gps"
@@ -123,11 +125,37 @@ class AbstractionLayer():
     
     def recalculatePath(self):
         self.analyst.calculatePath = True
+    
+    def isVictims(self):
+        victims = self.robot.getVictims()
+        if len(victims) and not self.analyst.isRegisteredVictim():
+            return True
+        return False
+
+    def reportVictims(self):
+        self.robot.reportVictims()
+        self.analyst.registerVictim()
+    
+    def endGame(self):
+        self.sendFinalArray()
+        self.robot.sendEnd()
+
+    def sendFinalArray(self):
+        self.robot.sendArray(self.analyst.getArrayRepresentation())
+
+    def isEnded(self):
+        return self.analyst.ended
+    
+    @property
+    def timeLeft(self):
+        return self.timeInRound - self.robot.time
 
     def update(self):
         self.robot.update()
 
+        print("Time:", self.robot.time)
         print("time without moving: ", self.timeWithoutMoving)
+        print("time left:", self.timeLeft)
         diff = [self.position[0] - self.prevPosition[0], self.position[1] - self.prevPosition[1]]
         if self.robot.getWheelDirection() < 0.1:
             self.timeWithoutMoving = 0
