@@ -1,30 +1,15 @@
+from numpy.lib.type_check import imag
 from controller import Robot
 import sys
 import math
 import numpy as np
+import struct
 import cv2 as cv
 
 #REMEMBER TO COPY-PASTE THIS FUNCTIONS ON TO FINAL CODE
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
-
-
-class Listener:
-    def __init__(self, lowerHSV, upperHSV):
-        hue_min= 73
-        hue_max=179
-        saturation_min=157
-        saturation_max=255
-        min_value=127
-        max_value=255
-        self.lower = np.array(lowerHSV)
-        self.upper = np.array(upperHSV)
-    
-    def getFiltered(self, img):
-        hsv_image = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-        mask = cv.inRange(hsv_image, self.lower, self.upper1)
-        imgResult = cv.bitwise_and(img, img, mask=mask)
-        return imgResult
+from CameraDetection import Classifier
 
 # Captures images and processes them
 class Camera:
@@ -33,137 +18,12 @@ class Camera:
         self.camera.enable(timeStep)
         self.height = self.camera.getHeight()
         self.width = self.camera.getWidth()
-        # min hue, saturation, value 
-        redLower = (73, 157, 127)
-        # max hue, saturation, value 
-        redUpper = (179, 255, 255)
-        self.redListener = Listener(redLower, redUpper)
-        # min hue, saturation, value 
-        yellowLower = (73, 157, 127)
-        # max hue, saturation, value 
-        yellowUpper = (179, 255, 255)
-        self.yellowListener = Listener(yellowLower, yellowUpper)
-        # min hue, saturation, value 
-        whiteLower = (73, 157, 127)
-        # max hue, saturation, value 
-        whiteUpper = (179, 255, 255)
-        self.whiteListener = Listener(whiteLower, whiteUpper)
 
     # Gets an image from the raw camera data
     def getImg(self):
         imageData = self.camera.getImage()
         return np.array(np.frombuffer(imageData, np.uint8).reshape((self.height, self.width, 4)))
-    
 
-    def getVictimImagesAndPositions(self, img):
-        # Hace una copia de la imagen
-        img1 = img.copy()
-        # Filtra la copia para aislar su elemento azul
-        img1[:, :, 2] = np.zeros([img1.shape[0], img1.shape[1]])
-        # Hace una version es escala de grises
-        gray = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
-        # Hace un thershold para hacer la imagen binaria
-        thresh = cv.threshold(gray, 140, 255, cv.THRESH_BINARY)[1]
-        #cv.imshow("thresh", thresh)
-        # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
-        contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        # Pra evitar la confusion dibuja rectangulos blancos donde estan los contornos en la imagen y despues vuelve a
-        # sacar los contornos para obtener solo los del rectangulo, no los de las letras.
-        for c0 in contours:
-            x, y, w, h = cv.boundingRect(c0)
-            cv.rectangle(thresh, (x, y), (x + w, y + h), (225, 255, 255), -1)
-        #cv.imshow("thresh2", thresh)
-        contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        # saca las medidas y la posicion de los contornos y agrega a la lista de imagenes la parte esa de la imagen original
-        # Tambien anade la posicion de cada recuadro en la imagen original
-        finalPoses = []
-        finalImages = []
-        for c in contours:
-            x, y, w, h = cv.boundingRect(c)
-            finalImages.append(img[y:y + h, x:x + w])
-            finalPoses.append((y, x))
-        return finalImages, finalPoses
-
-    def getVictimDistance(self, victimImg):
-        return 1
-
-    def classifyVictim(self, victimImg):
-        victimImg = cv.resize(victimImg, (100, 100))
-        gray = cv.cvtColor(victimImg, cv.COLOR_BGR2GRAY)
-        threshVal1 = 25
-        threshVal2 = 100
-        thresh1 = cv.threshold(gray, threshVal1, 255, cv.THRESH_BINARY_INV)[1]
-        thresh2 = cv.threshold(gray, threshVal2, 255, cv.THRESH_BINARY_INV)[1]
-        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        white = 255
-        #print(conts)
-        maxX = 0
-        maxY = 0
-        minX = thresh1.shape[0]
-        minY = thresh1.shape[1]
-        for yIndex, row in enumerate(thresh1):
-            for xIndex, pixel in enumerate(row):
-                if pixel == white:
-                    maxX = max(maxX, xIndex)
-                    maxY = max(maxY, yIndex)
-                    minX = min(minX, xIndex)
-                    minY = min(minY, yIndex)
-
-        letter = thresh2[minY:maxY, minX:maxX]
-        letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
-        #cv.imshow("letra", letter)
-        #cv.imshow("thresh", thresh1)
-        #letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
-        areaWidth = 20
-        areaHeight = 30
-        areas = {
-            "top": ((0, areaHeight),(50 - areaWidth // 2, 50 + areaWidth // 2)),
-            "middle": ((50 - areaHeight // 2, 50 + areaHeight // 2), (50 - areaWidth // 2, 50 + areaWidth // 2)),
-            "bottom": ((100 - areaHeight, 100), (50 - areaWidth // 2, 50 + areaWidth // 2 ))
-            }
-        images = {
-            "top": letter[areas["top"][0][0]:areas["top"][0][1], areas["top"][1][0]:areas["top"][1][1]],
-            "middle": letter[areas["middle"][0][0]:areas["middle"][0][1], areas["middle"][1][0]:areas["middle"][1][1]],
-            "bottom": letter[areas["bottom"][0][0]:areas["bottom"][0][1], areas["bottom"][1][0]:areas["bottom"][1][1]]
-            }
-        #cv.rectangle(letterColor,(areas["top"][1][0], areas["top"][0][0]), (areas["top"][1][1], areas["top"][0][1]), (0, 255, 0), 1)
-        #cv.rectangle(letterColor, (areas["middle"][1][0], areas["middle"][0][0]), (areas["middle"][1][1], areas["middle"][0][1]), (0, 0, 255), 1)
-        #cv.rectangle(letterColor,(areas["bottom"][1][0], areas["bottom"][0][0]), (areas["bottom"][1][1], areas["bottom"][0][1]), (225, 0, 255), 1)
-        counts = {}
-        for key in images.keys():
-            count = 0
-            for row in images[key]:
-                for pixel in row:
-                    if pixel == white:
-                        count += 1
-            counts[key] = count > self.classifyThresh
-        letters = {
-            "H":{'top': False, 'middle': True, 'bottom': False},
-            "S":{'top': True, 'middle': True, 'bottom': True},
-            "U":{'top': False, 'middle': False, 'bottom': True}
-            }
-
-        finalLetter = "N"
-        for letterKey in letters.keys():
-            if counts == letters[letterKey]:
-                finalLetter = letterKey
-                break
-        
-        #print(counts)
-        #print(finalLetter)
-        return finalLetter
-
-    def getVictims(self):
-        victims = []
-        camImage = self.getImg()
-        imgs, poses = self.getVictimImagesAndPositions(camImage)
-        for victimImg, victimPos in zip(imgs, poses):
-            cv.imshow("victim", victimImg)
-            vicType = self.classifyVictim(victimImg)
-            vicDist = self.getVictimDistance(victimImg)
-            victims.append({"distance":vicDist, "type":vicType})
-
-        return victims
 
 # Tracks global rotation
 class Gyroscope:
@@ -351,6 +211,99 @@ class ColourSensor:
         #print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
         return tileType
 
+
+class Comunicator:
+    def __init__(self, emmiter, receiver, timeStep):
+        self.receiver = receiver
+        self.emmiter = emmiter
+        self.receiver.enable(timeStep)
+        self.lackOfProgress = False
+        self.doGetWordInfo = True
+        self.gameScore = 0
+        self.remainingTime = 0
+    
+    def sendVictim(self, position, victimtype):
+        self.doGetWordInfo = False
+        letter = bytes(victimtype, "utf-8")
+        position = multiplyLists(position, [100, 100])
+        position = [int(position[0]), int(position[1])]
+        message = struct.pack("i i c", position[0], position[1], letter)
+        self.emmiter.send(message)
+        
+    
+    def sendLackOfProgress(self):
+        self.doGetWordInfo = False
+        message = struct.pack('c', 'L'.encode()) # message = 'L' to activate lack of progress
+        self.emmiter.send(message)
+        
+    
+    def sendEndOfPlay(self):
+        self.doGetWordInfo = False
+        exit_mes = struct.pack('c', b'E')
+        self.emmiter.send(exit_mes)
+        
+        
+        print("Ended!!!!!")
+    
+    def sendMap(self, npArray):
+         ## Get shape
+        print(npArray)
+        s = npArray.shape
+        ## Get shape as bytes
+        s_bytes = struct.pack('2i',*s)
+        ## Flattening the matrix and join with ','
+        flatMap = ','.join(npArray.flatten())
+        ## Encode
+        sub_bytes = flatMap.encode('utf-8')
+        ## Add togeather, shape + map
+        a_bytes = s_bytes + sub_bytes
+        ## Send map data
+        self.emmiter.send(a_bytes)
+        #STEP3 Send map evaluate request
+        map_evaluate_request = struct.pack('c', b'M')
+        self.emmiter.send(map_evaluate_request)
+        self.doGetWordInfo = False
+    
+    def requestGameData(self):
+        if self.doGetWordInfo:
+            message = struct.pack('c', 'G'.encode()) # message = 'G' for game information
+            self.emmiter.send(message) # send message
+
+    def update(self):
+        
+        if self.doGetWordInfo:
+            """
+            self.requestGameData()
+            if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
+                receivedData = self.receiver.getData()
+                if len(receivedData) > 2:
+                    tup = struct.unpack('c f i', receivedData) # Parse data into char, float, int
+                    if tup[0].decode("utf-8") == 'G':
+                        self.gameScore = tup[1]
+                        self.remainingTime = tup[2]
+                        self.receiver.nextPacket() # Discard the current data packet
+            """
+
+            #print("Remaining time:", self.remainingTime)
+            self.lackOfProgress = False
+            if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
+                receivedData = self.receiver.getData()
+                print(receivedData)
+                if len(receivedData) < 2:
+                    tup = struct.unpack('c', receivedData) # Parse data into character
+                    if tup[0].decode("utf-8") == 'L': # 'L' means lack of progress occurred
+                        print("Detected Lack of Progress!")
+                        self.lackOfProgress = True
+                    self.receiver.nextPacket() # Discard the current data packetelse:
+        else:
+            self.doGetWordInfo = True
+        
+
+        
+        
+        
+
+        
 # Abstraction layer for robot
 class RobotLayer:
     def __init__(self, timeStep):
@@ -372,7 +325,34 @@ class RobotLayer:
         self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
         self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed) 
         self.colorSensor = ColourSensor(self.robot.getDevice("colour_sensor"), 0.037, 32)
-        self.camera = Camera(self.robot.getDevice("camera1"), self.timeStep)
+        self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
+        self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
+        self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
+        self.victimClasifier = Classifier()
+
+    def getVictims(self):
+        poses = []
+        imgs = []
+        for camera in (self.rightCamera, self.leftCamera):
+            cposes, cimgs = self.victimClasifier.getVictimImagesAndPositions(camera.getImg())
+            poses += cposes
+            imgs += cimgs
+        print("Victim Poses: ",poses)
+        for img in imgs:
+            print("Victim shape:", img.shape)
+        closeVictims = self.victimClasifier.getCloseVictims(poses, imgs)
+        return closeVictims
+    
+    def reportVictims(self):
+        self.comunicator.sendVictim(self.globalPosition, "H")
+    
+    def sendArray(self, array):
+        self.comunicator.sendMap(array)
+    
+    def sendEnd(self):
+        print("End sended")
+        self.comunicator.sendEndOfPlay()
+        
 
     # Decides if the rotation detection is carried out by the gps or gyro
     @property
@@ -567,9 +547,6 @@ class RobotLayer:
         self.globalPosition[0] += self.positionOffsets[0]
         self.globalPosition[1] += self.positionOffsets[1]
 
-        print("Gyro diff: ", self.gyroscope.getDiff())
-        print("Gyro ROT: ", self.gyroscope.getDegrees())
-
         if self.gyroscope.getDiff() < 0.00001 and self.getWheelDirection() >= 0:
             self.rotationDetectionType = "gps"
             
@@ -583,16 +560,17 @@ class RobotLayer:
             self.rotation = self.gyroscope.getDegrees()
             print("USING GYRO")
         else:
-            print("USING GPS_____________")
+            print("USING GPS")
             val = self.gps.getRotation()
             if val is not None:
                 self.rotation = val
             self.gyroscope.setDegrees(self.rotation)
         
-        
-
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation + 0)
+        self.getVictims()
+
+        self.comunicator.update()
 
         #victims = self.camera.getVictims()
         #print("Victims: ", victims)

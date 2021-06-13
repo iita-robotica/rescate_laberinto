@@ -20,6 +20,17 @@ while r.doLoop():
     print("rotation: " + str(r.rotation))
     print("position: " + str(r.position))
 
+    
+
+    if not stMg.checkState("init"):
+        if r.isEnded():
+            stMg.changeState("end")
+
+        elif r.isVictims():
+            stMg.changeState("victim")
+    
+
+
     if stMg.checkState("init"):
         if r.calibrate():
             stMg.changeState("followBest")
@@ -57,5 +68,21 @@ while r.doLoop():
         if r.seqMg.simpleSeqEvent(): r.recalculatePath()
         r.seqMg.seqResetSequence()
         stMg.changeState("followBest")
+
+    if stMg.checkState("victim"):
+        print("Victim mode!!")
+        r.seqMg.startSequence()
+        r.seqMoveWheels(0, 0)
+        r.seqDelaySec(3.2)
+        if r.seqMg.simpleSeqEvent(): r.reportVictims()
+        r.seqPrint("Victim reported")
+        r.seqMg.seqResetSequence()
+        stMg.changeState("followBest")
     
+    if stMg.checkState("end"):
+        r.seqMg.startSequence()
+        if r.seqMg.simpleSeqEvent(): r.endGame()
+        r.seqMoveWheels(0, 0)
+        if r.seqMg.simpleSeqEvent(): break
+        
     print("--------------------------------------------------------------------")
