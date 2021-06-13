@@ -341,10 +341,13 @@ class RobotLayer:
         for img in imgs:
             print("Victim shape:", img.shape)
         closeVictims = self.victimClasifier.getCloseVictims(poses, imgs)
-        return closeVictims
+        finalVictims = []
+        for closeVictim in closeVictims:
+            finalVictims.append(self.victimClasifier.classifyVictim(closeVictim))
+        return finalVictims
     
-    def reportVictims(self):
-        self.comunicator.sendVictim(self.globalPosition, "H")
+    def reportVictims(self, letter):
+        self.comunicator.sendVictim(self.globalPosition, letter)
     
     def sendArray(self, array):
         self.comunicator.sendMap(array)

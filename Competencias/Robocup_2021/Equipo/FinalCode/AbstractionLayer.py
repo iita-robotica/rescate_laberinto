@@ -133,7 +133,9 @@ class AbstractionLayer():
         return False
 
     def reportVictims(self):
-        self.robot.reportVictims()
+        victims = self.robot.getVictims()
+        if len(victims):
+            self.robot.reportVictims(victims[0])
         self.analyst.registerVictim()
     
     def endGame(self):
