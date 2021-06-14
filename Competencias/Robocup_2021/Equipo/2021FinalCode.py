@@ -1,6 +1,7 @@
 from controller import Robot
 import math
 import copy
+import struct
 import numpy as np
 import cv2 as cv
 
@@ -49,6 +50,7 @@ def getCoordsFromDegs(deg, distance):
 def getRadsFromCoords(coords):
     return math.atan2(coords[0], coords[1])
 
+
 def getDegsFromCoords(coords):
     rads = math.atan2(coords[0], coords[1])
     return radsToDegs(rads)
@@ -64,8 +66,46 @@ def isInRange(val, minVal, maxVal):
 def roundDecimal(number, decimal):
     return (round(number * decimal) / decimal)
 
+def multiplyLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 * item2)
+    return finalList
+
+def sumLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 + item2)
+    return finalList
+
+def substractLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 - item2)
+    return finalList
+
+def divideLists(list1, list2):
+    finalList = []
+    for item1, item2 in zip(list1, list2):
+        finalList.append(item1 / item2)
+    return finalList
+
 
 # ----------------Robot Layer---------------------
+
+# Captures images and processes them
+class Camera:
+    def __init__(self, camera, timeStep):
+        self.camera = camera
+        self.camera.enable(timeStep)
+        self.height = self.camera.getHeight()
+        self.width = self.camera.getWidth()
+
+    # Gets an image from the raw camera data
+    def getImg(self):
+        imageData = self.camera.getImage()
+        return np.array(np.frombuffer(imageData, np.uint8).reshape((self.height, self.width, 4)))
+
 
 # Tracks global rotation
 class Gyroscope:
@@ -75,15 +115,24 @@ class Gyroscope:
         self.oldTime = 0.0
         self.index = index
         self.rotation = 0
+        self.lastRads = 0
 
     # Do on every timestep
     def update(self, time):
         #print("Gyro Vals: " + str(self.sensor.getValues()))
         timeElapsed = time - self.oldTime  # Time passed in time step
         radsInTimestep = (self.sensor.getValues())[self.index] * timeElapsed
+        self.lastRads = radsInTimestep
         finalRot = self.rotation + radsInTimestep
         self.rotation = normalizeRads(finalRot)
         self.oldTime = time
+
+    # Gets the actual angular Velocity
+    def getDiff(self):
+        if self.lastRads < 0:
+            return self.lastRads * -1
+        
+        return self.lastRads
 
     # Returns the rotation on degrees
     def getDegrees(self):
@@ -109,7 +158,7 @@ class Gps:
         self.gps.enable(timeStep)
         self.multiplier = coordsMultiplier
         self.__prevPosition = []
-        self.position = []
+        self.position = self.getPosition()
 
     # updates gps, must run every timestep
     def update(self):
@@ -186,6 +235,7 @@ class Wheel:
     def __init__(self, wheel, maxVelocity):
         self.maxVelocity = maxVelocity
         self.wheel = wheel
+        self.velocity = 0
         self.wheel.setPosition(float("inf"))
         self.wheel.setVelocity(0)
 
@@ -195,7 +245,8 @@ class Wheel:
             ratio = 1
         elif ratio < -1:
             ratio = -1
-        self.wheel.setVelocity(ratio * self.maxVelocity)
+        self.velocity = ratio * self.maxVelocity
+        self.wheel.setVelocity(self.velocity)
 
 # Reads the colour sensor
 class ColourSensor:
@@ -242,16 +293,125 @@ class ColourSensor:
         #print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
         return tileType
 
+
+class Comunicator:
+    def __init__(self, emmiter, receiver, timeStep):
+        self.receiver = receiver
+        self.emmiter = emmiter
+        self.receiver.enable(timeStep)
+        self.lackOfProgress = False
+        self.doGetWordInfo = True
+        self.gameScore = 0
+        self.remainingTime = 0
+    
+    def sendVictim(self, position, victimtype):
+        self.doGetWordInfo = False
+        letter = bytes(victimtype, "utf-8")
+        position = multiplyLists(position, [100, 100])
+        position = [int(position[0]), int(position[1])]
+        message = struct.pack("i i c", position[0], position[1], letter)
+        self.emmiter.send(message)
+        
+    
+    def sendLackOfProgress(self):
+        self.doGetWordInfo = False
+        message = struct.pack('c', 'L'.encode()) # message = 'L' to activate lack of progress
+        self.emmiter.send(message)
+        
+    
+    def sendEndOfPlay(self):
+        self.doGetWordInfo = False
+        exit_mes = struct.pack('c', b'E')
+        self.emmiter.send(exit_mes)
+        
+        
+        print("Ended!!!!!")
+    
+    def sendMap(self, npArray):
+         ## Get shape
+        print(npArray)
+        s = npArray.shape
+        ## Get shape as bytes
+        s_bytes = struct.pack('2i',*s)
+        ## Flattening the matrix and join with ','
+        flatMap = ','.join(npArray.flatten())
+        ## Encode
+        sub_bytes = flatMap.encode('utf-8')
+        ## Add togeather, shape + map
+        a_bytes = s_bytes + sub_bytes
+        ## Send map data
+        self.emmiter.send(a_bytes)
+        #STEP3 Send map evaluate request
+        map_evaluate_request = struct.pack('c', b'M')
+        self.emmiter.send(map_evaluate_request)
+        self.doGetWordInfo = False
+    
+    def requestGameData(self):
+        if self.doGetWordInfo:
+            message = struct.pack('c', 'G'.encode()) # message = 'G' for game information
+            self.emmiter.send(message) # send message
+
+    def update(self):
+        
+        if self.doGetWordInfo:
+            """
+            self.requestGameData()
+            if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
+                receivedData = self.receiver.getData()
+                if len(receivedData) > 2:
+                    tup = struct.unpack('c f i', receivedData) # Parse data into char, float, int
+                    if tup[0].decode("utf-8") == 'G':
+                        self.gameScore = tup[1]
+                        self.remainingTime = tup[2]
+                        self.receiver.nextPacket() # Discard the current data packet
+            """
+
+            #print("Remaining time:", self.remainingTime)
+            self.lackOfProgress = False
+            if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
+                receivedData = self.receiver.getData()
+                print(receivedData)
+                if len(receivedData) < 2:
+                    tup = struct.unpack('c', receivedData) # Parse data into character
+                    if tup[0].decode("utf-8") == 'L': # 'L' means lack of progress occurred
+                        print("Detected Lack of Progress!")
+                        self.lackOfProgress = True
+                    self.receiver.nextPacket() # Discard the current data packetelse:
+        else:
+            self.doGetWordInfo = True
+        
+class DistanceSensor:
+    def __init__(self, threshold, distanceFromCenter, angle, sensor, timeStep):
+        self.sensor = sensor
+        self.angle = angle
+        self.distance = distanceFromCenter
+        self.timeStep = timeStep
+        self.threshold = threshold
+        self.position = [0, 0]
+        self.sensor.enable(self.timeStep)
+    
+    def isFar(self):
+        distance = self.sensor.getValue()
+        #print("Sensor distance:", distance)
+        return distance > self.threshold
+    
+    def setPosition(self, robotPosition, robotRotation):
+        sensorRotation = robotRotation + self.angle
+        sensorPosition = getCoordsFromDegs(sensorRotation, self.distance)
+        self.position = sumLists(sensorPosition, robotPosition)
+        
 # Abstraction layer for robot
 class RobotLayer:
     def __init__(self, timeStep):
         self.maxWheelSpeed = 6.28
         self.timeStep = timeStep
         self.robot = Robot()
+        self.prevRotation = 0
         self.rotation = 0
         self.globalPosition = [0, 0]
+        self.prevGlobalPosition = [0, 0]
         self.positionOffsets = [0, 0]
-        self.__useGyroForRoation = True
+        self.__useGyroForRotation = True
         self.time = 0
         self.rotateToDegsFirstTime = True
         self.delayFirstTime = True
@@ -261,11 +421,44 @@ class RobotLayer:
         self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
         self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed) 
         self.colorSensor = ColourSensor(self.robot.getDevice("colour_sensor"), 0.037, 32)
+        self.leftGroundSensor = DistanceSensor(0.04, 0.0523, 45, self.robot.getDevice("distance sensor2"), self.timeStep)
+        self.rightGroundSensor = DistanceSensor(0.04, 0.0523, -45, self.robot.getDevice("distance sensor1"), self.timeStep)
+        self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
+        self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
+        self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
+        self.victimClasifier = VictimClassifier()
+
+    def getVictims(self):
+        poses = []
+        imgs = []
+        for camera in (self.rightCamera, self.leftCamera):
+            cposes, cimgs = self.victimClasifier.getVictimImagesAndPositions(camera.getImg())
+            poses += cposes
+            imgs += cimgs
+        print("Victim Poses: ",poses)
+        for img in imgs:
+            print("Victim shape:", img.shape)
+        closeVictims = self.victimClasifier.getCloseVictims(poses, imgs)
+        finalVictims = []
+        for closeVictim in closeVictims:
+            finalVictims.append(self.victimClasifier.classifyVictim(closeVictim))
+        return finalVictims
+    
+    def reportVictims(self, letter):
+        self.comunicator.sendVictim(self.globalPosition, letter)
+    
+    def sendArray(self, array):
+        self.comunicator.sendMap(array)
+    
+    def sendEnd(self):
+        print("End sended")
+        self.comunicator.sendEndOfPlay()
+        
 
     # Decides if the rotation detection is carried out by the gps or gyro
     @property
     def rotationDetectionType(self):
-        if self.__useGyroForRoation:
+        if self.__useGyroForRotation:
             return "gyroscope"
         else:
             return "gps"
@@ -273,13 +466,13 @@ class RobotLayer:
     @rotationDetectionType.setter
     def rotationDetectionType(self, rotationType):
         if rotationType == "gyroscope":
-            self.__useGyroForRoation = True
-            self.gyroscope.setDegrees(self.rotation)
+            self.__useGyroForRotation = True
+            
         elif rotationType == "gps":
-            self.__useGyroForRoation = False
+            self.__useGyroForRotation = False
         else:
             raise ValueError("Invalid rotation detection type inputted")
-    
+
     def delaySec(self, delay):
         if self.delayFirstTime:
             self.delayStart = self.robot.getTime()
@@ -295,14 +488,13 @@ class RobotLayer:
         self.leftWheel.move(leftRatio)
         self.rightWheel.move(rightRatio)
 
-    def rotateToDegs(self, degs, orientation="closest", maxSpeed=0.7):
+    def rotateToDegs(self, degs, orientation="closest", maxSpeed=0.5):
         accuracy = 2
         if self.rotateToDegsFirstTime:
             #print("STARTED ROTATION")
-            self.seqRotateToDegsInitialRot = self.rotation
-            self.seqRotateToDegsinitialDiff = round(self.seqRotateToDegsInitialRot - degs)
             self.rotateToDegsFirstTime = False
-        
+        self.seqRotateToDegsInitialRot = self.rotation  
+        self.seqRotateToDegsinitialDiff = round(self.seqRotateToDegsInitialRot - degs)
         diff = self.rotation - degs
         moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
         if diff > 180 or diff < -180:
@@ -324,10 +516,17 @@ class RobotLayer:
                     direction = "right"
             else:
                 direction = orientation
-            if direction == "right":
-                self.moveWheels(speedFract * -1, speedFract)
-            elif direction == "left":
-                self.moveWheels(speedFract, speedFract * -1)
+
+            if moveDiff > 10:
+                if direction == "right":
+                    self.moveWheels(speedFract * -1, speedFract)
+                elif direction == "left":
+                    self.moveWheels(speedFract, speedFract * -1)
+            else: 
+                if direction == "right":
+                    self.moveWheels(speedFract * -0.5, speedFract)
+                elif direction == "left":
+                    self.moveWheels(speedFract, speedFract * -0.5)
             #print("speed fract: " +  str(speedFract))
             #print("target angle: " +  str(degs))
             #print("moveDiff: " + str(moveDiff))
@@ -335,6 +534,45 @@ class RobotLayer:
             #print("orientation: " + str(orientation))
             #print("direction: " + str(direction))
             #print("initialDiff: " + str(self.seqRotateToDegsinitialDiff))
+
+        #print("ROT IS FALSE")
+        return False
+    
+    def rotateSmoothlyToDegs(self, degs, orientation="closest", maxSpeed=0.5):
+        accuracy = 2 
+        seqRotateToDegsinitialDiff = round(self.rotation  - degs)
+        diff = self.rotation - degs
+        moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
+        if diff > 180 or diff < -180:
+            moveDiff = 360 - moveDiff
+        speedFract = min(mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
+        if accuracy  * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
+            self.rotateToDegsFirstTime = True
+            return True
+        else:
+            if orientation == "closest":
+                if 180 > seqRotateToDegsinitialDiff > 0 or seqRotateToDegsinitialDiff < -180:
+                    direction = "right"
+                else:
+                    direction = "left"
+            elif orientation == "farthest":
+                if 180 > seqRotateToDegsinitialDiff > 0 or seqRotateToDegsinitialDiff < -180:
+                    direction = "left"
+                else:
+                    direction = "right"
+            else:
+                direction = orientation
+            if direction == "right":
+                self.moveWheels(speedFract * -0.5, speedFract)
+            elif direction == "left":
+                self.moveWheels(speedFract, speedFract * -0.5)
+            #print("speed fract: " +  str(speedFract))
+            #print("target angle: " +  str(degs))
+            #print("moveDiff: " + str(moveDiff))
+            #print("diff: " + str(diff))
+            #print("orientation: " + str(orientation))
+            #print("direction: " + str(direction))
+            #print("initialDiff: " + str(seqRotateToDegsinitialDiff))
 
         #print("ROT IS FALSE")
         return False
@@ -381,9 +619,22 @@ class RobotLayer:
         detection = self.colorSensor.getTileType()
         return pos, detection
     
+    def trapsAtSides(self):
+        sides = []
+        if self.leftGroundSensor.isFar():
+            sides.append(self.leftGroundSensor.position)
+        if self.rightGroundSensor.isFar():
+            sides.append(self.rightGroundSensor.position)
+        return sides
+    
     # Returns True if the simulation is running
     def doLoop(self):
         return self.robot.step(self.timeStep) != -1
+    
+    def getWheelDirection(self):
+        if self.rightWheel.velocity + self.leftWheel.velocity == 0:
+            return 0
+        return (self.rightWheel.velocity + self.leftWheel.velocity) / 2
     
     # Must run every TimeStep
     def update(self):
@@ -394,149 +645,248 @@ class RobotLayer:
         self.gyroscope.update(self.time)
 
         # Gets global position
+        self.prevGlobalPosition = self.globalPosition
         self.globalPosition = self.gps.getPosition()
         self.globalPosition[0] += self.positionOffsets[0]
         self.globalPosition[1] += self.positionOffsets[1]
 
-        # Gets global rotation
-        if self.__useGyroForRoation:
-            self.rotation = self.gyroscope.getDegrees()
+        if self.gyroscope.getDiff() < 0.00001 and self.getWheelDirection() >= 0:
+            self.rotationDetectionType = "gps"
+            
         else:
+            self.rotationDetectionType = "gyroscope"
+
+        self.prevRotation = self.rotation
+
+        # Gets global rotation
+        if self.__useGyroForRotation:
+            self.rotation = self.gyroscope.getDegrees()
+            print("USING GYRO")
+        else:
+            print("USING GPS")
             val = self.gps.getRotation()
             if val is not None:
                 self.rotation = val
-
+            self.gyroscope.setDegrees(self.rotation)
+        
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation + 0)
+        
+        self.rightGroundSensor.setPosition(self.globalPosition, self.rotation)
+        self.leftGroundSensor.setPosition(self.globalPosition, self.rotation)
+
+
+
+        self.comunicator.update()
+
+        #victims = self.camera.getVictims()
+        #print("Victims: ", victims)
 #--------------------------------------------------------------
 # Victim detection
-class TitanVision:
-    def __init__(self, camera1, camera2):
-        self.camera1 = camera1
-        self.camera2 = camera2
-        self.redHazzardFlag = False;
-        self.yellowHazzardFlag = False;
-        self.whiteCharacterVictim = False;
+class Listener:
+    def __init__(self, lowerHSV, upperHSV):
+        self.lower = np.array(lowerHSV)
+        self.upper = np.array(upperHSV)
+    
+    def getFiltered(self, img):
+        hsv_image = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+        mask = cv.inRange(hsv_image, self.lower, self.upper)
+        #imgResult = cv.bitwise_and(img, img, mask=mask)
+        return mask
+
+class VictimClassifier:
+    def __init__(self):
+        self.redListener = Listener(lowerHSV=(73, 157, 127), upperHSV=(179, 255, 255))
+        self.yellowListener = Listener(lowerHSV=(0, 157, 82), upperHSV=(40, 255, 255))
+        self.whiteListener = Listener(lowerHSV=(0, 0, 200), upperHSV=(0, 255, 255))
+        self.blackListener = Listener(lowerHSV=(0, 0, 0), upperHSV=(0, 255, 10))
+
+    def isClose(self, height):
+        return height > 45
+    
+    def isInCenter(self, pos):
+        return 15 < pos[1] < 70
+
+    def getCloseVictims(self, victimPoses, victimImages):
+        finalVictims = []
+        for pos, img in zip(victimPoses, victimImages):
+            height = img.shape[0]
+            if self.isClose(height) and self.isInCenter(pos):
+                finalVictims.append(img)
+        return finalVictims
 
 
-    def victimSpotCall(self, image, flagType, hazzardType):
-        gridOfPixelsValues = image
-        for i in image:
-            for a in i:
-                if a == 255:
-                    if flagType == False:
-                        print(f"\n\nI spot a {hazzardType}")
-                        self.flagType = True
-                    else:
-                        pass
+
+    def getSumedFilters(self, images):
+        finalImg = images[0]
+        for index, image in enumerate(images):
+            finalImg += image
+            #cv.imshow(str(index), image)
+        return finalImg
 
 
-    def redListener(self, camera1, camera2):
-        image1 = camera1.getImage()
-        image1 = np.frombuffer(image1, np.uint8).reshape((camera1.getHeight(), camera1.getWidth(), 4))
-        hsv_image1 = cv.cvtColor(image1, cv.COLOR_BGR2HSV)
-        hue_min1= 73
-        hue_max1=179
-        saturation_min1=157
-        saturation_max1=255
-        min_value1=127
-        max_value1=255
-        lower1 = np.array([hue_min1, saturation_min1, min_value1])
-        upper1 = np.array([hue_max1, saturation_max1, max_value1])
-        mask1 = cv.inRange(hsv_image1, lower1, upper1)
-        imgResult1 = cv.bitwise_and(image1, image1, mask=mask1)
+    def filterVictims(self, poses, images):
+        finalPoses = []
+        finalImages = []
+        for pos, img in zip(poses, images):
+            if 25 < pos[0] < 60:
+                finalPoses.append(pos)
+                finalImages.append(img)
+
+        return finalPoses, finalImages
+
+    def getVictimImagesAndPositions(self, image):
+        binaryImages = [self.redListener.getFiltered(image), 
+                        self.yellowListener.getFiltered(image), 
+                        self.whiteListener.getFiltered(image), 
+                        self.blackListener.getFiltered(image)]
+
+        binaryImage = self.getSumedFilters(binaryImages)
+        #cv.imshow("binaryImage", binaryImage)
         
-        image2 = camera2.getImage()
-        image2 = np.frombuffer(image2, np.uint8).reshape((camera2.getHeight(), camera2.getWidth(), 4))
-        hsv_image2 = cv.cvtColor(image2, cv.COLOR_BGR2HSV)
-        hue_min2= 73
-        hue_max2=179
-        saturation_min2=157
-        saturation_max2=255
-        min_value2=127
-        max_value2=255
-        lower2 = np.array([hue_min2, saturation_min2, min_value2])
-        upper2 = np.array([hue_max2, saturation_max2, max_value2])
-        mask2 = cv.inRange(hsv_image2, lower2, upper2)
-        imgResult2 = cv.bitwise_and(image2, image2, mask=mask2)
-
-        panelMask = cv.hconcat([mask1,mask2])
-        panelRedListener = cv.hconcat([imgResult1, imgResult2])
-        cv.imshow("RedPanel", panelRedListener)
-        cv.imshow("RedPanelMask", panelMask)
-        self.victimSpotCall(panelMask, self.redHazzardFlag ,"red hazzard warning!" )
+        # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
+        contours, _ = cv.findContours(binaryImage, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        # Pra evitar la confusion dibuja rectangulos blancos donde estan los contornos en la imagen y despues vuelve a
+        # sacar los contornos para obtener solo los del rectangulo, no los de las letras.
+        for c0 in contours:
+            x, y, w, h = cv.boundingRect(c0)
+            cv.rectangle(binaryImage, (x, y), (x + w, y + h), (225, 255, 255), -1)
+        #cv.imshow("thresh2", binaryImage)
+        contours, _ = cv.findContours(binaryImage, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        # saca las medidas y la posicion de los contornos y agrega a la lista de imagenes la parte esa de la imagen original
+        # Tambien anade la posicion de cada recuadro en la imagen original
+        finalPoses = []
+        finalImages = []
+        for c in contours:
+            x, y, w, h = cv.boundingRect(c)
+            finalImages.append(image[y:y + h, x:x + w])
+            finalPoses.append((y, x))
         
+        return self.filterVictims(finalPoses, finalImages)
+    
+    def classifyHSU(self, img):
+        gray = img[10:90]
+        gray =  cv.resize(gray, (100, 100), interpolation=cv.INTER_AREA)
+        threshVal1 = 25
+        threshVal2 = 100
+        thresh1 = cv.threshold(gray, threshVal1, 255, cv.THRESH_BINARY_INV)[1]
+        thresh2 = cv.threshold(gray, threshVal2, 255, cv.THRESH_BINARY_INV)[1]
+        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        white = 255
+        #print(conts)
+        maxX = 0
+        maxY = 0
+        minX = thresh1.shape[0]
+        minY = thresh1.shape[1]
+        for yIndex, row in enumerate(thresh1):
+            for xIndex, pixel in enumerate(row):
+                if pixel == white:
+                    maxX = max(maxX, xIndex)
+                    maxY = max(maxY, yIndex)
+                    minX = min(minX, xIndex)
+                    minY = min(minY, yIndex)
 
-    def yellowListener(self, camera1, camera2):
-        image1 = camera1.getImage()
-        image1 = np.frombuffer(image1, np.uint8).reshape((camera1.getHeight(), camera1.getWidth(), 4))
-        hsv_image1 = cv.cvtColor(image1, cv.COLOR_BGR2HSV)
-        hue_min1= 0
-        hue_max1=40
-        saturation_min1=157
-        saturation_max1=255
-        min_value1=82
-        max_value1=255
-        lower1 = np.array([hue_min1, saturation_min1, min_value1])
-        upper1 = np.array([hue_max1, saturation_max1, max_value1])
-        mask1 = cv.inRange(hsv_image1, lower1, upper1)
-        imgResult1 = cv.bitwise_and(image1, image1, mask=mask1)
+        letter = thresh2[minY:maxY, minX:maxX]
+        letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
+        cv.imshow("letra", letter)
+        cv.imshow("thresh", thresh1)
+        letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
+        areaWidth = 20
+        areaHeight = 30
+        areas = {
+            "top": ((0, areaHeight),(50 - areaWidth // 2, 50 + areaWidth // 2)),
+            "middle": ((50 - areaHeight // 2, 50 + areaHeight // 2), (50 - areaWidth // 2, 50 + areaWidth // 2)),
+            "bottom": ((100 - areaHeight, 100), (50 - areaWidth // 2, 50 + areaWidth // 2 ))
+            }
+        images = {
+            "top": letter[areas["top"][0][0]:areas["top"][0][1], areas["top"][1][0]:areas["top"][1][1]],
+            "middle": letter[areas["middle"][0][0]:areas["middle"][0][1], areas["middle"][1][0]:areas["middle"][1][1]],
+            "bottom": letter[areas["bottom"][0][0]:areas["bottom"][0][1], areas["bottom"][1][0]:areas["bottom"][1][1]]
+            }
+        cv.rectangle(letterColor,(areas["top"][1][0], areas["top"][0][0]), (areas["top"][1][1], areas["top"][0][1]), (0, 255, 0), 1)
+        cv.rectangle(letterColor, (areas["middle"][1][0], areas["middle"][0][0]), (areas["middle"][1][1], areas["middle"][0][1]), (0, 0, 255), 1)
+        cv.rectangle(letterColor,(areas["bottom"][1][0], areas["bottom"][0][0]), (areas["bottom"][1][1], areas["bottom"][0][1]), (225, 0, 255), 1)
+        counts = {}
+        for key in images.keys():
+            count = 0
+            for row in images[key]:
+                for pixel in row:
+                    if pixel == white:
+                        count += 1
+            counts[key] = count > 20
+        letters = {
+            "H":{'top': False, 'middle': True, 'bottom': False},
+            "S":{'top': True, 'middle': True, 'bottom': True},
+            "U":{'top': False, 'middle': False, 'bottom': True}
+            }
 
+        finalLetter = "S"
+        for letterKey in letters.keys():
+            if counts == letters[letterKey]:
+                finalLetter = letterKey
+                break
         
-        image2 = camera2.getImage()
-        image2 = np.frombuffer(image2, np.uint8).reshape((camera2.getHeight(), camera2.getWidth(), 4))
-        hsv_image2 = cv.cvtColor(image2, cv.COLOR_BGR2HSV)
-        hue_min2= 0
-        hue_max2=40
-        saturation_min2= 157
-        saturation_max2=255
-        min_value2= 82
-        max_value2=255
-        lower2 = np.array([hue_min2, saturation_min2, min_value2])
-        upper2 = np.array([hue_max2, saturation_max2, max_value2])
-        mask2 = cv.inRange(hsv_image2, lower2, upper2)
-        imgResult2 = cv.bitwise_and(image2, image2, mask=mask2)
+        #print(counts)
+        #print(finalLetter)
+        return finalLetter
 
-        panelMask = cv.hconcat([mask1, mask2])
-        panelYellowListener = cv.hconcat([imgResult1, imgResult2])
-        cv.imshow("yellowPanel", panelYellowListener)
-        self.victimSpotCall(panelMask, self.yellowHazzardFlag,"Yellow hazzard warning!" )
+    def isPoison(self, blackPoints, whitePoints):
+        return blackPoints < 80 and whitePoints > 700 and whitePoints < 4000
+    
+    def isVictim(self, blackPoints, whitePoints):
+        return whitePoints > 5000 and 1500 > blackPoints > 100
+    
+    def isCorrosive(self, blackPoints, whitePoints):
+        return 1000 < whitePoints < 2500 and 1000 < blackPoints < 2500
+    
+    def isFlammable(self, redPoints, whitePoints):
+        return redPoints and whitePoints
+    
+    def isOrganicPeroxide(self, redPoints, yellowPoints):
+        return redPoints and yellowPoints
 
-    def whiteListener(self, camera1, camera2):
-        image1 = camera1.getImage()
-        image1 = np.frombuffer(image1, np.uint8).reshape((camera1.getHeight(), camera1.getWidth(), 4))
-        hsv_image1 = cv.cvtColor(image1, cv.COLOR_BGR2HSV)
-        hue_min1 = 0
-        hue_max1 = 0
-        saturation_min1 = 0
-        saturation_max1= 255
-        min_value1 = 206
-        max_value1 = 255
-        lower1 = np.array([hue_min1, saturation_min1, min_value1])
-        upper1 = np.array([hue_max1, saturation_max1, max_value1])
-        mask1 = cv.inRange(hsv_image1, lower1, upper1)
-        imgResult1 = cv.bitwise_and(image1, image1, mask=mask1)
+    def classifyVictim(self, img):
+        letter = "N"
+        image = cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
+        colorImgs = {
+        "red" : self.redListener.getFiltered(image),
+        "yellow" : self.yellowListener.getFiltered(image), 
+        "white" : self.whiteListener.getFiltered(image),
+        "black" : self.blackListener.getFiltered(image)}
+
+        colorPointCounts = {}
+        for key, img in colorImgs.items():
+            print("Shpae idisjfdj:", img.shape)
+            sought = 255
+            all_points = np.where(img == 255)
+            all_points = all_points[0]
+            count = len(all_points)
+            
+            colorPointCounts[key] = count
         
-        image2 = camera2.getImage()
-        image2 = np.frombuffer(image2, np.uint8).reshape((camera2.getHeight(), camera2.getWidth(), 4))
-        hsv_image2 = cv.cvtColor(image2, cv.COLOR_BGR2HSV)
-        hue_min2= cv.getTrackbarPos("hue mini", "trackBars")
-        hue_max2= cv.getTrackbarPos("hue max", "trackBars")
-        saturation_min2= cv.getTrackbarPos("saturation mini", "trackBars")
-        saturation_max2=cv.getTrackbarPos("saturation max", "trackBars")
-        min_value2= cv.getTrackbarPos("min value", "trackBars")
-        max_value2= cv.getTrackbarPos("max value", "trackBars")
-        lower2 = np.array([hue_min2, saturation_min2, min_value2])
-        upper2 = np.array([hue_max2, saturation_max2, max_value2])
-        mask2 = cv.inRange(hsv_image2, lower2, upper2)
-        imgResult2 = cv.bitwise_and(image2, image2, mask=mask2)
+        print(colorPointCounts)
+        if self.isPoison(colorPointCounts["black"], colorPointCounts["white"]):
+            print("Poison!")
+            letter = "P"
+        
+        if self.isVictim(colorPointCounts["black"], colorPointCounts["white"]):
+            letter = self.classifyHSU(colorImgs["white"])
+            print("Victim:", letter)
+            
+        
+        if self.isCorrosive(colorPointCounts["black"], colorPointCounts["white"]):
+            print("Corroive!")
+            letter = "C"
+        
+        if self.isOrganicPeroxide(colorPointCounts["red"], colorPointCounts["yellow"]):
+            print("organic peroxide!")
+            letter = "O"
+        
+        if self.isFlammable(colorPointCounts["red"], colorPointCounts["white"]):
+            print("Flammable!")
+            letter = "F"
 
-        panelMask = cv.hconcat([mask1, mask2])
-        panelWhiteListener = cv.hconcat([imgResult1, imgResult2])
-        cv.imshow("whitePanel", panelWhiteListener)
-        self.victimSpotCall(panelMask, self.whiteCharacterVictim ,"white character victim!" )
-#-------------------------------------------------------------------------------------
-
+        return letter
 
 
 
@@ -686,17 +1036,22 @@ class TileNode:
     __typesToNumbers = {"undefined" : "0", "normal": "0", "hole":"2", "swamp":"3", "checkpoint":"4", "start":"5", "connection1-2":"6", "connection1-3":"7", "connection2-3":"8"}
     def __init__(self, tileType="undefined", curvedWall=[0,0], fixtures=[], obstacles=[]):
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
-        self.tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
+        self.__tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
         self.traversed = False
         self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
         self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
         self.obstacles = obstacles # List of obstacles in tile
     
-    
-    # Defines what to print if I ask to print it
-    def __repr__(self):
-        return self.__typesToNumbers[self.tileType]
-    def __str__(self):
+    @property
+    def tileType(self):
+        return self.__tileType
+
+    @tileType.setter
+    def tileType(self, value):
+        if self.__tileType in ("normal", "undefined"):
+            self.__tileType = value
+
+    def getString(self):
         return self.__typesToNumbers[self.tileType]
     
 
@@ -705,19 +1060,23 @@ class WallNode:
     __wallFixtureTypes = ("H", "S", "U", "F", "P", "C", "O")
     def __init__(self, occupied=False, fixtures=[]):
         self.dimensions = [0.06, 0.06, 0.01] # Dimensions of the wall
-        self.occupied = occupied # If there is a wall. Can be True or false.
+        self.__occupied = occupied # If there is a wall. Can be True or false.
         self.isFloating = False # If it is a floating wal
         self.traversed = False
         self.fixtures = fixtures # List of all fixtures in wall
     
-     # Defines what to print if I ask to print it
-    def __repr__(self):
-        if len(self.fixtures):
-            returnString = "".join(self.fixtures)
-        elif self.occupied: returnString = "1"
-        else: returnString = "0"
-        return returnString
-    def __str__(self):
+    @property
+    def occupied(self):
+        return self.__occupied
+
+    @occupied.setter
+    def occupied(self, value):
+        if value and not self.traversed:
+            self.__occupied = True
+        else:
+            self.__occupied = False
+    
+    def getString(self):
         if len(self.fixtures):
             returnString = "".join(self.fixtures)
         elif self.occupied: returnString = "1"
@@ -731,11 +1090,21 @@ class VortexNode:
         self.dimensions = [0.01, 0.01, 0.06] # Dimensions of the vortex
         self.occupied = occupied # If there is a vortex. Can be True or false.
         self.traversed = False
-    
-     # Defines what to print if I ask to print it
-    def __repr__(self):
-        return str(int(self.occupied))
-    def __str__(self):
+        self.victimDetected = False
+        self.tileType = "undefined"
+
+    @property
+    def occupied(self):
+        return self.__occupied
+        
+    @occupied.setter
+    def occupied(self, value):
+        if value and not self.traversed:
+            self.__occupied = True
+        else:
+            self.__occupied = False
+
+    def getString(self):
         return str(int(self.occupied))
 
 # A virtual representation of the competition map
@@ -872,19 +1241,45 @@ class Grid:
     def setNode(self, position, value, side=[0,0]):
         self.setRawNode(self.processedToRawNode(position, side), value)
     
+    def getArrayRepresentation(self):
+        grid = []
+        for y in self.grid:
+            row = []
+            for node in y:
+                row.append(node.getString())
+            grid.append(row)
+        return np.array(grid)
+                
+
     def getNumpyPrintableArray(self):
         printableArray = np.zeros(self.size, np.uint8)
         for y in range(len(self.grid)):
             for x, node in enumerate(self.grid[y]):
+
                 if isinstance(node, TileNode):
-                    if node.tileType == "hole":
+                    if node.tileType == "start":
+                        printableArray[x][y] = 100
+                    elif node.tileType == "hole":
+                        print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 255
-                elif isinstance(node, VortexNode):
-                    if node.traversed:
+                    elif node.traversed:
                         printableArray[x][y] = 150
-                else:
+
+                elif isinstance(node, VortexNode):
+                    if node.tileType == "start":
+                        printableArray[x][y] = 100
+                    elif node.occupied:
+                        printableArray[x][y] = 255
+                    elif node.traversed:
+                        printableArray[x][y] = 150
+                    else:
+                        printableArray[x][y] = 50
+
+                elif isinstance(node, WallNode):
                     if node.occupied:
                         printableArray[x][y] = 255
+                    elif node.traversed:
+                        printableArray[x][y] = 150
                     else:
                         printableArray[x][y] = 50
         
@@ -906,7 +1301,7 @@ class aStarNode():
 
 # Finds the best path to follow
 class PathFinder:
-    def __init__(self, vortexNode, wallNode, tileNode, grid, searchLimit):
+    def __init__(self, vortexNode, wallNode, tileNode, grid, searchLimit, startNode):
         self.grid = grid
         self.startVortex = [0, 0]
         self.objectiveVortex = [0, 0]
@@ -914,6 +1309,7 @@ class PathFinder:
         self.wallNode = wallNode
         self.tileNode = tileNode
         self.searchLimit = searchLimit
+        self.startNode = startNode
 
     def isTraversable(self, index):
         node = self.grid.getRawNode(index)
@@ -927,7 +1323,7 @@ class PathFinder:
             if node.occupied:
                 return False
             traversable = True
-            for adjacentIndex in ((-1, 1), (1, -1), (1, -1), (-1, 1), (0, 1), (0, -1), (1, 0), (-1, 0)):
+            for adjacentIndex in ((-1, 1), (1, -1), (1, 1), (-1, -1), (0, 1), (0, -1), (1, 0), (-1, 0)):
                 adjacent = self.grid.getRawNode((index[0] + adjacentIndex[0], index[1] + adjacentIndex[1]))
                 if isinstance(adjacent, TileNode):
                     if adjacent.tileType == "hole":
@@ -1029,6 +1425,8 @@ class PathFinder:
         visited.append(start)
         queue.append(start)
         while queue:
+            if len(found) > 3:
+                break
             coords = queue.pop(0)
             y = coords[1]
             x = coords[0]
@@ -1072,20 +1470,38 @@ class PathFinder:
     def setGrid(self, grid):
         self.grid = grid
 
-    def getBestPath(self):
-        possibleNodes = self.bfs(self.startVortex, self.searchLimit)
-        if len(possibleNodes) > 1:
+    def getBestPath(self, orientation):
+        bfsLimits = ("undefined",)
+        possibleNodes = []
+        for limit in bfsLimits:
+            possibleNodes = self.bfs(self.startVortex, limit)
+            if len(possibleNodes) > 0:
+                break
+        
+        if len(possibleNodes) > 0:
             bestNode = possibleNodes[0]
-            bestPath = self.aStar(self.startVortex ,bestNode)
-            print("BFS NODES: ", possibleNodes[0:50])
-            print("AStar PATH: ", bestPath)
-            print("Start Vortex: ", self.startVortex)
-            """
-            if self.startVortex == bestPath[0]:
-                return bestPath[1:]
-            """
-            return bestPath#[1:]
-        return []
+            if bestNode[:2] == list(self.startVortex):
+                bestNode = possibleNodes[1]
+            for posNode in possibleNodes:
+                diff = substractLists(self.startVortex, posNode[:2])
+                #print("Diff:", diff)
+                #print("Multiplied orientation: ", multiplyLists(orientation, [-2, -2]))
+                if posNode[2] > 1:
+                    break
+                
+                elif diff == multiplyLists(orientation, [-2, -2]):
+                    bestNode = posNode
+                    break
+        else:
+            bestNode = self.startNode
+
+
+        bestPath = self.aStar(self.startVortex, bestNode)
+        print("BFS NODES: ", possibleNodes)
+        print("Best Node:", bestNode)
+        print("AStar PATH: ", bestPath)
+        print("Start Vortex: ", self.startVortex)
+        return bestPath#[1:]
     
 class Analyst:
     def __init__(self, tileSize):
@@ -1102,74 +1518,115 @@ class Analyst:
         classifTemp = {
         
             ("straight", "right"): np.array([[0, 0, 0, 0, 1, 1],
-                                         [0, 0, 0, 0, 1, 1],
-                                         [0, 0, 0, 0, 1, 1],
-                                         [0, 0, 0, 0, 1, 1],
-                                         [0, 0, 0, 0, 1, 1],
-                                         [0, 0, 0, 0, 1, 1]]),
+                                            [0, 0, 0, 0, 1, 1],
+                                            [0, 0, 0, 0, 1, 1],
+                                            [0, 0, 0, 0, 1, 1],
+                                            [0, 0, 0, 0, 1, 1],
+                                            [0, 0, 0, 0, 1, 1]]),
 
             ("straight", "left"): np.array([[1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0]]),
-                                
+                                            [1, 1, 0, 0, 0, 0],
+                                            [1, 1, 0, 0, 0, 0],
+                                            [1, 1, 0, 0, 0, 0],
+                                            [1, 1, 0, 0, 0, 0],
+                                            [1, 1, 0, 0, 0, 0]]),
+                                    
             ("straight", "up"): np.array([[1, 1, 1, 1, 1, 1],
-                                         [1, 1, 1, 1, 1, 1],
-                                         [0, 0, 0, 0, 0, 0],
-                                         [0, 0, 0, 0, 0, 0],
-                                         [0, 0, 0, 0, 0, 0],
-                                        [0, 0, 0, 0, 0, 0]]),
-                                
+                                            [1, 1, 1, 1, 1, 1],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0]]),
+                                    
             ("straight", "down"): np.array([[0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [1, 1, 1, 1, 1, 1],
-                                [1, 1, 1, 1, 1, 1]]),
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [1, 1, 1, 1, 1, 1],
+                                            [1, 1, 1, 1, 1, 1]]),
 
-            ("curved", "right-up"): np.array([[1, 1, 1, 1, 0, 0],
-                                        [1, 1, 1, 1, 1, 0],
-                                        [0, 0, 0, 1, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1]]),
+            ("curved", "right-up"): np.array([[0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 1, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0]]),
+            
 
-            ("curved", "left-up"): np.array([[0, 0, 1, 1, 1, 1],
-                                    [0, 1, 1, 1, 1, 1],
-                                    [1, 1, 1, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0]]),
-                                
-            ("curved", "right-down"): np.array([[0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 0, 1, 1],
-                                        [0, 0, 0, 1, 1, 1],
-                                        [1, 1, 1, 1, 1, 0],
-                                        [1, 1, 1, 1, 0, 0]]),
-                                
-            ("curved", "left-down"): np.array([[1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 0, 0, 0, 0],
-                                        [1, 1, 1, 0, 0, 0],
-                                        [0, 1, 1, 1, 1, 1],
-                                        [0, 0, 1, 1, 1, 1]])
-            }
+            ("curved", "left-up"): np.array([[0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 1, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0]]),
+                                    
+            ("curved", "right-down"): np.array([[0, 0, 0, 0, 0, 0],
+                                                [0, 0, 0, 0, 0, 0],
+                                                [0, 0, 0, 0, 0, 0],
+                                                [0, 0, 0, 0, 0, 0],
+                                                [0, 0, 0, 1, 0, 0],
+                                                [0, 0, 0, 0, 0, 0]]),
+                                    
+            ("curved", "left-down"): np.array([[0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 1, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0],
+                                            [0, 0, 0, 0, 0, 0]]),
+            
+            ("curvedwall", "right-up"): np.array([[1, 1, 1, 0, -1, -1],
+                                                [1, 1, 1, 0, -1, -1],
+                                                [0, 0, 0, 0, 0, 0],
+                                                [0, 0, 0, 0, 1, 1],
+                                                [0, 0, 0, 0, 1, 1],
+                                                [0, 0, 0, 0, 1, 1]]),
+            
+
+            ("curvedwall", "left-up"): np.array([[-1, -1, 0, 1, 1, 1],
+                                                [-1, -1, 0, 1, 1, 1],
+                                                [0, 0, 0, 0, 0, 0],
+                                                [1, 1, 0, 0, 0, 0],
+                                                [1, 1, 0, 0, 0, 0],
+                                                [1, 1, 0, 0, 0, 0]]),
+                                    
+            ("curvedwall", "right-down"): np.array([[0, 0, 0, 0, 1, 1],
+                                                    [0, 0, 0, 0, 1, 1],
+                                                    [0, 0, 0, 0, 1, 1],
+                                                    [0, 0, 0, 0, 0, 0],
+                                                    [1, 1, 1, 0, -1, -1],
+                                                    [1, 1, 1, 0, -1, -1]]),
+                                    
+            ("curvedwall", "left-down"): np.array([[1, 1, 0, 0, 0, 0],
+                                                [1, 1, 0, 0, 0, 0],
+                                                [1, 1, 0, 0, 0, 0],
+                                                [0, 0, 0, 0, 0, 0],
+                                                [-1, -1, 0, 1, 1, 1],
+                                                [-1, -1, 0, 1, 1, 1]])
+
+                }
         self.classifier = Classifier(classifTemp)
         # Path finder
-        self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 10)
+        self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 10, [0, 0])
         self.pathFinder.setStartVortex((1, 1))
         #self.pathFinder.getBestPath()
         # Variables
         self.actualRawNode = []
+        self.direction = None
         self.__bestPath = []
         self.calculatePath = True
+        self.stoppedMoving = False
         self.pathIndex = 0
         self.positionReachedThresh = 0.02
         self.startRawNode = [0 ,0]
-    
+        self.ended = False
+
+    def getRawAdjacents(self, node, side):
+        rawNode = self.grid.processedToRawNode(node, side)
+        adjacents = []
+        for i in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+            adjacents.append(sumLists(rawNode, i))
+        return adjacents
+
     def loadPointCloud(self, pointCloud):
         self.converter.loadPointCloud(pointCloud)
         tilesWithPoints = self.converter.getTilesWithPoints()
@@ -1182,10 +1639,30 @@ class Analyst:
                 if wallType == "straight":
                     if value >= 5:
                         self.grid.getNode(item["tile"], orientation).occupied = True
+                        for adjacent in self.getRawAdjacents(item["tile"], orientation):
+                            adjNode = self.grid.getRawNode(adjacent)
+                            if isinstance(adjNode, VortexNode):
+                                adjNode.occupied = True
+
+                elif wallType == "curved":
+                    if value > 0:
+                        #print("Robot tile", self.tile)
+                        #print("Curved", orientation, "in sight at", item["tile"])
+                        if percentages[("curvedwall", orientation)] > 2:
+                            walls = orientation.split("-")
+                            for wall in walls:
+                                self.grid.getNode(item["tile"], wall).occupied = True
+    
+    
     
     def loadColorDetection(self, colorSensorPosition, tileType):
         convPos = self.getTile(colorSensorPosition)
         self.grid.getNode(convPos).tileType = tileType
+        """
+        if tileType == "hole":
+            self.calculatePath = True
+        """
+            
 
     def getQuadrant(self, posInTile):
         if posInTile[0] > self.tileSize / 2: x = 1
@@ -1217,15 +1694,47 @@ class Analyst:
         vortexPos = self.getVortexPosInTile(quadrant)
         return [nodePos[0] + vortexPos[0], nodePos[1] + vortexPos[1]]
 
+    def getQuadrantFromDegs(self, degs):
+        if 315 <= degs < 360 or 0 <= degs < 45:
+            quadrant = (0, 1)
+        elif 45 <= degs < 135:
+            quadrant = (1, 0)
+        elif 135 <= degs < 225:
+            quadrant = (0, -1)
+        elif 255 <= 315:
+            quadrant = (-1, 0)
+        return quadrant
 
-  
-    def update(self, position):
+    def blockFront(self):
+        front = [self.startRawNode[0] + (self.direction[0] * 2), self.startRawNode[1] + (self.direction[1] * 2)]
+        self.grid.getRawNode(front).occupied = True
+
+    def registerStart(self):
+        self.pathFinder.startNode = self.startRawNode
+        self.grid.getRawNode(self.startRawNode).tileType = "start"
+        for i in ((1, 1), (-1, -1), (-1, 1), (1, -1)):
+            adjacent = sumLists(self.startRawNode, i)
+            self.grid.getRawNode(adjacent).tileType = "start"
+
+    def registerVictim(self):
+        self.grid.getRawNode(self.startRawNode).victimDetected = True
+    
+    def isRegisteredVictim(self):
+        return self.grid.getRawNode(self.startRawNode).victimDetected
+    
+    def getArrayRepresentation(self):
+        return self.grid.getArrayRepresentation()
+
+    def update(self, position, rotation):
+        self.direction = self.getQuadrantFromDegs(rotation)
+
+
         posInTile = self.getPosInTile(position)
         quadrant = self.getQuadrant(posInTile)
-        tile = self.getTile(position)
-        startRawNode = self.grid.processedToRawNode(tile, quadrant)
+        self.tile = self.getTile(position)
+        startRawNode = self.grid.processedToRawNode(self.tile, quadrant)
         self.startRawNode = startRawNode
-        print("startRawNode: ", startRawNode)
+        #print("startRawNode: ", startRawNode)
         self.pathFinder.setStartVortex(startRawNode)
         self.pathFinder.setGrid(self.grid)
 
@@ -1234,19 +1743,20 @@ class Analyst:
         distToVortex = getDistance(diff)
         if distToVortex < self.positionReachedThresh:
             self.grid.getRawNode(self.startRawNode).traversed = True
-            for adjacentPos in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+            for adjacentPos in ((1, 1), (-1, 1), (1, -1), (-1, -1), (0, 1), (1, 0), (-1, 0), (0, -1)):
                 adjacent = [self.startRawNode[0] + adjacentPos[0], self.startRawNode[1] + adjacentPos[1]]
                 self.grid.getRawNode(adjacent).traversed = True
-            
+ 
+        if self.stoppedMoving:
+            self.blockFront
+            self.calculatePath = True
 
         if len(self.__bestPath):
-            print("Dist to Vortex: ", distToVortex)
+            #print("Dist to Vortex: ", distToVortex)
             if distToVortex < self.positionReachedThresh and startRawNode == self.__bestPath[self.pathIndex]:
                 self.pathIndex += 1
 
-            
-
-        print("PathLenght: ", len(self.__bestPath))
+        #print("PathLenght: ", len(self.__bestPath))
         if self.pathIndex >= len(self.__bestPath):
             self.calculatePath = True
 
@@ -1257,14 +1767,17 @@ class Analyst:
                     self.calculatePath = True
 
         if self.calculatePath:
-            print("Calculating path")
-            self.__bestPath = self.pathFinder.getBestPath()
+            #print("Calculating path")
+            self.__bestPath = self.pathFinder.getBestPath(self.direction)
             self.pathIndex = 0
+            if len(self.__bestPath) < 2:
+                self.ended = True
             self.calculatePath = False
+
     
     def getBestRawNodeToMove(self):
-        print("Best path: ", self.__bestPath)
-        print("Index: ", self.pathIndex)
+        #print("Best path: ", self.__bestPath)
+        #print("Index: ", self.pathIndex)
         if len(self.__bestPath):
             return self.__bestPath[self.pathIndex]
         else:
@@ -1272,7 +1785,7 @@ class Analyst:
     
     def getBestPosToMove(self):
         bestRawNode = self.getBestRawNodeToMove()
-        print("BEST PATH: ", bestRawNode)
+        #print("BEST PATH: ", bestRawNode)
         if bestRawNode is None:
             return None
         node, quadrant = self.grid.rawToProcessedNode(bestRawNode)
@@ -1291,17 +1804,19 @@ class Analyst:
             nodePos = self.getTilePos(node)
         
             vortexPos = self.getVortexPosInTile(quadrant)
-            print("Vortex pos: ", vortexPos)
+            #print("Vortex pos: ", vortexPos)
             #return 
             bestPoses.append([nodePos[0] + vortexPos[0], nodePos[1] + vortexPos[1]])
         return bestPoses
 
+
+
+        
     def getGrid(self):
         return self.grid.grid
     
     def showGrid(self):
         cv.imshow("Analyst grid", cv.resize(self.grid.getNumpyPrintableArray(), (400, 400), interpolation=cv.INTER_NEAREST))
-
 
 # ------------------- State machines ------------
 
@@ -1409,14 +1924,14 @@ class PlottingArray:
         self.scale = scale
         self.tileSize = tileSize
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
-        """
+        
         for y in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
             for x in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
+                self.gridPlottingArray[x][y] = 50
         for x in range(0, len(self.gridPlottingArray), int(self.tileSize * scale)):
             for y in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
-        """
+                self.gridPlottingArray[x][y] = 50
+        
     
     def plotPoint(self, point, value):
         procPoint = [int(point[0] * self.scale), int(point[1] * self.scale * -1)]
@@ -1436,14 +1951,13 @@ class PlottingArray:
     
     def reset(self):
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
-        """
+
         for y in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
             for x in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
+                self.gridPlottingArray[x][y] = 50
         for x in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
             for y in range(len(self.gridPlottingArray[0])):
-                self.gridPlottingArray[x][y] = 100
-        """
+                self.gridPlottingArray[x][y] = 50
 
 
 
@@ -1456,6 +1970,10 @@ class AbstractionLayer():
         self.gridPlotter = PlottingArray((300, 300), [1500, 1500], 150, self.tileSize)
         self.doWallMapping = False
         self.actualTileType = "undefined"
+        self.isTrap = False
+        self.timeInRound = 8 * 60
+        self.timeWithoutMoving = 0
+        self.__timeWithoutMovingStart = 0
 
         # Components
         self.robot = RobotLayer(self.timeStep)
@@ -1468,6 +1986,16 @@ class AbstractionLayer():
         self.seqMoveWheels = self.seqMg.makeSimpleSeqEvent(self.robot.moveWheels)
         self.seqRotateToDegs = self.seqMg.makeComplexSeqEvent(self.robot.rotateToDegs)
         self.seqMoveToCoords = self.seqMg.makeComplexSeqEvent(self.robot.moveToCoords)
+        self.seqResetSequenceFlags = self.seqMg.makeSimpleSeqEvent(self.resetSequenceFlags)
+        self.seqResetSequence = self.seqMg.makeSimpleSeqEvent(self.resetSequence)
+
+    def resetSequence(self):
+        self.seqMg.resetSequence()
+        self.resetSequenceFlags()
+        self.seqMg.linePointer = 0
+
+    def resetSequenceFlags(self):
+        self.robot.delayFirstTime = True
 
     def calibrate(self):
         self.seqMg.startSequence()
@@ -1478,6 +2006,7 @@ class AbstractionLayer():
             self.robot.positionOffsets = [self.robot.positionOffsets[0] % self.tileSize, self.robot.positionOffsets[1] % self.tileSize]
 
             print("positionOffsets: ", self.robot.positionOffsets)
+        if self.seqMg.simpleSeqEvent(): self.analyst.registerStart()
         self.seqDelaySec(0.5)
         
         if self.seqMg.simpleSeqEvent(): self.robot.rotationDetectionType = "gps"
@@ -1499,6 +2028,10 @@ class AbstractionLayer():
     @property
     def position(self):
         return self.robot.globalPosition
+    
+    @property
+    def prevPosition(self):
+        return self.robot.prevGlobalPosition
 
     
     def getBestPos(self):
@@ -1509,12 +2042,60 @@ class AbstractionLayer():
     
     def recalculatePath(self):
         self.analyst.calculatePath = True
+    
+    def isVictims(self):
+        victims = self.robot.getVictims()
+        if len(victims) and not self.analyst.isRegisteredVictim():
+            return True
+        return False
+
+    def reportVictims(self):
+        victims = self.robot.getVictims()
+        if len(victims):
+            self.robot.reportVictims(victims[0])
+        self.analyst.registerVictim()
+    
+    def endGame(self):
+        self.sendFinalArray()
+        self.robot.sendEnd()
+
+    def sendFinalArray(self):
+        self.robot.sendArray(self.analyst.getArrayRepresentation())
+
+    def isEnded(self):
+        return self.analyst.ended
+    
+    @property
+    def timeLeft(self):
+        return self.timeInRound - self.robot.time
 
     def update(self):
         self.robot.update()
-        
+
+        print("Time:", self.robot.time)
+        print("time without moving: ", self.timeWithoutMoving)
+        print("time left:", self.timeLeft)
+        diff = [self.position[0] - self.prevPosition[0], self.position[1] - self.prevPosition[1]]
+        if self.robot.getWheelDirection() < 0.1:
+            self.timeWithoutMoving = 0
+        elif -0.0001 < getDistance(diff) < 0.0001:
+            if self.timeWithoutMoving == 0:
+                self.__timeWithoutMovingStart = self.robot.time
+                self.timeWithoutMoving = 0.000000001
+            else:
+                self.timeWithoutMoving = self.robot.time - self.__timeWithoutMovingStart
+        else:
+            self.timeWithoutMoving = 0
+
         if self.doWallMapping:
             print("Doing wall mapping")
+
+            if self.timeWithoutMoving > 1:
+                self.analyst.stoppedMoving = True
+            else:
+                self.analyst.stoppedMoving = False
+
+
             pointCloud = self.robot.getDetectionPointCloud()
             
             """
@@ -1526,25 +2107,31 @@ class AbstractionLayer():
             #tileType = self.robot.get
             self.analyst.loadPointCloud(pointCloud)
             
-            colorPos, self.actualTileType = self.robot.getColorDetection()
-            print("Tile type: ", self.actualTileType)
-            self.analyst.loadColorDetection(colorPos, self.actualTileType)
-            self.analyst.update(self.position)
+        colorPos, self.actualTileType = self.robot.getColorDetection()
+        print("Tile type: ", self.actualTileType)
+        self.analyst.loadColorDetection(colorPos, self.actualTileType)
+        trapsAtSides = self.robot.trapsAtSides()
+        for trap in trapsAtSides:
+            self.analyst.loadColorDetection(trap, "hole")
+        self.isTrap = len(trapsAtSides) or self.actualTileType == "hole"
+        self.analyst.update(self.position, self.rotation)
 
+        
+
+
+        self.gridPlotter.reset()
+        for point in self.analyst.converter.totalPointCloud:
+            if point[2] > 20:
+                ppoint = [point[0] / 100, point[1] / 100]
+                self.gridPlotter.plotPoint(ppoint, 100)
             
-            self.gridPlotter.reset()
-            for point in self.analyst.converter.totalPointCloud:
-                if point[2] > 30:
-                    ppoint = [point[0] / 100, point[1] / 100]
-                    self.gridPlotter.plotPoint(ppoint, 100)
+        bestPos = self.analyst.getStartRawNodePos()
+        if bestPos is not None:
+            self.gridPlotter.plotPoint(bestPos, 255)
             
-            bestPos = self.analyst.getStartRawNodePos()
-            if bestPos is not None:
-                self.gridPlotter.plotPoint(bestPos, 255)
-            
-            bestPos = self.analyst.getBestPosToMove()
-            if bestPos is not None:
-                self.gridPlotter.plotPoint(bestPos, 200)
+        bestPos = self.analyst.getBestPosToMove()
+        if bestPos is not None:
+            self.gridPlotter.plotPoint(bestPos, 200)        
             
         
         #self.gridPlotter.plotPoint(self.position, 150)
@@ -1556,19 +2143,20 @@ class AbstractionLayer():
         
         
 
-        #self.analyst.showGrid()
+        self.analyst.showGrid()
         
         
         cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (400, 400), interpolation=cv.INTER_NEAREST))
         cv.waitKey(1)
 
-        print("--------------------------------------------------------------------")
-
-
 #:::::::::::::::::MAIN PROGRAM::::::::::::::::::
+
+timeStep = 16 * 2 
+
 
 stMg = StateManager("init")
 r = AbstractionLayer()
+
 
 # While the simulation is running
 while r.doLoop():
@@ -1577,6 +2165,19 @@ while r.doLoop():
     print("rotation: " + str(r.rotation))
     print("position: " + str(r.position))
 
+    
+
+    if not stMg.checkState("init"):
+        if r.isEnded():
+            r.seqResetSequence()
+            stMg.changeState("end")
+
+        elif r.isVictims():
+            r.seqResetSequence()
+            stMg.changeState("victim")
+    
+
+
     if stMg.checkState("init"):
         if r.calibrate():
             stMg.changeState("followBest")
@@ -1584,16 +2185,25 @@ while r.doLoop():
     if stMg.checkState("stop"):
         r.seqMg.startSequence()
         r.seqMoveWheels(0, 0)
+
+    if stMg.checkState("moveForward"):
+        r.seqMg.startSequence()
+        r.seqMoveWheels(0.5, -0.5)
+        r.seqDelaySec(0.1)
+        r.seqMoveWheels(-0.5, 0.5)
+        r.seqDelaySec(0.1)
+        r.seqResetSequence()
+
     
     if stMg.checkState("followBest"):
         r.seqMg.startSequence()
         bestPos = r.getBestPos()
         if bestPos is not None:
             r.seqMoveToCoords(bestPos)
-        r.seqMg.seqResetSequence()
+        r.seqResetSequence()
 
-        if r.actualTileType == "hole":
-            r.seqMg.resetSequence()
+        if r.isTrap:
+            r.seqResetSequence()
             stMg.changeState("hole")
         
     
@@ -1603,5 +2213,25 @@ while r.doLoop():
         r.seqDelaySec(0.5)
         r.seqMoveWheels(0, 0)
         if r.seqMg.simpleSeqEvent(): r.recalculatePath()
-        r.seqMg.seqResetSequence()
+        r.seqResetSequence()
         stMg.changeState("followBest")
+
+    if stMg.checkState("victim"):
+        print("Victim mode!!")
+        r.seqMg.startSequence()
+        r.seqMoveWheels(0, 0)
+        r.seqPrint("stopping")
+        r.seqDelaySec(3.2)
+        r.seqPrint("reporting")
+        if r.seqMg.simpleSeqEvent(): r.reportVictims()
+        r.seqPrint("Victim reported")
+        r.seqResetSequence()
+        stMg.changeState("followBest")
+    
+    if stMg.checkState("end"):
+        r.seqMg.startSequence()
+        if r.seqMg.simpleSeqEvent(): r.endGame()
+        r.seqMoveWheels(0, 0)
+        #if r.seqMg.simpleSeqEvent(): break
+        
+    print("--------------------------------------------------------------------")
