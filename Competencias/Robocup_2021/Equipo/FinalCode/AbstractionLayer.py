@@ -46,10 +46,10 @@ class PlottingArray:
     def reset(self):
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
 
-        for y in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+        for y in range(0, len(self.gridPlottingArray), round(self.tileSize * self.scale)):
             for x in range(len(self.gridPlottingArray[0])):
                 self.gridPlottingArray[x][y] = 50
-        for x in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+        for x in range(0, len(self.gridPlottingArray), round(self.tileSize * self.scale)):
             for y in range(len(self.gridPlottingArray[0])):
                 self.gridPlottingArray[x][y] = 50
 
@@ -240,7 +240,7 @@ class AbstractionLayer():
         self.analyst.showGrid()
         
         
-        cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (400, 400), interpolation=cv.INTER_NEAREST))
+        cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (600, 600), interpolation=cv.INTER_NEAREST))
         cv.waitKey(1)
 
         

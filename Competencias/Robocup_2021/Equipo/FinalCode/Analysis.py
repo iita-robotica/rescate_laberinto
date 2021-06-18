@@ -241,7 +241,7 @@ class Grid:
                     if node.tileType == "start":
                         printableArray[x][y] = 100
                     elif node.tileType == "hole":
-                        print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                        #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 255
                     elif node.traversed:
                         printableArray[x][y] = 150
@@ -536,6 +536,7 @@ class Analyst:
             for key, value in percentages.items():
                 wallType, orientation = key
                 if wallType == "straight":
+                        
                     if value >= 5:
                         self.grid.getNode(item["tile"], orientation).occupied = True
                         for adjacent in self.getRawAdjacents(item["tile"], orientation):
