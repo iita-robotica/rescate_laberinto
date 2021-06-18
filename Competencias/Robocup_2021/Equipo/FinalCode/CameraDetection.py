@@ -85,20 +85,15 @@ class Classifier:
         return self.filterVictims(finalPoses, finalImages)
     
     def classifyHSU(self, img):
-        gray = img[10:90]
-        gray =  cv.resize(gray, (100, 100), interpolation=cv.INTER_AREA)
-        threshVal1 = 25
-        threshVal2 = 100
-        thresh1 = cv.threshold(gray, threshVal1, 255, cv.THRESH_BINARY_INV)[1]
-        thresh2 = cv.threshold(gray, threshVal2, 255, cv.THRESH_BINARY_INV)[1]
+        img =  cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
         #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         white = 255
         #print(conts)
         maxX = 0
         maxY = 0
-        minX = thresh1.shape[0]
-        minY = thresh1.shape[1]
-        for yIndex, row in enumerate(thresh1):
+        minX = img.shape[0]
+        minY = img.shape[1]
+        for yIndex, row in enumerate(img):
             for xIndex, pixel in enumerate(row):
                 if pixel == white:
                     maxX = max(maxX, xIndex)
@@ -106,10 +101,10 @@ class Classifier:
                     minX = min(minX, xIndex)
                     minY = min(minY, yIndex)
 
-        letter = thresh2[minY:maxY, minX:maxX]
+        letter = img[minY:maxY, minX:maxX]
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         cv.imshow("letra", letter)
-        cv.imshow("thresh", thresh1)
+        cv.imshow("thresh", img)
         letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
         areaWidth = 20
         areaHeight = 30
@@ -190,7 +185,8 @@ class Classifier:
             letter = "P"
         
         if self.isVictim(colorPointCounts["black"], colorPointCounts["white"]):
-            letter = self.classifyHSU(colorImgs["white"])
+            cv.imshow("black filter:", colorImgs["black"])
+            letter = self.classifyHSU(colorImgs["black"])
             print("Victim:", letter)
             
         
