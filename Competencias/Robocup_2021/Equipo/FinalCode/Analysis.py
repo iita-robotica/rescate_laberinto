@@ -548,7 +548,7 @@ class Analyst:
                     if value > 0:
                         #print("Robot tile", self.tile)
                         #print("Curved", orientation, "in sight at", item["tile"])
-                        if percentages[("curvedwall", orientation)] > 2:
+                        if percentages[("curvedwall", orientation)] > 6:
                             walls = orientation.split("-")
                             for wall in walls:
                                 self.grid.getNode(item["tile"], wall).occupied = True
