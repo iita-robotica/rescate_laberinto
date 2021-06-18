@@ -285,6 +285,7 @@ class PathFinder:
     def __init__(self, vortexNode, wallNode, tileNode, grid, searchLimit, startNode):
         self.grid = grid
         self.startVortex = [0, 0]
+        self.prevVortex = [0, 0]
         self.objectiveVortex = [0, 0]
         self.vortexNode = vortexNode
         self.wallNode = wallNode
@@ -443,7 +444,9 @@ class PathFinder:
     def setStartVortex(self, startRawVortexPos):
         if not isinstance(self.grid.getRawNode(startRawVortexPos), self.vortexNode):
             raise ValueError("Inputed position does not correspond to a vortex node")
-        
+        if self.startVortex != startRawVortexPos:
+            self.prevVortex = self.startVortex
+
         self.startVortex = startRawVortexPos
         if not self.isTraversable(startRawVortexPos):
             print("INITIAL VORTEX NOT TRAVERSABLE")
@@ -454,8 +457,12 @@ class PathFinder:
     def getBestPath(self, orientation):
         bfsLimits = ("undefined",)
         possibleNodes = []
+        if self.isTraversable(self.startVortex):
+            bfsStart = self.startVortex
+        else:
+            bfsStart = self.prevVortex
         for limit in bfsLimits:
-            possibleNodes = self.bfs(self.startVortex, limit)
+            possibleNodes = self.bfs(bfsStart, limit)
             if len(possibleNodes) > 0:
                 break
         
@@ -477,12 +484,12 @@ class PathFinder:
             bestNode = self.startNode
 
 
-        bestPath = self.aStar(self.startVortex, bestNode)
+        bestPath = self.aStar(bfsStart, bestNode)
         print("BFS NODES: ", possibleNodes)
         print("Best Node:", bestNode)
         print("AStar PATH: ", bestPath)
         print("Start Vortex: ", self.startVortex)
-        return bestPath#[1:]
+        return bestPath
     
 class Analyst:
     def __init__(self, tileSize):
@@ -503,14 +510,13 @@ class Analyst:
         self.pathFinder.setStartVortex((1, 1))
         #self.pathFinder.getBestPath()
         # Variables
-        self.actualRawNode = []
         self.direction = None
         self.__bestPath = []
         self.calculatePath = True
         self.stoppedMoving = False
         self.pathIndex = 0
         self.positionReachedThresh = 0.02
-        self.startRawNode = [0 ,0]
+        self.prevRawNode = [0, 0]
         self.ended = False
 
     def getRawAdjacents(self, node, side):
