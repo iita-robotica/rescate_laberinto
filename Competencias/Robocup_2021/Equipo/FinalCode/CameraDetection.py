@@ -85,7 +85,8 @@ class Classifier:
         return self.filterVictims(finalPoses, finalImages)
     
     def classifyHSU(self, img):
-        gray = img[20:90][10:90]
+        gray = img[10:90]
+        gray =  cv.resize(gray, (100, 100), interpolation=cv.INTER_AREA)
         threshVal1 = 25
         threshVal2 = 100
         thresh1 = cv.threshold(gray, threshVal1, 255, cv.THRESH_BINARY_INV)[1]
@@ -139,7 +140,7 @@ class Classifier:
             "U":{'top': False, 'middle': False, 'bottom': True}
             }
 
-        finalLetter = "N"
+        finalLetter = "S"
         for letterKey in letters.keys():
             if counts == letters[letterKey]:
                 finalLetter = letterKey
@@ -153,7 +154,7 @@ class Classifier:
         return blackPoints < 80 and whitePoints > 700 and whitePoints < 4000
     
     def isVictim(self, blackPoints, whitePoints):
-        return whitePoints > 5000 and 1500 > blackPoints > 450
+        return whitePoints > 5000 and 1500 > blackPoints > 100
     
     def isCorrosive(self, blackPoints, whitePoints):
         return 1000 < whitePoints < 2500 and 1000 < blackPoints < 2500

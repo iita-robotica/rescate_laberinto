@@ -64,6 +64,7 @@ class AbstractionLayer():
         self.gridPlotter = PlottingArray((300, 300), [1500, 1500], 150, self.tileSize)
         self.doWallMapping = False
         self.actualTileType = "undefined"
+        self.isTrap = False
         self.timeInRound = 8 * 60
         self.timeWithoutMoving = 0
         self.__timeWithoutMovingStart = 0
@@ -79,6 +80,16 @@ class AbstractionLayer():
         self.seqMoveWheels = self.seqMg.makeSimpleSeqEvent(self.robot.moveWheels)
         self.seqRotateToDegs = self.seqMg.makeComplexSeqEvent(self.robot.rotateToDegs)
         self.seqMoveToCoords = self.seqMg.makeComplexSeqEvent(self.robot.moveToCoords)
+        self.seqResetSequenceFlags = self.seqMg.makeSimpleSeqEvent(self.resetSequenceFlags)
+        self.seqResetSequence = self.seqMg.makeSimpleSeqEvent(self.resetSequence)
+
+    def resetSequence(self):
+        self.seqMg.resetSequence()
+        self.resetSequenceFlags()
+        self.seqMg.linePointer = 0
+
+    def resetSequenceFlags(self):
+        self.robot.delayFirstTime = True
 
     def calibrate(self):
         self.seqMg.startSequence()
@@ -193,9 +204,15 @@ class AbstractionLayer():
         colorPos, self.actualTileType = self.robot.getColorDetection()
         print("Tile type: ", self.actualTileType)
         self.analyst.loadColorDetection(colorPos, self.actualTileType)
+        trapsAtSides = self.robot.trapsAtSides()
+        for trap in trapsAtSides:
+            self.analyst.loadColorDetection(trap, "hole")
+        self.isTrap = len(trapsAtSides) or self.actualTileType == "hole"
         self.analyst.update(self.position, self.rotation)
 
-            
+        
+
+
         self.gridPlotter.reset()
         for point in self.analyst.converter.totalPointCloud:
             if point[2] > 20:

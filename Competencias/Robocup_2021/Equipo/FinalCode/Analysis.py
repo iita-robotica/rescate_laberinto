@@ -304,7 +304,7 @@ class PathFinder:
             if node.occupied:
                 return False
             traversable = True
-            for adjacentIndex in ((-1, 1), (1, -1), (1, -1), (-1, 1), (0, 1), (0, -1), (1, 0), (-1, 0)):
+            for adjacentIndex in ((-1, 1), (1, -1), (1, 1), (-1, -1), (0, 1), (0, -1), (1, 0), (-1, 0)):
                 adjacent = self.grid.getRawNode((index[0] + adjacentIndex[0], index[1] + adjacentIndex[1]))
                 if isinstance(adjacent, TileNode):
                     if adjacent.tileType == "hole":
@@ -461,6 +461,8 @@ class PathFinder:
         
         if len(possibleNodes) > 0:
             bestNode = possibleNodes[0]
+            if bestNode[:2] == list(self.startVortex):
+                bestNode = possibleNodes[1]
             for posNode in possibleNodes:
                 diff = substractLists(self.startVortex, posNode[:2])
                 #print("Diff:", diff)
@@ -476,9 +478,10 @@ class PathFinder:
 
 
         bestPath = self.aStar(self.startVortex, bestNode)
-        #print("BFS NODES: ", possibleNodes[0:50])
-        #print("AStar PATH: ", bestPath)
-        #print("Start Vortex: ", self.startVortex)
+        print("BFS NODES: ", possibleNodes)
+        print("Best Node:", bestNode)
+        print("AStar PATH: ", bestPath)
+        print("Start Vortex: ", self.startVortex)
         return bestPath#[1:]
     
 class Analyst:
@@ -548,8 +551,10 @@ class Analyst:
     def loadColorDetection(self, colorSensorPosition, tileType):
         convPos = self.getTile(colorSensorPosition)
         self.grid.getNode(convPos).tileType = tileType
+        """
         if tileType == "hole":
-            self.calculatePath == True
+            self.calculatePath = True
+        """
             
 
     def getQuadrant(self, posInTile):

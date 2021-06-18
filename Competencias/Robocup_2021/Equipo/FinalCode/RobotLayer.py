@@ -298,11 +298,25 @@ class Comunicator:
         else:
             self.doGetWordInfo = True
         
-
-        
-        
-        
-
+class DistanceSensor:
+    def __init__(self, threshold, distanceFromCenter, angle, sensor, timeStep):
+        self.sensor = sensor
+        self.angle = angle
+        self.distance = distanceFromCenter
+        self.timeStep = timeStep
+        self.threshold = threshold
+        self.position = [0, 0]
+        self.sensor.enable(self.timeStep)
+    
+    def isFar(self):
+        distance = self.sensor.getValue()
+        #print("Sensor distance:", distance)
+        return distance > self.threshold
+    
+    def setPosition(self, robotPosition, robotRotation):
+        sensorRotation = robotRotation + self.angle
+        sensorPosition = getCoordsFromDegs(sensorRotation, self.distance)
+        self.position = sumLists(sensorPosition, robotPosition)
         
 # Abstraction layer for robot
 class RobotLayer:
@@ -325,6 +339,8 @@ class RobotLayer:
         self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
         self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed) 
         self.colorSensor = ColourSensor(self.robot.getDevice("colour_sensor"), 0.037, 32)
+        self.leftGroundSensor = DistanceSensor(0.04, 0.0523, 45, self.robot.getDevice("distance sensor2"), self.timeStep)
+        self.rightGroundSensor = DistanceSensor(0.04, 0.0523, -45, self.robot.getDevice("distance sensor1"), self.timeStep)
         self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
         self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
         self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
@@ -521,11 +537,13 @@ class RobotLayer:
         detection = self.colorSensor.getTileType()
         return pos, detection
     
-    def getVictimDistance(self):
-        pass
-    
-    def getVictimLetter(self):
-        pass
+    def trapsAtSides(self):
+        sides = []
+        if self.leftGroundSensor.isFar():
+            sides.append(self.leftGroundSensor.position)
+        if self.rightGroundSensor.isFar():
+            sides.append(self.rightGroundSensor.position)
+        return sides
     
     # Returns True if the simulation is running
     def doLoop(self):
@@ -571,7 +589,11 @@ class RobotLayer:
         
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation + 0)
-        self.getVictims()
+        
+        self.rightGroundSensor.setPosition(self.globalPosition, self.rotation)
+        self.leftGroundSensor.setPosition(self.globalPosition, self.rotation)
+
+
 
         self.comunicator.update()
 

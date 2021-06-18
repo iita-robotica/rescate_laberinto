@@ -24,9 +24,11 @@ while r.doLoop():
 
     if not stMg.checkState("init"):
         if r.isEnded():
+            r.seqResetSequence()
             stMg.changeState("end")
 
         elif r.isVictims():
+            r.seqResetSequence()
             stMg.changeState("victim")
     
 
@@ -45,7 +47,7 @@ while r.doLoop():
         r.seqDelaySec(0.1)
         r.seqMoveWheels(-0.5, 0.5)
         r.seqDelaySec(0.1)
-        r.seqMg.seqResetSequence()
+        r.seqResetSequence()
 
     
     if stMg.checkState("followBest"):
@@ -53,10 +55,10 @@ while r.doLoop():
         bestPos = r.getBestPos()
         if bestPos is not None:
             r.seqMoveToCoords(bestPos)
-        r.seqMg.seqResetSequence()
+        r.seqResetSequence()
 
-        if r.actualTileType == "hole":
-            r.seqMg.resetSequence()
+        if r.isTrap:
+            r.seqResetSequence()
             stMg.changeState("hole")
         
     
@@ -66,17 +68,19 @@ while r.doLoop():
         r.seqDelaySec(0.5)
         r.seqMoveWheels(0, 0)
         if r.seqMg.simpleSeqEvent(): r.recalculatePath()
-        r.seqMg.seqResetSequence()
+        r.seqResetSequence()
         stMg.changeState("followBest")
 
     if stMg.checkState("victim"):
         print("Victim mode!!")
         r.seqMg.startSequence()
         r.seqMoveWheels(0, 0)
+        r.seqPrint("stopping")
         r.seqDelaySec(3.2)
+        r.seqPrint("reporting")
         if r.seqMg.simpleSeqEvent(): r.reportVictims()
         r.seqPrint("Victim reported")
-        r.seqMg.seqResetSequence()
+        r.seqResetSequence()
         stMg.changeState("followBest")
     
     if stMg.checkState("end"):
