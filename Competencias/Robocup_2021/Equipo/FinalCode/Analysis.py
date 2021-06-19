@@ -248,7 +248,10 @@ class Grid:
                         printableArray[x][y] = 60
                     elif node.tileType == "swamp":
                         #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                        printableArray[x][y] = 20
+                        printableArray[x][y] = 80
+
+                    elif node.tileType in ("connection1-2", "connection2-3", "connection1-3"):
+                        printableArray[x][y] = 120
                     elif node.traversed:
                         printableArray[x][y] = 150
 
