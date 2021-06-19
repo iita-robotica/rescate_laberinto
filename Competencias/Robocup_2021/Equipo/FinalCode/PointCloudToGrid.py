@@ -42,7 +42,7 @@ class PointCloudQueManager:
 
         finalPointCloud = []
         for point in pointCloud:
-            fpoint = [int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier), 1]
+            fpoint = [round(point[0] * self.pointMultiplier), round(point[1] * self.pointMultiplier), 1]
             alreadyInFinal = False
             for finalPoint in finalPointCloud:
                 if fpoint[:2] == finalPoint[:2]:
@@ -94,7 +94,10 @@ class PointCloudDivider:
         return (int(position[0] // self.realTileSize), int(position[1] // self.realTileSize))
     
     def getPosInTile(self, position):
-        return (int(position[0] % self.realTileSize), int(position[1] % self.realTileSize))
+        tile = self.getTile(position)
+        tilePosition = multiplyLists(tile, [self.realTileSize, self.realTileSize])
+        posInTile = [round(round(position[0]) - tilePosition[0]), round(round(position[1]) - tilePosition[1])]
+        return posInTile
     
     # Returns a list with dictionarys containing the tile number and the position inside of said tile
     def getTiles(self, totalPointCloud):
