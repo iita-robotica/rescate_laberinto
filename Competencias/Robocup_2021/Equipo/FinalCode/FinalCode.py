@@ -87,6 +87,5 @@ while r.doLoop():
         r.seqMg.startSequence()
         if r.seqMg.simpleSeqEvent(): r.endGame()
         r.seqMoveWheels(0, 0)
-        if r.seqMg.simpleSeqEvent(): break
         
     print("--------------------------------------------------------------------")

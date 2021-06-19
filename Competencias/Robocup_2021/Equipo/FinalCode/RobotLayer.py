@@ -615,18 +615,3 @@ class RobotLayer:
         #victims = self.camera.getVictims()
         #print("Victims: ", victims)
 
-        
-
-        
-
-
-
-
-    
-        
-
-
-    
-
-    
-

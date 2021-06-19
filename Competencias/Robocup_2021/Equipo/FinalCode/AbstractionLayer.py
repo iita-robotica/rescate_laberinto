@@ -6,8 +6,8 @@ import cv2 as cv
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
 from StateMachines import *
-from RobotLayer import RobotLayer
-import Analysis
+from RobotLayer import *
+from Analysis import *
 
 
 class PlottingArray:
@@ -72,7 +72,7 @@ class AbstractionLayer():
         # Components
         self.robot = RobotLayer(self.timeStep)
         self.seqMg = SequenceManager()
-        self.analyst = Analysis.Analyst(self.tileSize)
+        self.analyst = Analyst(self.tileSize)
 
         # -- Functions --
         self.seqPrint = self.seqMg.makeSimpleSeqEvent(print)
