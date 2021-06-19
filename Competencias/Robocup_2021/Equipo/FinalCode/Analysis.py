@@ -29,7 +29,7 @@ class TileNode:
 
     @tileType.setter
     def tileType(self, value):
-        if self.__tileType in ("normal", "undefined"):
+        if self.__tileType in ("normal", "undefined") or value in ("start",):
             self.__tileType = value
 
     def getString(self):
@@ -243,6 +243,12 @@ class Grid:
                     elif node.tileType == "hole":
                         #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 255
+                    elif node.tileType == "checkpoint":
+                        #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                        printableArray[x][y] = 60
+                    elif node.tileType == "swamp":
+                        #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                        printableArray[x][y] = 20
                     elif node.traversed:
                         printableArray[x][y] = 150
 

@@ -64,19 +64,6 @@
 		"rz": 0,
 		"a": 1.5708
 	},
-	"colsensor": {
-		"dictName": "colsensor",
-		"name": "Colour sensor",
-		"customName": "colour_sensor",
-		"type": "add",
-		"x": 0,
-		"y": -100,
-		"z": -370,
-		"rx": 0,
-		"ry": 0,
-		"rz": -1,
-		"a": 1.5708
-	},
 	"camera1": {
 		"dictName": "camera1",
 		"name": "Camera",
@@ -128,5 +115,18 @@
 		"ry": 0,
 		"rz": 1,
 		"a": -1.57
+	},
+	"colsensor": {
+		"dictName": "colsensor",
+		"name": "Colour sensor",
+		"customName": "colour_sensor",
+		"type": "add",
+		"x": 0,
+		"y": 17,
+		"z": -370,
+		"rx": 0,
+		"ry": 0,
+		"rz": -1,
+		"a": 1.5708
 	}
 }
