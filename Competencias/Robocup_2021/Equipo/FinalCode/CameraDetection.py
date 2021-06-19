@@ -14,7 +14,7 @@ class Listener:
         #imgResult = cv.bitwise_and(img, img, mask=mask)
         return mask
 
-class Classifier:
+class VictimClassifier:
     def __init__(self):
         self.redListener = Listener(lowerHSV=(73, 157, 127), upperHSV=(179, 255, 255))
         self.yellowListener = Listener(lowerHSV=(0, 157, 82), upperHSV=(40, 255, 255))

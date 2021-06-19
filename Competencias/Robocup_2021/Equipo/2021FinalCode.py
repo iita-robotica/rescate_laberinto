@@ -264,18 +264,27 @@ class ColourSensor:
     
     def __update(self):
         colour = self.sensor.getImage()
-        self.r = colour[0]
-        self.g = colour[1]
-        self.b = colour[2]
+        print("Colourimg:", colour)
+        self.r = self.sensor.imageGetRed(colour, 1, 0, 0)
+        self.g = self.sensor.imageGetGreen(colour, 1, 0, 0)
+        self.b = self.sensor.imageGetBlue(colour, 1, 0, 0)
+        print("Colour:", self.r, self.g, self.b)
     
     def __isTrap(self):
-        return (57 < self.r < 61 and 57 < self.g < 61) or (self.r == 111 and self.g == 111)
+        return (35 < self.r < 45 and 35 < self.g < 45)
     def __isSwamp(self):
-        return (144 > self.r > 140 and 225 > self.g > 220 and self.b == 246)
+        return (200 < self.r < 210 and 165 < self.g < 175 and 95 < self.b < 105)
     def __isCheckpoint(self):
-        return (self.r == 255 and self.g == 255 and self.b == 255)
+        return (self.r > 232 and self.g > 232 and self.b > 232)
     def __isNormal(self):
-        return self.r == 252 and self.g == 252
+        return self.r == 227 and self.g == 227
+    def __isBlue(self):
+        return (55 < self.r < 65 and 55 < self.g < 65 and 245 < self.b < 255)
+    def __isPurple(self):
+        return (135 < self.r < 145 and 55 < self.g < 65 and 215 < self.b < 225)
+    def __isRed(self):
+        return (245 < self.r < 255 and 55 < self.g < 65 and 55 < self.b < 65)
+    
     # Returns the type of tyle detected from the colour data
     def getTileType(self):
         self.__update()
@@ -288,6 +297,12 @@ class ColourSensor:
             tileType = "swamp"
         elif self.__isCheckpoint():
             tileType = "checkpoint"
+        elif self.__isBlue():
+            tileType = "connection1-2"
+        elif self.__isPurple():
+            tileType = "connection2-3"
+        elif self.__isRed():
+            tileType = "connection1-3"
 
         #print("Color: " + tileType)
         #print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
@@ -679,8 +694,6 @@ class RobotLayer:
 
         self.comunicator.update()
 
-        #victims = self.camera.getVictims()
-        #print("Victims: ", victims)
 #--------------------------------------------------------------
 # Victim detection
 class Listener:
@@ -700,6 +713,7 @@ class VictimClassifier:
         self.yellowListener = Listener(lowerHSV=(0, 157, 82), upperHSV=(40, 255, 255))
         self.whiteListener = Listener(lowerHSV=(0, 0, 200), upperHSV=(0, 255, 255))
         self.blackListener = Listener(lowerHSV=(0, 0, 0), upperHSV=(0, 255, 10))
+        self.victimLetterListener = Listener(lowerHSV=(0, 0, 0), upperHSV=(5, 255, 100))
 
     def isClose(self, height):
         return height > 45
@@ -764,32 +778,36 @@ class VictimClassifier:
         
         return self.filterVictims(finalPoses, finalImages)
     
-    def classifyHSU(self, img):
-        gray = img[10:90]
-        gray =  cv.resize(gray, (100, 100), interpolation=cv.INTER_AREA)
-        threshVal1 = 25
-        threshVal2 = 100
-        thresh1 = cv.threshold(gray, threshVal1, 255, cv.THRESH_BINARY_INV)[1]
-        thresh2 = cv.threshold(gray, threshVal2, 255, cv.THRESH_BINARY_INV)[1]
-        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    def cropWhite(self, binaryImg):
         white = 255
         #print(conts)
         maxX = 0
         maxY = 0
-        minX = thresh1.shape[0]
-        minY = thresh1.shape[1]
-        for yIndex, row in enumerate(thresh1):
+        minX = binaryImg.shape[0]
+        minY = binaryImg.shape[1]
+        for yIndex, row in enumerate(binaryImg):
             for xIndex, pixel in enumerate(row):
                 if pixel == white:
                     maxX = max(maxX, xIndex)
                     maxY = max(maxY, yIndex)
                     minX = min(minX, xIndex)
                     minY = min(minY, yIndex)
+ 
+        return binaryImg[minY:maxY, minX:maxX]
 
-        letter = thresh2[minY:maxY, minX:maxX]
+    def classifyHSU(self, img):
+        white = 255
+
+        img =  cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
+        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        binary = self.victimLetterListener.getFiltered(img)
+
+        letter = self.cropWhite(binary)
+        letter = letter[:,10:90]
+        letter = self.cropWhite(letter)
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         cv.imshow("letra", letter)
-        cv.imshow("thresh", thresh1)
+        cv.imshow("thresh", binary)
         letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
         areaWidth = 20
         areaHeight = 30
@@ -837,7 +855,7 @@ class VictimClassifier:
         return whitePoints > 5000 and 1500 > blackPoints > 100
     
     def isCorrosive(self, blackPoints, whitePoints):
-        return 1000 < whitePoints < 2500 and 1000 < blackPoints < 2500
+        return 700 < whitePoints < 2500 and 1000 < blackPoints < 2500
     
     def isFlammable(self, redPoints, whitePoints):
         return redPoints and whitePoints
@@ -870,12 +888,13 @@ class VictimClassifier:
             letter = "P"
         
         if self.isVictim(colorPointCounts["black"], colorPointCounts["white"]):
-            letter = self.classifyHSU(colorImgs["white"])
+            cv.imshow("black filter:", colorImgs["black"])
+            letter = self.classifyHSU(image)
             print("Victim:", letter)
             
         
         if self.isCorrosive(colorPointCounts["black"], colorPointCounts["white"]):
-            print("Corroive!")
+            print("Corrosive!")
             letter = "C"
         
         if self.isOrganicPeroxide(colorPointCounts["red"], colorPointCounts["yellow"]):
@@ -887,7 +906,6 @@ class VictimClassifier:
             letter = "F"
 
         return letter
-
 
 
 #--------------Point Cloud To Grid --------------
@@ -909,7 +927,7 @@ class PointCloudQueManager:
 
         finalPointCloud = []
         for point in pointCloud:
-            fpoint = [int(point[0] * self.pointMultiplier), int(point[1] * self.pointMultiplier), 1]
+            fpoint = [round(point[0] * self.pointMultiplier), round(point[1] * self.pointMultiplier), 1]
             alreadyInFinal = False
             for finalPoint in finalPointCloud:
                 if fpoint[:2] == finalPoint[:2]:
@@ -961,7 +979,10 @@ class PointCloudDivider:
         return (int(position[0] // self.realTileSize), int(position[1] // self.realTileSize))
     
     def getPosInTile(self, position):
-        return (int(position[0] % self.realTileSize), int(position[1] % self.realTileSize))
+        tile = self.getTile(position)
+        tilePosition = multiplyLists(tile, [self.realTileSize, self.realTileSize])
+        posInTile = [round(round(position[0]) - tilePosition[0]), round(round(position[1]) - tilePosition[1])]
+        return posInTile
     
     # Returns a list with dictionarys containing the tile number and the position inside of said tile
     def getTiles(self, totalPointCloud):
@@ -1038,6 +1059,7 @@ class TileNode:
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
         self.__tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
         self.traversed = False
+        self.tileGroup = [0, 0]
         self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
         self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
         self.obstacles = obstacles # List of obstacles in tile
@@ -1048,7 +1070,7 @@ class TileNode:
 
     @tileType.setter
     def tileType(self, value):
-        if self.__tileType in ("normal", "undefined"):
+        if self.__tileType in ("normal", "undefined") or value in ("start",):
             self.__tileType = value
 
     def getString(self):
@@ -1109,7 +1131,6 @@ class VortexNode:
 
 # A virtual representation of the competition map
 class Grid:
-    
     def __init__(self, chunk, initialSize):
         self.startingSize = initialSize # The initial size of the grid, cant be 0 and has to be divisible by the size of the chunk
         self.size = [2, 2] # The actual size of the grid
@@ -1157,6 +1178,7 @@ class Grid:
             self.offsets[1] -= 1
 
         self.size = self.startingSize
+
     
     # Adds a row at the end of the grid
     def addRowAtEnd(self):
@@ -1260,8 +1282,15 @@ class Grid:
                     if node.tileType == "start":
                         printableArray[x][y] = 100
                     elif node.tileType == "hole":
-                        print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                        #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 255
+                    elif node.tileType == "checkpoint":
+                        printableArray[x][y] = 60
+                    elif node.tileType == "swamp":
+                        printableArray[x][y] = 80
+
+                    elif node.tileType in ("connection1-2", "connection2-3", "connection1-3"):
+                        printableArray[x][y] = 120
                     elif node.traversed:
                         printableArray[x][y] = 150
 
@@ -1304,6 +1333,7 @@ class PathFinder:
     def __init__(self, vortexNode, wallNode, tileNode, grid, searchLimit, startNode):
         self.grid = grid
         self.startVortex = [0, 0]
+        self.prevVortex = [0, 0]
         self.objectiveVortex = [0, 0]
         self.vortexNode = vortexNode
         self.wallNode = wallNode
@@ -1462,7 +1492,9 @@ class PathFinder:
     def setStartVortex(self, startRawVortexPos):
         if not isinstance(self.grid.getRawNode(startRawVortexPos), self.vortexNode):
             raise ValueError("Inputed position does not correspond to a vortex node")
-        
+        if self.startVortex != startRawVortexPos:
+            self.prevVortex = self.startVortex
+
         self.startVortex = startRawVortexPos
         if not self.isTraversable(startRawVortexPos):
             print("INITIAL VORTEX NOT TRAVERSABLE")
@@ -1473,8 +1505,12 @@ class PathFinder:
     def getBestPath(self, orientation):
         bfsLimits = ("undefined",)
         possibleNodes = []
+        if self.isTraversable(self.startVortex):
+            bfsStart = self.startVortex
+        else:
+            bfsStart = self.prevVortex
         for limit in bfsLimits:
-            possibleNodes = self.bfs(self.startVortex, limit)
+            possibleNodes = self.bfs(bfsStart, limit)
             if len(possibleNodes) > 0:
                 break
         
@@ -1496,12 +1532,12 @@ class PathFinder:
             bestNode = self.startNode
 
 
-        bestPath = self.aStar(self.startVortex, bestNode)
+        bestPath = self.aStar(bfsStart, bestNode)
         print("BFS NODES: ", possibleNodes)
         print("Best Node:", bestNode)
         print("AStar PATH: ", bestPath)
         print("Start Vortex: ", self.startVortex)
-        return bestPath#[1:]
+        return bestPath
     
 class Analyst:
     def __init__(self, tileSize):
@@ -1603,6 +1639,8 @@ class Analyst:
                                                 [-1, -1, 0, 1, 1, 1],
                                                 [-1, -1, 0, 1, 1, 1]])
 
+
+
                 }
         self.classifier = Classifier(classifTemp)
         # Path finder
@@ -1610,14 +1648,13 @@ class Analyst:
         self.pathFinder.setStartVortex((1, 1))
         #self.pathFinder.getBestPath()
         # Variables
-        self.actualRawNode = []
         self.direction = None
         self.__bestPath = []
         self.calculatePath = True
         self.stoppedMoving = False
         self.pathIndex = 0
-        self.positionReachedThresh = 0.02
-        self.startRawNode = [0 ,0]
+        self.positionReachedThresh = 0.01
+        self.prevRawNode = [0, 0]
         self.ended = False
 
     def getRawAdjacents(self, node, side):
@@ -1637,6 +1674,7 @@ class Analyst:
             for key, value in percentages.items():
                 wallType, orientation = key
                 if wallType == "straight":
+                        
                     if value >= 5:
                         self.grid.getNode(item["tile"], orientation).occupied = True
                         for adjacent in self.getRawAdjacents(item["tile"], orientation):
@@ -1648,7 +1686,7 @@ class Analyst:
                     if value > 0:
                         #print("Robot tile", self.tile)
                         #print("Curved", orientation, "in sight at", item["tile"])
-                        if percentages[("curvedwall", orientation)] > 2:
+                        if percentages[("curvedwall", orientation)] > 6:
                             walls = orientation.split("-")
                             for wall in walls:
                                 self.grid.getNode(item["tile"], wall).occupied = True
@@ -1818,6 +1856,7 @@ class Analyst:
     def showGrid(self):
         cv.imshow("Analyst grid", cv.resize(self.grid.getNumpyPrintableArray(), (400, 400), interpolation=cv.INTER_NEAREST))
 
+
 # ------------------- State machines ------------
 
 # Manages states
@@ -1952,10 +1991,10 @@ class PlottingArray:
     def reset(self):
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
 
-        for y in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+        for y in range(0, len(self.gridPlottingArray), round(self.tileSize * self.scale)):
             for x in range(len(self.gridPlottingArray[0])):
                 self.gridPlottingArray[x][y] = 50
-        for x in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+        for x in range(0, len(self.gridPlottingArray), round(self.tileSize * self.scale)):
             for y in range(len(self.gridPlottingArray[0])):
                 self.gridPlottingArray[x][y] = 50
 
@@ -2146,7 +2185,7 @@ class AbstractionLayer():
         self.analyst.showGrid()
         
         
-        cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (400, 400), interpolation=cv.INTER_NEAREST))
+        cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (600, 600), interpolation=cv.INTER_NEAREST))
         cv.waitKey(1)
 
 #:::::::::::::::::MAIN PROGRAM::::::::::::::::::
@@ -2164,7 +2203,7 @@ while r.doLoop():
     r.update()
     print("rotation: " + str(r.rotation))
     print("position: " + str(r.position))
-
+    print("State:", stMg.state)
     
 
     if not stMg.checkState("init"):
@@ -2232,6 +2271,5 @@ while r.doLoop():
         r.seqMg.startSequence()
         if r.seqMg.simpleSeqEvent(): r.endGame()
         r.seqMoveWheels(0, 0)
-        #if r.seqMg.simpleSeqEvent(): break
         
     print("--------------------------------------------------------------------")
