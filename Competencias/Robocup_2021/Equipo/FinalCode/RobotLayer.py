@@ -193,7 +193,7 @@ class ColourSensor:
     def __isSwamp(self):
         return (200 < self.r < 210 and 165 < self.g < 175 and 95 < self.b < 105)
     def __isCheckpoint(self):
-        return (self.r > 250 and self.g > 250 and self.b > 250)
+        return (self.r > 232 and self.g > 232 and self.b > 232)
     def __isNormal(self):
         return self.r == 227 and self.g == 227
     def __isBlue(self):
