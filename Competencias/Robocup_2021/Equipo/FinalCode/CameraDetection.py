@@ -85,26 +85,33 @@ class Classifier:
         
         return self.filterVictims(finalPoses, finalImages)
     
-    def classifyHSU(self, img):
-        img =  cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
-        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        binary = self.victimLetterListener.getFiltered(img)
-
+    def cropWhite(self, binaryImg):
         white = 255
         #print(conts)
         maxX = 0
         maxY = 0
-        minX = binary.shape[0]
-        minY = binary.shape[1]
-        for yIndex, row in enumerate(binary):
+        minX = binaryImg.shape[0]
+        minY = binaryImg.shape[1]
+        for yIndex, row in enumerate(binaryImg):
             for xIndex, pixel in enumerate(row):
                 if pixel == white:
                     maxX = max(maxX, xIndex)
                     maxY = max(maxY, yIndex)
                     minX = min(minX, xIndex)
                     minY = min(minY, yIndex)
+ 
+        return binaryImg[minY:maxY, minX:maxX]
 
-        letter = binary[minY:maxY, minX:maxX]
+    def classifyHSU(self, img):
+        white = 255
+
+        img =  cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
+        #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        binary = self.victimLetterListener.getFiltered(img)
+
+        letter = self.cropWhite(binary)
+        letter = letter[:,10:90]
+        letter = self.cropWhite(letter)
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         cv.imshow("letra", letter)
         cv.imshow("thresh", binary)

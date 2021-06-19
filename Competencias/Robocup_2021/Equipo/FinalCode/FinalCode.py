@@ -19,7 +19,7 @@ while r.doLoop():
     r.update()
     print("rotation: " + str(r.rotation))
     print("position: " + str(r.position))
-
+    print("State:", stMg.state)
     
 
     if not stMg.checkState("init"):
