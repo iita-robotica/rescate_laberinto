@@ -19,6 +19,7 @@ class TileNode:
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
         self.__tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
         self.traversed = False
+        self.tileGroup = [0, 0]
         self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
         self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
         self.obstacles = obstacles # List of obstacles in tile
@@ -90,7 +91,6 @@ class VortexNode:
 
 # A virtual representation of the competition map
 class Grid:
-    
     def __init__(self, chunk, initialSize):
         self.startingSize = initialSize # The initial size of the grid, cant be 0 and has to be divisible by the size of the chunk
         self.size = [2, 2] # The actual size of the grid
@@ -138,6 +138,7 @@ class Grid:
             self.offsets[1] -= 1
 
         self.size = self.startingSize
+
     
     # Adds a row at the end of the grid
     def addRowAtEnd(self):
@@ -244,10 +245,8 @@ class Grid:
                         #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 255
                     elif node.tileType == "checkpoint":
-                        #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 60
                     elif node.tileType == "swamp":
-                        #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 80
 
                     elif node.tileType in ("connection1-2", "connection2-3", "connection1-3"):
