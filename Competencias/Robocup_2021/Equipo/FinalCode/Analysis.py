@@ -6,7 +6,7 @@ import copy
 
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
-import PointCloudToGrid
+from PointCloudToGrid import *
 
 # Class that defines a tile node in the grid
 class TileNode:
@@ -509,10 +509,10 @@ class Analyst:
                               [WallNode()  , TileNode()]])
         self.grid = Grid(gridChunk, (100, 100))
         # Converter
-        self.converter = PointCloudToGrid.PointCloudConverter(self.tileSize, pointMultiplier=self.posMultiplier)
+        self.converter = PointCloudConverter(self.tileSize, pointMultiplier=self.posMultiplier)
         # Classifier
         from ClassifierTemplate import tilesDict as classifTemp
-        self.classifier = PointCloudToGrid.Classifier(classifTemp)
+        self.classifier = Classifier(classifTemp)
         # Path finder
         self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 10, [0, 0])
         self.pathFinder.setStartVortex((1, 1))
