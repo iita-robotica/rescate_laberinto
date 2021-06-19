@@ -9,7 +9,7 @@ import cv2 as cv
 #REMEMBER TO COPY-PASTE THIS FUNCTIONS ON TO FINAL CODE
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
-from CameraDetection import Classifier
+from CameraDetection import *
 
 # Captures images and processes them
 class Camera:
@@ -359,7 +359,7 @@ class RobotLayer:
         self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
         self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
         self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
-        self.victimClasifier = Classifier()
+        self.victimClasifier = VictimClassifier()
 
     def getVictims(self):
         poses = []
