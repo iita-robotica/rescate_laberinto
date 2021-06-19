@@ -523,7 +523,7 @@ class Analyst:
         self.calculatePath = True
         self.stoppedMoving = False
         self.pathIndex = 0
-        self.positionReachedThresh = 0.02
+        self.positionReachedThresh = 0.01
         self.prevRawNode = [0, 0]
         self.ended = False
 

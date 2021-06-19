@@ -162,7 +162,7 @@ class Classifier:
         return whitePoints > 5000 and 1500 > blackPoints > 100
     
     def isCorrosive(self, blackPoints, whitePoints):
-        return 1000 < whitePoints < 2500 and 1000 < blackPoints < 2500
+        return 700 < whitePoints < 2500 and 1000 < blackPoints < 2500
     
     def isFlammable(self, redPoints, whitePoints):
         return redPoints and whitePoints
