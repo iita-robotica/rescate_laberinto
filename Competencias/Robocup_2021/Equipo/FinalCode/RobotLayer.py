@@ -9,7 +9,7 @@ import cv2 as cv
 #REMEMBER TO COPY-PASTE THIS FUNCTIONS ON TO FINAL CODE
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
-from CameraDetection import Classifier
+from CameraDetection import *
 
 # Captures images and processes them
 class Camera:
@@ -182,18 +182,27 @@ class ColourSensor:
     
     def __update(self):
         colour = self.sensor.getImage()
-        self.r = colour[0]
-        self.g = colour[1]
-        self.b = colour[2]
+        print("Colourimg:", colour)
+        self.r = self.sensor.imageGetRed(colour, 1, 0, 0)
+        self.g = self.sensor.imageGetGreen(colour, 1, 0, 0)
+        self.b = self.sensor.imageGetBlue(colour, 1, 0, 0)
+        print("Colour:", self.r, self.g, self.b)
     
     def __isTrap(self):
-        return (57 < self.r < 61 and 57 < self.g < 61) or (self.r == 111 and self.g == 111)
+        return (35 < self.r < 45 and 35 < self.g < 45)
     def __isSwamp(self):
-        return (144 > self.r > 140 and 225 > self.g > 220 and self.b == 246)
+        return (200 < self.r < 210 and 165 < self.g < 175 and 95 < self.b < 105)
     def __isCheckpoint(self):
-        return (self.r == 255 and self.g == 255 and self.b == 255)
+        return (self.r > 232 and self.g > 232 and self.b > 232)
     def __isNormal(self):
-        return self.r == 252 and self.g == 252
+        return self.r == 227 and self.g == 227
+    def __isBlue(self):
+        return (55 < self.r < 65 and 55 < self.g < 65 and 245 < self.b < 255)
+    def __isPurple(self):
+        return (135 < self.r < 145 and 55 < self.g < 65 and 215 < self.b < 225)
+    def __isRed(self):
+        return (245 < self.r < 255 and 55 < self.g < 65 and 55 < self.b < 65)
+    
     # Returns the type of tyle detected from the colour data
     def getTileType(self):
         self.__update()
@@ -206,6 +215,12 @@ class ColourSensor:
             tileType = "swamp"
         elif self.__isCheckpoint():
             tileType = "checkpoint"
+        elif self.__isBlue():
+            tileType = "connection1-2"
+        elif self.__isPurple():
+            tileType = "connection2-3"
+        elif self.__isRed():
+            tileType = "connection1-3"
 
         #print("Color: " + tileType)
         #print("r: " + str(self.r) + "g: " + str(self.g) + "b: " +  str(self.b))
@@ -344,7 +359,7 @@ class RobotLayer:
         self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
         self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
         self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
-        self.victimClasifier = Classifier()
+        self.victimClasifier = VictimClassifier()
 
     def getVictims(self):
         poses = []
@@ -599,19 +614,4 @@ class RobotLayer:
 
         #victims = self.camera.getVictims()
         #print("Victims: ", victims)
-
-        
-
-        
-
-
-
-
-    
-        
-
-
-    
-
-    
 

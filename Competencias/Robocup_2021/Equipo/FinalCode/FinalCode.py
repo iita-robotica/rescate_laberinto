@@ -19,7 +19,7 @@ while r.doLoop():
     r.update()
     print("rotation: " + str(r.rotation))
     print("position: " + str(r.position))
-
+    print("State:", stMg.state)
     
 
     if not stMg.checkState("init"):
@@ -87,6 +87,5 @@ while r.doLoop():
         r.seqMg.startSequence()
         if r.seqMg.simpleSeqEvent(): r.endGame()
         r.seqMoveWheels(0, 0)
-        if r.seqMg.simpleSeqEvent(): break
         
     print("--------------------------------------------------------------------")

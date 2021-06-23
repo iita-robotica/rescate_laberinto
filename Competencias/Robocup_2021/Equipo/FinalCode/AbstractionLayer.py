@@ -6,8 +6,8 @@ import cv2 as cv
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
 from StateMachines import *
-from RobotLayer import RobotLayer
-import Analysis
+from RobotLayer import *
+from Analysis import *
 
 
 class PlottingArray:
@@ -46,10 +46,10 @@ class PlottingArray:
     def reset(self):
         self.gridPlottingArray = np.zeros(self.size, np.uint8)
 
-        for y in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+        for y in range(0, len(self.gridPlottingArray), round(self.tileSize * self.scale)):
             for x in range(len(self.gridPlottingArray[0])):
                 self.gridPlottingArray[x][y] = 50
-        for x in range(0, len(self.gridPlottingArray), int(self.tileSize * self.scale)):
+        for x in range(0, len(self.gridPlottingArray), round(self.tileSize * self.scale)):
             for y in range(len(self.gridPlottingArray[0])):
                 self.gridPlottingArray[x][y] = 50
 
@@ -72,7 +72,7 @@ class AbstractionLayer():
         # Components
         self.robot = RobotLayer(self.timeStep)
         self.seqMg = SequenceManager()
-        self.analyst = Analysis.Analyst(self.tileSize)
+        self.analyst = Analyst(self.tileSize)
 
         # -- Functions --
         self.seqPrint = self.seqMg.makeSimpleSeqEvent(print)
@@ -240,7 +240,7 @@ class AbstractionLayer():
         self.analyst.showGrid()
         
         
-        cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (400, 400), interpolation=cv.INTER_NEAREST))
+        cv.imshow("raw detections", cv.resize(self.gridPlotter.gridPlottingArray, (600, 600), interpolation=cv.INTER_NEAREST))
         cv.waitKey(1)
 
         

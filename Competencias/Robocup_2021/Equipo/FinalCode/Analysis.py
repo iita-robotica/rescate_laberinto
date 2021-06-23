@@ -6,7 +6,7 @@ import copy
 
 sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
 from UtilityFunctions import *
-import PointCloudToGrid
+from PointCloudToGrid import *
 
 # Class that defines a tile node in the grid
 class TileNode:
@@ -19,6 +19,7 @@ class TileNode:
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
         self.__tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
         self.traversed = False
+        self.tileGroup = [0, 0]
         self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
         self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
         self.obstacles = obstacles # List of obstacles in tile
@@ -29,7 +30,7 @@ class TileNode:
 
     @tileType.setter
     def tileType(self, value):
-        if self.__tileType in ("normal", "undefined"):
+        if self.__tileType in ("normal", "undefined") or value in ("start",):
             self.__tileType = value
 
     def getString(self):
@@ -90,7 +91,6 @@ class VortexNode:
 
 # A virtual representation of the competition map
 class Grid:
-    
     def __init__(self, chunk, initialSize):
         self.startingSize = initialSize # The initial size of the grid, cant be 0 and has to be divisible by the size of the chunk
         self.size = [2, 2] # The actual size of the grid
@@ -138,6 +138,7 @@ class Grid:
             self.offsets[1] -= 1
 
         self.size = self.startingSize
+
     
     # Adds a row at the end of the grid
     def addRowAtEnd(self):
@@ -241,8 +242,15 @@ class Grid:
                     if node.tileType == "start":
                         printableArray[x][y] = 100
                     elif node.tileType == "hole":
-                        print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                        #print("NEW HOLE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         printableArray[x][y] = 255
+                    elif node.tileType == "checkpoint":
+                        printableArray[x][y] = 60
+                    elif node.tileType == "swamp":
+                        printableArray[x][y] = 80
+
+                    elif node.tileType in ("connection1-2", "connection2-3", "connection1-3"):
+                        printableArray[x][y] = 120
                     elif node.traversed:
                         printableArray[x][y] = 150
 
@@ -501,10 +509,10 @@ class Analyst:
                               [WallNode()  , TileNode()]])
         self.grid = Grid(gridChunk, (100, 100))
         # Converter
-        self.converter = PointCloudToGrid.PointCloudConverter(self.tileSize, pointMultiplier=self.posMultiplier)
+        self.converter = PointCloudConverter(self.tileSize, pointMultiplier=self.posMultiplier)
         # Classifier
         from ClassifierTemplate import tilesDict as classifTemp
-        self.classifier = PointCloudToGrid.Classifier(classifTemp)
+        self.classifier = Classifier(classifTemp)
         # Path finder
         self.pathFinder = PathFinder(VortexNode, WallNode, TileNode, self.grid, 10, [0, 0])
         self.pathFinder.setStartVortex((1, 1))
@@ -515,7 +523,7 @@ class Analyst:
         self.calculatePath = True
         self.stoppedMoving = False
         self.pathIndex = 0
-        self.positionReachedThresh = 0.02
+        self.positionReachedThresh = 0.01
         self.prevRawNode = [0, 0]
         self.ended = False
 
@@ -536,6 +544,7 @@ class Analyst:
             for key, value in percentages.items():
                 wallType, orientation = key
                 if wallType == "straight":
+                        
                     if value >= 5:
                         self.grid.getNode(item["tile"], orientation).occupied = True
                         for adjacent in self.getRawAdjacents(item["tile"], orientation):
@@ -547,7 +556,7 @@ class Analyst:
                     if value > 0:
                         #print("Robot tile", self.tile)
                         #print("Curved", orientation, "in sight at", item["tile"])
-                        if percentages[("curvedwall", orientation)] > 2:
+                        if percentages[("curvedwall", orientation)] > 6:
                             walls = orientation.split("-")
                             for wall in walls:
                                 self.grid.getNode(item["tile"], wall).occupied = True
