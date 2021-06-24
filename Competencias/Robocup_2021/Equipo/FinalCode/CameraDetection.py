@@ -108,11 +108,13 @@ class VictimClassifier:
         #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         binary = self.victimLetterListener.getFiltered(img)
 
-        letter = self.cropWhite(binary)
-        letter = letter[:,15:85]
+        letter1 = self.cropWhite(binary)
+        letter1 = cv.resize(letter1, (100, 100), interpolation=cv.INTER_AREA)
+        letter = letter1[:,10:90]
         letter = self.cropWhite(letter)
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         cv.imshow("letra", letter)
+        cv.imshow("letra1", letter1)
         cv.imshow("thresh", binary)
         letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
         areaWidth = 20
