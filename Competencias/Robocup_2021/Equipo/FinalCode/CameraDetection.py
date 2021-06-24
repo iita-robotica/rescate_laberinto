@@ -1,4 +1,3 @@
-from numpy.core.numeric import identity
 import cv2 as cv
 import numpy as np
 
@@ -110,7 +109,7 @@ class VictimClassifier:
         binary = self.victimLetterListener.getFiltered(img)
 
         letter = self.cropWhite(binary)
-        letter = letter[:,10:90]
+        letter = letter[:,15:85]
         letter = self.cropWhite(letter)
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         cv.imshow("letra", letter)
@@ -213,28 +212,3 @@ class VictimClassifier:
             letter = "F"
 
         return letter
-
-    
-
-def blackAndWhiteCases(panels_of_values):
-    blacks = 0
-    whites = 0
-    for keys, value in panels_of_values.items():
-        all_points = np.where(value == 255)
-        all_points = all_points[0]
-        if len(all_points) == 0:
-            print("\n_")
-        if keys == "Black":
-            blacks = len(all_points)
-        if keys == "White":
-            whites = len(all_points)
-    
-    if blacks <20 and whites > 700 and whites <1000:
-    #print(f"balcks --> {blacks}")
-        print("all white hazzard")
-    elif whites < 200 and whites > 100 and blacks > 350 and blacks < 550:
-        print("white and black hazzard detected")
-    
-    elif whites > 2000 and blacks< 510:
-        print("VICTIM DETECTED --> APPLY TEAM LOGIC FOR VICTIMS")
-    #print(f"We have {whites} whites and {blacks} blacks")

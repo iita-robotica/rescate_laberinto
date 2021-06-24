@@ -803,7 +803,7 @@ class VictimClassifier:
         binary = self.victimLetterListener.getFiltered(img)
 
         letter = self.cropWhite(binary)
-        letter = letter[:,10:90]
+        letter = letter[:,15:85]
         letter = self.cropWhite(letter)
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         cv.imshow("letra", letter)
@@ -849,10 +849,10 @@ class VictimClassifier:
         return finalLetter
 
     def isPoison(self, blackPoints, whitePoints):
-        return blackPoints < 80 and whitePoints > 700 and whitePoints < 4000
+        return blackPoints < 600 and whitePoints > 700 and whitePoints < 4000
     
     def isVictim(self, blackPoints, whitePoints):
-        return whitePoints > 5000 and 1500 > blackPoints > 100
+        return whitePoints > 5000 and 2000 > blackPoints > 100
     
     def isCorrosive(self, blackPoints, whitePoints):
         return 700 < whitePoints < 2500 and 1000 < blackPoints < 2500
