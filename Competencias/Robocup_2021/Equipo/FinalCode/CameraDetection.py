@@ -1,4 +1,3 @@
-from numpy.core.numeric import identity
 import cv2 as cv
 import numpy as np
 
@@ -109,11 +108,13 @@ class VictimClassifier:
         #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         binary = self.victimLetterListener.getFiltered(img)
 
-        letter = self.cropWhite(binary)
-        letter = letter[:,10:90]
+        letter1 = self.cropWhite(binary)
+        letter1 = cv.resize(letter1, (100, 100), interpolation=cv.INTER_AREA)
+        letter = letter1[:,10:90]
         letter = self.cropWhite(letter)
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
         cv.imshow("letra", letter)
+        cv.imshow("letra1", letter1)
         cv.imshow("thresh", binary)
         letterColor = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
         areaWidth = 20
@@ -156,10 +157,10 @@ class VictimClassifier:
         return finalLetter
 
     def isPoison(self, blackPoints, whitePoints):
-        return blackPoints < 80 and whitePoints > 700 and whitePoints < 4000
+        return blackPoints < 600 and whitePoints > 700 and whitePoints < 4000
     
     def isVictim(self, blackPoints, whitePoints):
-        return whitePoints > 5000 and 1500 > blackPoints > 100
+        return whitePoints > 5000 and 2000 > blackPoints > 100
     
     def isCorrosive(self, blackPoints, whitePoints):
         return 700 < whitePoints < 2500 and 1000 < blackPoints < 2500
@@ -213,28 +214,3 @@ class VictimClassifier:
             letter = "F"
 
         return letter
-
-    
-
-def blackAndWhiteCases(panels_of_values):
-    blacks = 0
-    whites = 0
-    for keys, value in panels_of_values.items():
-        all_points = np.where(value == 255)
-        all_points = all_points[0]
-        if len(all_points) == 0:
-            print("\n_")
-        if keys == "Black":
-            blacks = len(all_points)
-        if keys == "White":
-            whites = len(all_points)
-    
-    if blacks <20 and whites > 700 and whites <1000:
-    #print(f"balcks --> {blacks}")
-        print("all white hazzard")
-    elif whites < 200 and whites > 100 and blacks > 350 and blacks < 550:
-        print("white and black hazzard detected")
-    
-    elif whites > 2000 and blacks< 510:
-        print("VICTIM DETECTED --> APPLY TEAM LOGIC FOR VICTIMS")
-    #print(f"We have {whites} whites and {blacks} blacks")
