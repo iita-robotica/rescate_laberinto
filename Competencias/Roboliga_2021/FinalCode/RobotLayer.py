@@ -7,7 +7,7 @@ import struct
 import cv2 as cv
 
 #REMEMBER TO COPY-PASTE THIS FUNCTIONS ON TO FINAL CODE
-sys.path.append(r"C:\\Users\\ANA\\Desktop\\Webots - Erebus\\rescate_laberinto\\Competencias\\Robocup_2021\\Equipo\\FinalCode")
+sys.path.append(r"/home/ale/rescate_laberinto/Competencias/Roboliga_2021/FinalCode")
 from UtilityFunctions import *
 from CameraDetection import *
 
