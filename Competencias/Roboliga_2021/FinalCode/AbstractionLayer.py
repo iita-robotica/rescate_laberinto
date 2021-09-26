@@ -150,7 +150,7 @@ class AbstractionLayer():
         self.analyst.registerVictim()
     
     def endGame(self):
-        self.sendFinalArray()
+        #self.sendFinalArray()
         self.robot.sendEnd()
 
     def sendFinalArray(self):
@@ -184,7 +184,7 @@ class AbstractionLayer():
         if self.doWallMapping:
             print("Doing wall mapping")
 
-            if self.timeWithoutMoving > 1:
+            if self.timeWithoutMoving > 10:
                 self.analyst.stoppedMoving = True
             else:
                 self.analyst.stoppedMoving = False

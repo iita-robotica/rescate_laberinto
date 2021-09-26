@@ -17,7 +17,7 @@ class VictimClassifier:
     def __init__(self):
         self.redListener = Listener(lowerHSV=(73, 157, 127), upperHSV=(179, 255, 255))
         self.yellowListener = Listener(lowerHSV=(0, 157, 82), upperHSV=(40, 255, 255))
-        self.whiteListener = Listener(lowerHSV=(0, 0, 200), upperHSV=(0, 255, 255))
+        self.whiteListener = Listener(lowerHSV=(0, 0, 195), upperHSV=(5, 255, 255))
         self.blackListener = Listener(lowerHSV=(0, 0, 0), upperHSV=(0, 255, 10))
         self.victimLetterListener = Listener(lowerHSV=(0, 0, 0), upperHSV=(5, 255, 100))
 
@@ -46,10 +46,11 @@ class VictimClassifier:
 
 
     def filterVictims(self, poses, images):
+        print("Raw victim poses: ", poses)
         finalPoses = []
         finalImages = []
         for pos, img in zip(poses, images):
-            if 25 < pos[0] < 60:
+            if 20 < pos[0] < 60:
                 finalPoses.append(pos)
                 finalImages.append(img)
 
@@ -82,7 +83,9 @@ class VictimClassifier:
             finalImages.append(image[y:y + h, x:x + w])
             finalPoses.append((y, x))
         
-        return self.filterVictims(finalPoses, finalImages)
+        filtered = self.filterVictims(finalPoses, finalImages)
+        
+        return filtered[0], filtered[1], finalImages
     
     def cropWhite(self, binaryImg):
         white = 255
@@ -204,13 +207,15 @@ class VictimClassifier:
         if self.isCorrosive(colorPointCounts["black"], colorPointCounts["white"]):
             print("Corrosive!")
             letter = "C"
-        
+
+        if self.isFlammable(colorPointCounts["red"], colorPointCounts["white"]):
+            print("Flammable!")
+            letter = "F"
+            
         if self.isOrganicPeroxide(colorPointCounts["red"], colorPointCounts["yellow"]):
             print("organic peroxide!")
             letter = "O"
         
-        if self.isFlammable(colorPointCounts["red"], colorPointCounts["white"]):
-            print("Flammable!")
-            letter = "F"
+        
 
         return letter
