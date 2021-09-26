@@ -29,6 +29,7 @@ while r.doLoop():
 
         elif r.isVictims():
             r.seqResetSequence()
+            print("THERE ARE VICTIMS")
             stMg.changeState("victim")
     
 
@@ -68,8 +69,8 @@ while r.doLoop():
         r.seqDelaySec(0.5)
         r.seqMoveWheels(0, 0)
         if r.seqMg.simpleSeqEvent(): r.recalculatePath()
-        r.seqResetSequence()
-        stMg.changeState("followBest")
+        if r.seqResetSequence():
+            stMg.changeState("followBest")
 
     if stMg.checkState("victim"):
         print("Victim mode!!")
@@ -80,8 +81,8 @@ while r.doLoop():
         r.seqPrint("reporting")
         if r.seqMg.simpleSeqEvent(): r.reportVictims()
         r.seqPrint("Victim reported")
-        r.seqResetSequence()
-        stMg.changeState("followBest")
+        if r.seqResetSequence():
+            stMg.changeState("followBest")
     
     if stMg.checkState("end"):
         r.seqMg.startSequence()

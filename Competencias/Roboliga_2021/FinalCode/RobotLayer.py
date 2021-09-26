@@ -182,11 +182,11 @@ class ColourSensor:
     
     def __update(self):
         colour = self.sensor.getImage()
-        print("Colourimg:", colour)
+        #print("Colourimg:", colour)
         self.r = self.sensor.imageGetRed(colour, 1, 0, 0)
         self.g = self.sensor.imageGetGreen(colour, 1, 0, 0)
         self.b = self.sensor.imageGetBlue(colour, 1, 0, 0)
-        print("Colour:", self.r, self.g, self.b)
+        #print("Colour:", self.r, self.g, self.b)
     
     def __isTrap(self):
         return (35 < self.r < 45 and 35 < self.g < 45)
@@ -348,6 +348,7 @@ class RobotLayer:
         self.time = 0
         self.rotateToDegsFirstTime = True
         self.delayFirstTime = True
+        self.delayStart = self.robot.getTime()
         self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.timeStep)
         self.gps = Gps(self.robot.getDevice("gps"), self.timeStep)
         self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep)
@@ -364,10 +365,12 @@ class RobotLayer:
     def getVictims(self):
         poses = []
         imgs = []
-        for camera in (self.rightCamera, self.leftCamera):
-            cposes, cimgs = self.victimClasifier.getVictimImagesAndPositions(camera.getImg())
+        for index, camera in enumerate((self.rightCamera, self.leftCamera)):
+            cposes, cimgs, binaryImgs = self.victimClasifier.getVictimImagesAndPositions(camera.getImg())
             poses += cposes
             imgs += cimgs
+            if len(binaryImgs):
+                cv.imshow("Binary_image_" + str(index), binaryImgs[0])
         print("Victim Poses: ",poses)
         for img in imgs:
             print("Victim shape:", img.shape)
@@ -407,11 +410,13 @@ class RobotLayer:
             raise ValueError("Invalid rotation detection type inputted")
 
     def delaySec(self, delay):
+        print("Current delay: ", delay)
         if self.delayFirstTime:
             self.delayStart = self.robot.getTime()
             self.delayFirstTime = False
         else:
             if self.time - self.delayStart >= delay:
+                
                 self.delayFirstTime = True
                 return True
         return False
@@ -608,7 +613,8 @@ class RobotLayer:
         self.rightGroundSensor.setPosition(self.globalPosition, self.rotation)
         self.leftGroundSensor.setPosition(self.globalPosition, self.rotation)
 
-
+        print("Delay time:", self.time - self.delayStart)
+        
 
         self.comunicator.update()
 

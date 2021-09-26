@@ -616,6 +616,7 @@ class Analyst:
     def blockFront(self):
         front = [self.startRawNode[0] + (self.direction[0] * 2), self.startRawNode[1] + (self.direction[1] * 2)]
         self.grid.getRawNode(front).occupied = True
+        self.grid.getRawNode(self.startRawNode).occupied = True
 
     def registerStart(self):
         self.pathFinder.startNode = self.startRawNode
@@ -656,7 +657,7 @@ class Analyst:
                 self.grid.getRawNode(adjacent).traversed = True
  
         if self.stoppedMoving:
-            self.blockFront
+            self.blockFront()
             self.calculatePath = True
 
         if len(self.__bestPath):
