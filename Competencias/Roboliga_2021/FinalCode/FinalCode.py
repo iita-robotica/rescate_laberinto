@@ -21,6 +21,7 @@ while r.doLoop():
     print("position: " + str(r.position))
     print("State:", stMg.state)
     
+    
 
     if not stMg.checkState("init"):
         if r.isEnded():
@@ -31,16 +32,32 @@ while r.doLoop():
             r.seqResetSequence()
             print("THERE ARE VICTIMS")
             stMg.changeState("victim")
-    
+        
+        elif r.analyst.stoppedMoving and not stMg.checkState("stoppedMoving"):
+            r.seqResetSequence()
+            print("ESTADO STOPPED MOVING")
+            stMg.changeState("stoppedMoving")
 
 
     if stMg.checkState("init"):
         if r.calibrate():
             stMg.changeState("followBest")
+            #stMg.changeState("stop")
     
     if stMg.checkState("stop"):
         r.seqMg.startSequence()
         r.seqMoveWheels(0, 0)
+
+    if stMg.checkState("stoppedMoving"):
+        r.seqMg.startSequence()
+        r.seqMoveWheels(-0.5, -0.5)
+        r.seqDelaySec(0.5)
+        r.seqMoveWheels(0, 0)
+        r.seqDelaySec(0.2)
+        r.analyst.calculatePath = True
+        if r.seqResetSequence():
+            stMg.changeState("followBest")
+
 
     if stMg.checkState("moveForward"):
         r.seqMg.startSequence()

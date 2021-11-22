@@ -15,14 +15,14 @@ class TileNode:
     __allowedTypes = ("undefined", "normal", "hole", "swamp", "checkpoint", "start", "connection1-2", "connection2-3")
     __allowedCurvedWalls = ([1, 1], [-1, -1], [-1, 1], [-1, 1])
     __typesToNumbers = {"undefined" : "0", "normal": "0", "hole":"2", "swamp":"3", "checkpoint":"4", "start":"5", "connection1-2":"6", "connection1-3":"7", "connection2-3":"8"}
-    def __init__(self, tileType="undefined", curvedWall=[0,0], fixtures=[], obstacles=[]):
+    def __init__(self, tileType="undefined", curvedWall=[0,0], fixtures=[], obstacle=False):
         self.dimensions = [0.06, 0.06] # Dimensions of the tile
         self.__tileType = tileType # Can be undefined, start, normal, swamp, hole, checkpoint, connection1-2, connection2-3
         self.traversed = False
         self.tileGroup = [0, 0]
         self.curvedWall = curvedWall # if it is a tile with curved walls and curved wall position
         self.fixtures = fixtures # List of all fixtures in walls adjacent to tile
-        self.obstacles = obstacles # List of obstacles in tile
+        self.obstacle = obstacle # List of obstacles in tile
     
     @property
     def tileType(self):
@@ -254,6 +254,10 @@ class Grid:
                     elif node.traversed:
                         printableArray[x][y] = 150
 
+                    if node.obstacle:
+                        print("There is obstacles!")
+                        printableArray[x][y] = 255
+
                 elif isinstance(node, VortexNode):
                     if node.tileType == "start":
                         printableArray[x][y] = 100
@@ -316,7 +320,7 @@ class PathFinder:
             for adjacentIndex in ((-1, 1), (1, -1), (1, 1), (-1, -1), (0, 1), (0, -1), (1, 0), (-1, 0)):
                 adjacent = self.grid.getRawNode((index[0] + adjacentIndex[0], index[1] + adjacentIndex[1]))
                 if isinstance(adjacent, TileNode):
-                    if adjacent.tileType == "hole":
+                    if adjacent.tileType == "hole" or adjacent.obstacle:
                         traversable = False
                 elif isinstance(adjacent, WallNode):
                     if adjacent.occupied:
@@ -560,6 +564,11 @@ class Analyst:
                             walls = orientation.split("-")
                             for wall in walls:
                                 self.grid.getNode(item["tile"], wall).occupied = True
+                """
+                if wallType == "obstacle":
+                    if value > 1:
+                        self.grid.getNode(item["tile"]).obstacle = True
+                """
     
     
     
