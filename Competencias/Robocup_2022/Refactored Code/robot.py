@@ -375,6 +375,8 @@ class RobotLayer:
         self.rotateToDegsFirstTime = True
         self.delayFirstTime = True
         self.delayStart = self.robot.getTime()
+
+        self.autoDecideRotation = True
         self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.timeStep)
         self.gps = Gps(self.robot.getDevice("gps"), self.timeStep)
         self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep, 0.03, (0, 360))
@@ -549,13 +551,7 @@ class RobotLayer:
 
         rawPointCloud = self.lidar.getPointCloud(layers=(2,3))
         self.pointIsClose = self.lidar.pointIsClose
-
-        processedPointCloud = []
-        for point in rawPointCloud:
-            procPoint = [point[0] + self.position[0], point[1] + self.position[1]]
-            # procPoint = [procPoint[0] + procPoint[0] * 0.1, procPoint[1] + procPoint[1] * 0.1]
-            processedPointCloud.append(procPoint)
-        return processedPointCloud
+        return rawPointCloud
     
     # Returns True if the simulation is running
     def doLoop(self):
@@ -582,11 +578,13 @@ class RobotLayer:
 
         # Decides wich sensor to use for roatation detection
         # if the robot is going srtaight i tuses the gps
-        if self.gyroscope.getDiff() < 0.00001 and self.getWheelDirection() >= 0:
-            self.rotationSensor = "gps"
-        # if it isn't going straight it uses the gyro
-        else:
-            self.rotationSensor = "gyro"
+        
+        if self.autoDecideRotation:
+            if self.gyroscope.getDiff() < 0.00001 and self.getWheelDirection() >= 0:
+                self.rotationSensor = "gps"
+            # if it isn't going straight it uses the gyro
+            else:
+                self.rotationSensor = "gyro"
 
         # Remembers the corrent rotation for the next timestep
         self.prevRotation = self.rotation
