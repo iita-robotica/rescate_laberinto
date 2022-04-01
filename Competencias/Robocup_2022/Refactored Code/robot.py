@@ -114,6 +114,35 @@ class Lidar():
         self.pointIsClose = False
         self.pointIsCloseThresh = pointIsCloseThresh
         self.pointIsCloseRange = pointIsCloseRange
+    
+    def getRotationsAndDistances(self, layers=range(3)):
+        self.pointIsClose = False
+        
+        # (degsToRads(359 - radsToDegs(self.rotation)))
+        # rangeImage = self.device.getRangeImageArray()
+        # print("Lidar vFov: ", self.verticalFov/ self.verticalRes)
+
+        rots = []
+        distances = []
+        
+        for layer in layers:
+            actualVDetectionRot = (layer * self.vRadPerDetection) + self.verticalFov / 2
+            depthArray = self.device.getLayerRangeImage(layer)
+            actualHDetectionRot = self.detectRotOffset + ((2 * math.pi) - self.rotation)
+            for item in depthArray:
+                if item <= self.maxDetectionDistance:
+                    if item != 0:
+                        x = item * math.cos(actualVDetectionRot)
+                        x += 0.06 * 0.2
+
+                        if utils.degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > utils.degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
+                            self.pointIsClose = True
+
+                        rots.append(actualHDetectionRot)
+                        distances.append(x)
+                actualHDetectionRot += self.hRadPerDetection
+        return rots, distances
+
 
     # Does a detection pass and returns a point cloud with the results
     def getPointCloud(self, layers=range(3)):
@@ -382,21 +411,12 @@ class RobotLayer:
         self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep, 0.03, (0, 360))
         self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
         self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed)
-        self.colorSensor = ColourSensor(self.robot.getDevice("colour_sensor"), 0.037, 32)
-        self.leftGroundSensor = DistanceSensor(0.04, 0.0523, 45, self.robot.getDevice("distance sensor2"), self.timeStep)
-        self.rightGroundSensor = DistanceSensor(0.04, 0.0523, -45, self.robot.getDevice("distance sensor1"), self.timeStep)
-             
-        self.frontRightSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor5"), 0.001, self.timeStep)
-        self.middleRightSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor4"), 0.012, self.timeStep)
-        self.sideRightSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor3"), 0.03, self.timeStep)
-
-        self.frontLeftSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor6"), 0.001, self.timeStep)
-        self.middleLeftSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor7"), 0.012, self.timeStep)
-        self.sideLeftSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor8"), 0.03, self.timeStep)
 
         self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
+        self.centerCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
         self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
-        self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
+        self.leftCamera = Camera(self.robot.getDevice("camera3"), self.timeStep)
+        
 
         self.pointIsClose = False
 
@@ -600,12 +620,9 @@ class RobotLayer:
                 self.rotation = val
             self.gyroscope.setDegrees(self.rotation)
 
-        self.colorSensor.setPosition(self.position, self.rotation)
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation + 0)
         
-        self.rightGroundSensor.setPosition(self.position, self.rotation)
-        self.leftGroundSensor.setPosition(self.position, self.rotation)
 
         #print("Delay time:", self.time - self.delayStart)
         
