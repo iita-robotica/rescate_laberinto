@@ -3,7 +3,7 @@ import numpy as np
 
 def flatten_image(image):
     minimum = 200
-    maximum = 300
+    maximum = 300 
 
     img_points = np.array(([38, 30], [91, 30],  [111, 50],  [20, 50],), dtype=np.float32)
     final_points = np.array(([minimum, minimum],  [maximum, minimum], [maximum, maximum], [minimum, maximum],), dtype=np.float32)
