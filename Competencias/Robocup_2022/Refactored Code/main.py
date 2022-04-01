@@ -1,8 +1,9 @@
 absuloute_dir = r'/home/ale/rescate_laberinto/Competencias/Robocup_2022/Refactored Code'
 import sys
+import cv2 as cv
 
 sys.path.append(absuloute_dir)
-import fixture_detection, mapping, pathfinding, robot, state_machines, utils
+import fixture_detection, camera_processing, mapping, pathfinding, point_cloud_processor, robot, state_machines, utils
 
 # World constants
 TIME_STEP = 32
@@ -96,18 +97,25 @@ while robot.doLoop():
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
     
+    elif stateManager.checkState("stop"):
+        robot.moveWheels(0, 0)
+
+    elif stateManager.checkState("save_img"):
+        img = robot.centerCamera.getImg()
+        img1 = camera_processing.flatten_image(img)
+        cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/Refactored Code/img1.png", img1)
+        #stateManager.changeState("stop")
+
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
         robot.autoDecideRotation = False
         robot.rotationSensor = "gyro"
         nube_de_puntos = robot.getDetectionPointCloud()
         #print("nube de puntos: ", nube_de_puntos)
-        nueva_nube_de_puntos = []
-        for pos in nube_de_puntos:
-            nueva_nube_de_puntos.append([((pos[0] * 1) + robot.position[0]) * 1000, ((pos[1] * 1) + robot.position[1]) * 1000])
+        nueva_nube_de_puntos = point_cloud_processor.processPointCloud(nube_de_puntos, robot.position)
         #print("nueva nube de puntos: ", nueva_nube_de_puntos)
         for pos in nueva_nube_de_puntos:
-            round_pos = [round(pos[0]), round(pos[1])]
+            round_pos = [round(pos[0] * 1000), round(pos[1] * 1000)]
             mi_grilla.add_point(round_pos)
         mi_grilla.print_grid()
 
@@ -118,6 +126,12 @@ while robot.doLoop():
         # robot.sequir camino(moviemientos)
         # repetir
 
+        img = robot.centerCamera.getImg()
+        img1 = camera_processing.flatten_image(img)
+        cv.imshow("camara", img1)
+
+        cv.waitKey(1)
+
         # If it encountered a hole
         if isHole():
             # Changes state and resets the sequence
@@ -127,6 +141,7 @@ while robot.doLoop():
 
     # What to do if it encounters a hole
     elif stateManager.checkState("hole"):
+        # TODO
         pass
         # reportar obstáculo a mapping
         # moverse para atras
@@ -134,11 +149,20 @@ while robot.doLoop():
         
     # Reports a victim
     elif stateManager.checkState("report_victim"):
-        pass
-        # Espera 3 segundos
-        # manda reporte a robot
-        # documenta vícitma
-        # vuelve a explore
+        seq.startSequence()
+        seqDelaySec(3)
+        #Classifies and reports the vicitim
+        if seq.simpleEvent():
+            victims = []
+            for cam in (robot.leftCamera, robot.rightCamera):
+                image = cam.getImg()
+                vics = fixture_detection.detectVictims(image)
+                victims += fixture_detection.getCloseVictims(vics)
+            if len(victims) > 0:
+                letter = fixture_detection.classifyFixture(victims[0])
+            robot.comunicator.sendVictim(robot.position, letter)
+        # TODO Reportar victima a mapping
+        seq.simpleEvent(stateManager.changeState, "explore")
     
     elif stateManager.checkState("teleported"):
         seq.startSequence()
