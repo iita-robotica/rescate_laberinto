@@ -5,7 +5,7 @@ import numpy as np
 import struct
 import cv2 as cv
 
-import utils
+import utilities
 
 # Captures images and processes them
 class Camera:
@@ -37,7 +37,7 @@ class Gyroscope:
         radsInTimestep = (self.sensor.getValues())[self.index] * timeElapsed
         self.lastRads = radsInTimestep
         finalRot = self.rotation + radsInTimestep
-        self.rotation = utils.normalizeRads(finalRot)
+        self.rotation = utilities.normalizeRads(finalRot)
         self.oldTime = time
 
     # Gets the actual angular Velocity
@@ -49,7 +49,7 @@ class Gyroscope:
 
     # Returns the rotation on degrees
     def getDegrees(self):
-        return utils.radsToDegs(self.rotation)
+        return utilities.radsToDegs(self.rotation)
 
     # Returns the rotation on radians
     def getRadians(self):
@@ -61,7 +61,7 @@ class Gyroscope:
 
     # Sets the rotation in degrees
     def setDegrees(self, degs):
-        self.rotation = utils.degsToRads(degs)
+        self.rotation = utilities.degsToRads(degs)
 
 
 # Tracks global position
@@ -87,10 +87,10 @@ class Gps:
     def getRotation(self):
         if self.__prevPosition != self.position:
             posDiff = ((self.position[0] - self.__prevPosition[0]), (self.position[1] - self.__prevPosition[1]))
-            accuracy = utils.getDistance(posDiff)
+            accuracy = utilities.getDistance(posDiff)
             if accuracy > 0.001:
-                degs = utils.getDegsFromCoords(posDiff)
-                return utils.normalizeDegs(degs)
+                degs = utilities.getDegsFromCoords(posDiff)
+                return utilities.normalizeDegs(degs)
         return None
 
 
@@ -135,7 +135,7 @@ class Lidar():
                         x = item * math.cos(actualVDetectionRot)
                         x += 0.06 * 0.2
 
-                        if utils.degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > utils.degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
+                        if utilities.degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > utilities.degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
                             self.pointIsClose = True
 
                         rots.append(actualHDetectionRot)
@@ -164,10 +164,10 @@ class Lidar():
                         x = item * math.cos(actualVDetectionRot)
                         x += 0.06 * 0.2
 
-                        if utils.degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > utils.degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
+                        if utilities.degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > utilities.degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
                             self.pointIsClose = True
 
-                        coords = utils.getCoordsFromRads(actualHDetectionRot, x)
+                        coords = utilities.getCoordsFromRads(actualHDetectionRot, x)
                         pointCloud.append([coords[0] - 0, (coords[1] * -1) - 0])
                 actualHDetectionRot += self.hRadPerDetection
         return pointCloud
@@ -178,7 +178,7 @@ class Lidar():
     
     # Sets the rotation of the sensors in degrees
     def setRotationDegrees(self, degs):
-        self.rotation = utils.degsToRads(degs)
+        self.rotation = utilities.degsToRads(degs)
 
 
 # Controlls a wheel
@@ -211,7 +211,7 @@ class ColourSensor:
         self.b = 0
     
     def setPosition(self, robotGlobalPosition, robotGlobalRotation):
-        realPosition = utils.getCoordsFromDegs(robotGlobalRotation, self.distance)
+        realPosition = utilities.getCoordsFromDegs(robotGlobalRotation, self.distance)
         self.position = [robotGlobalPosition[0] + realPosition[0], robotGlobalPosition[1] + realPosition[1]]
     
     def __update(self):
@@ -280,7 +280,7 @@ class Comunicator:
     def sendVictim(self, position, victimtype):
         self.doGetWordInfo = False
         letter = bytes(victimtype, "utf-8")
-        position = utils.multiplyLists(position, [100, 100])
+        position = utilities.multiplyLists(position, [100, 100])
         position = [int(position[0]), int(position[1])]
         message = struct.pack("i i c", position[0], position[1], letter)
         self.emmiter.send(message)
@@ -365,8 +365,8 @@ class DistanceSensor:
 
     def setPosition(self, robotPosition, robotRotation):
         sensorRotation = robotRotation + self.angle
-        sensorPosition = utils.getCoordsFromDegs(sensorRotation, self.distance)
-        self.position = utils.sumLists(sensorPosition, robotPosition)
+        sensorPosition = utilities.getCoordsFromDegs(sensorRotation, self.distance)
+        self.position = utilities.sumLists(sensorPosition, robotPosition)
 
 class FrontDistanceSensor():
     def __init__(self, sensor, threshold, timeStep, offset=0):
@@ -462,7 +462,7 @@ class RobotLayer:
         moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
         if diff > 180 or diff < -180:
             moveDiff = 360 - moveDiff
-        speedFract = min(utils.mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
+        speedFract = min(utilities.mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
         if accuracy * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
             self.rotateToDegsFirstTime = True
             return True
@@ -508,7 +508,7 @@ class RobotLayer:
         moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
         if diff > 180 or diff < -180:
             moveDiff = 360 - moveDiff
-        speedFract = min(utils.mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
+        speedFract = min(utilities.mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
         if accuracy * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
             self.rotateToDegsFirstTime = True
             return True
@@ -548,7 +548,7 @@ class RobotLayer:
         # print("Target Pos: ", targetPos)
         # print("Used global Pos: ", self.position)
         # print("diff in pos: " + str(diffX) + " , " + str(diffY))
-        dist = utils.getDistance((diffX, diffY))
+        dist = utilities.getDistance((diffX, diffY))
         # print("Dist: "+ str(dist))
         if errorMargin * -1 < dist < errorMargin:
             # self.robot.move(0,0)
@@ -556,10 +556,10 @@ class RobotLayer:
             return True
         else:
             
-            ang = utils.getDegsFromCoords((diffX, diffY))
-            ang = utils.normalizeDegs(ang)
+            ang = utilities.getDegsFromCoords((diffX, diffY))
+            ang = utilities.normalizeDegs(ang)
             # print("traget ang: " + str(ang))
-            ratio = min(utils.mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
+            ratio = min(utilities.mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
             ratio = max(ratio, 0.8)
             if self.rotateToDegs(ang):
                 self.moveWheels(ratio, ratio)
