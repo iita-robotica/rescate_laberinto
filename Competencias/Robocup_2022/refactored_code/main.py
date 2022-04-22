@@ -1,9 +1,10 @@
-absuloute_dir = r'/home/ale/rescate_laberinto/Competencias/Robocup_2022/Refactored Code'
+absuloute_dir = r'/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code'
 import sys
 import cv2 as cv
+import numpy as np
 
 sys.path.append(absuloute_dir)
-import fixture_detection, camera_processing, mapping, pathfinding, point_cloud_processor, robot, state_machines, utils
+import fixture_detection, camera_processing, mapping, pathfinding, point_cloud_processor, robot, state_machines, utilities
 
 # World constants
 TIME_STEP = 32
@@ -81,8 +82,7 @@ while robot.doLoop():
         # Calculates offsets in the robot position, in case it doesn't start perfectly centerd
         seq.simpleEvent(calibratePositionOffsets)
             
-        # Informs the mapping and pathfinding components of the starting position of the robot
-        # seq.simpleEvent(pathfinding.registerStart())
+        # Informs the mapping components of the starting position of the robot
         # seq.simpleEvent(mapping.registerStart())
         
         # Calibrates the rotation of the robot using the gps
@@ -110,25 +110,49 @@ while robot.doLoop():
     elif stateManager.checkState("explore"):
         robot.autoDecideRotation = False
         robot.rotationSensor = "gyro"
+
+        """
         nube_de_puntos = robot.getDetectionPointCloud()
         #print("nube de puntos: ", nube_de_puntos)
         nueva_nube_de_puntos = point_cloud_processor.processPointCloud(nube_de_puntos, robot.position)
         #print("nueva nube de puntos: ", nueva_nube_de_puntos)
         for pos in nueva_nube_de_puntos:
-            round_pos = [round(pos[0] * 1000), round(pos[1] * 1000)]
+            round_pos = [round(pos[0] * 2000), round(pos[1] * 2000)]
             mi_grilla.add_point(round_pos)
         mi_grilla.print_grid()
+        """
 
         # lidar es robot.getLidar()
-        # Grilla es mapping.getGrilla(lidar)
-        # mejor posicion es predictor de laberinto.getMejorPosición(grilla)
-        # moviemientos es pathfinding.getCamino(mejor posición)
-        # robot.sequir camino(moviemientos)
-        # repetir
+        # camaras es robot.getCameraImages()
+        # grilla.update(lidar, camaras)
 
-        img = robot.centerCamera.getImg()
-        img1 = camera_processing.flatten_image(img)
-        cv.imshow("camara", img1)
+        # Grilla es mapping.getGrilla()
+        # mejor moviemiento es AI.getMejorMovimiento(grilla)
+        # coordenadas es robot.getCoordenadas(mejor movimiento)
+        # robot.moveToCoords(coordenadas)
+        # repetir
+        flattened_images = []
+        for img in (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg()):
+            img = camera_processing.flatten_image(img)
+            flattened_images.append(img)
+
+        translations = [[0, 400], [200, 200], [0, 0]]
+        final_image = mapping.join_camera_images(flattened_images, translations)
+        for y, row in enumerate(final_image):
+            for x, pixel in enumerate(row):
+                if y % 100 == 0 or x % 100 == 0:
+                    final_image[y][x] = [255, 255, 255]
+
+        print("before saving")
+        
+        cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/final_image.png", final_image)
+        
+        #cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/flattened.png", flattened)
+        #cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/raw_img.png", img)
+        cv.imshow("final_image", final_image.astype(np.uint8))
+
+        print("FINAL IMG SHAPE", final_image.shape)
+
 
         cv.waitKey(1)
 
