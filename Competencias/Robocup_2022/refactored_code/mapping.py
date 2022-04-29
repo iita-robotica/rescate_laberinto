@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import sys
 import copy
+import imutils
 
 import utilities
 import point_cloud_processor
@@ -9,7 +10,7 @@ import point_cloud_processor
 class Grid:
     def __init__(self, initial_shape):
         self.offsets = [initial_shape[0] // 2, initial_shape[1] // 2]
-        self.resolution = 10
+        self.resolution = 100
         self.shape = initial_shape
         self.grid = np.zeros(self.shape, dtype=np.uint8)
 
@@ -60,8 +61,13 @@ class Grid:
 
     def print_grid(self):
         print("grid shape: ", self.grid.shape)
+        grid1 = copy.deepcopy(self.grid)
+        for y, row in enumerate(grid1):
+            for x, pixel in enumerate(row):
+                if y % self.resolution == 0 or x % self.resolution == 0:
+                    grid1[y][x] = 255
 
-        cv.imshow("grid", self.grid)
+        cv.imshow("grid", grid1)
         cv.waitKey(1)
 
 def overlay_image_alpha(img, img_overlay, x, y, alpha_mask):
@@ -115,6 +121,11 @@ def join_camera_images(images, translations):
     print("BACK_MIN", np.amin(backround))
     
     return backround.copy()
+
+def rotate_image(image, robot_rotation):
+    rot = utilities.normalizeDegs(robot_rotation)
+    return imutils.rotate(image, rot)
+
 
 if __name__ == "__main__":
     img = cv.imread("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/img2.png")

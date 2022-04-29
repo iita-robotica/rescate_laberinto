@@ -49,15 +49,16 @@ def seqCalibrateRobotRotation():
     # Calibrates the robot rotation using the gps
     if seq.simpleEvent():
         robot.autoDecideRotation = False
-    seqDelaySec(0.5)
+    seqMoveWheels(-1, -1)
+    seqDelaySec(0.1)
     if seq.simpleEvent(): robot.rotationSensor = "gps"
     seqMoveWheels(1, 1)
-    seqDelaySec(0.2)
+    seqDelaySec(0.1)
     if seq.simpleEvent(): robot.rotationSensor= "gyro"
-    seqDelaySec(0.2)
+    seqDelaySec(0.1)
     seqMoveWheels(0, 0)
     seqMoveWheels(-1, -1)
-    seqDelaySec(0.4)
+    seqDelaySec(0.1)
     seqMoveWheels(0, 0)
     if seq.simpleEvent():
         robot.autoDecideRotation = True
@@ -108,8 +109,9 @@ while robot.doLoop():
 
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
-        robot.autoDecideRotation = False
-        robot.rotationSensor = "gyro"
+        seq.startSequence()
+        #robot.autoDecideRotation = False
+        #robot.rotationSensor = "gyro"
 
         """
         nube_de_puntos = robot.getDetectionPointCloud()
@@ -117,10 +119,11 @@ while robot.doLoop():
         nueva_nube_de_puntos = point_cloud_processor.processPointCloud(nube_de_puntos, robot.position)
         #print("nueva nube de puntos: ", nueva_nube_de_puntos)
         for pos in nueva_nube_de_puntos:
-            round_pos = [round(pos[0] * 2000), round(pos[1] * 2000)]
+            round_pos = [round(pos[0] * 1000), round(pos[1]  * 1000)]
             mi_grilla.add_point(round_pos)
         mi_grilla.print_grid()
         """
+        
 
         # lidar es robot.getLidar()
         # camaras es robot.getCameraImages()
@@ -131,17 +134,51 @@ while robot.doLoop():
         # coordenadas es robot.getCoordenadas(mejor movimiento)
         # robot.moveToCoords(coordenadas)
         # repetir
+
+        
         flattened_images = []
         for img in (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg()):
             img = camera_processing.flatten_image(img)
             flattened_images.append(img)
 
-        translations = [[0, 400], [200, 200], [0, 0]]
+        x_red = 5
+        y_red = 2
+
+        translations = [[200 - y_red, 400 - x_red], [400 - x_red, 200 + y_red], [200 + y_red, 0 + x_red]]
         final_image = mapping.join_camera_images(flattened_images, translations)
+
+        final_image = mapping.rotate_image(final_image, robot.rotation - 90)
+
         for y, row in enumerate(final_image):
             for x, pixel in enumerate(row):
                 if y % 100 == 0 or x % 100 == 0:
                     final_image[y][x] = [255, 255, 255]
+
+        angs, dists = robot.lidar.getRotationsAndDistances(layers=(2,))
+
+        """
+        xy_resolution = 0.002  # x-y grid resolution
+        ang, dist = np.array(angs), np.array(dists)
+        ox = np.sin(ang) * dist
+        oy = np.cos(ang) * dist
+        occupancy_map, min_x, max_x, min_y, max_y, xy_resolution = \
+            point_cloud_processor.generate_ray_casting_grid_map(ox, oy, xy_resolution, True)
+        xy_res = np.array(occupancy_map).shape
+        cv.imshow("map", occupancy_map)
+        """
+
+        
+        nube_de_puntos = robot.getDetectionPointCloud()
+
+       
+        for pos in nube_de_puntos:
+            round_pos = [round((pos[0] * 850)+ 350), round((pos[1]  * 850) + 350)]
+            if round_pos[0] < 0 or round_pos[1] < 0:
+                continue
+            if round_pos[0] > final_image.shape[1] or round_pos[1] > final_image.shape[0]:
+                continue
+            final_image[round_pos[1]][round_pos[0]][:] = 255
+        
 
         print("before saving")
         
@@ -152,6 +189,7 @@ while robot.doLoop():
         cv.imshow("final_image", final_image.astype(np.uint8))
 
         print("FINAL IMG SHAPE", final_image.shape)
+        
 
 
         cv.waitKey(1)
@@ -161,7 +199,22 @@ while robot.doLoop():
             # Changes state and resets the sequence
             seq.simpleEvent(stateManager.changeState, "hole")
             seq.seqResetSequence()
-        robot.moveWheels(0, 0)
+        
+        seqMoveWheels(0, 0)
+        seqRotateToDegs(270)
+
+        """
+        seqMoveWheels(1, 1)
+        seqDelaySec(1)
+        seqRotateToDegs(180)
+        seqMoveWheels(1, 1)
+        seqDelaySec(0.8)
+        seqRotateToDegs(90)
+        seqMoveWheels(1, 1)
+        seqDelaySec(0.8)
+        seqMoveWheels(0, 0)
+        """
+        print("rotation:", robot.rotation)
 
     # What to do if it encounters a hole
     elif stateManager.checkState("hole"):
