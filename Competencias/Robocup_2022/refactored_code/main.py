@@ -68,6 +68,35 @@ doFloorMapping = False
 
 mi_grilla = mapping.Grid((10, 10))
 
+
+def do_mapping():
+    imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
+    camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
+
+    final_image = np.zeros(camera_final_image.shape, np.uint8)
+
+    
+    
+    nube_de_puntos = robot.getDetectionPointCloud()
+
+    final_point_cloud = point_cloud_processor.processPointCloud(nube_de_puntos, (350, 350))
+
+    
+    
+    seen_points = point_cloud_processor.get_intermediate_points(final_point_cloud, (350, 350))
+
+    utilities.draw_poses(final_image, seen_points, back_image=camera_final_image)
+    utilities.draw_poses(final_image, final_point_cloud, 255)
+
+    utilities.draw_grid(final_image, 50, (int((robot.position[0] * 850) % 50), int((robot.position[1] * 850) % 50)))
+
+    cv.imshow("final_image", final_image.astype(np.uint8))
+
+    print("FINAL IMG SHAPE", final_image.shape)
+
+    cv.waitKey(1)
+
+
 # Each timeStep
 while robot.doLoop():
     # Updates robot position and rotation, sensor positions, etc.
@@ -106,12 +135,29 @@ while robot.doLoop():
         img1 = camera_processing.flatten_image(img)
         cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/Refactored Code/img1.png", img1)
         #stateManager.changeState("stop")
+    
+    elif stateManager.checkState("measure"):
+        seq.startSequence()
+        if seq.simpleEvent():
+            start_time = robot.time
+        seqMoveWheels(0, 0)
+        seqRotateToDegs(270)
+        seqPrint("Time taken:", str(robot.time - start_time))
+        seqMoveWheels(0, 0)
+
+        if seq.simpleEvent():
+            start_time = robot.time
+        seqRotateToDegs(90)
+        seqPrint("Time taken:", str(robot.time - start_time))
+        seqMoveWheels(0, 0)
+        
+
 
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
         seq.startSequence()
-        #robot.autoDecideRotation = False
-        #robot.rotationSensor = "gyro"
+        robot.autoDecideRotation = False
+        robot.rotationSensor = "gyro"
 
         """
         nube_de_puntos = robot.getDetectionPointCloud()
@@ -135,64 +181,8 @@ while robot.doLoop():
         # robot.moveToCoords(coordenadas)
         # repetir
 
-        
-        flattened_images = []
-        for img in (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg()):
-            img = camera_processing.flatten_image(img)
-            flattened_images.append(img)
+        do_mapping()
 
-        x_red = 5
-        y_red = 2
-
-        translations = [[200 - y_red, 400 - x_red], [400 - x_red, 200 + y_red], [200 + y_red, 0 + x_red]]
-        final_image = mapping.join_camera_images(flattened_images, translations)
-
-        final_image = mapping.rotate_image(final_image, robot.rotation - 90)
-
-        for y, row in enumerate(final_image):
-            for x, pixel in enumerate(row):
-                if y % 100 == 0 or x % 100 == 0:
-                    final_image[y][x] = [255, 255, 255]
-
-        angs, dists = robot.lidar.getRotationsAndDistances(layers=(2,))
-
-        """
-        xy_resolution = 0.002  # x-y grid resolution
-        ang, dist = np.array(angs), np.array(dists)
-        ox = np.sin(ang) * dist
-        oy = np.cos(ang) * dist
-        occupancy_map, min_x, max_x, min_y, max_y, xy_resolution = \
-            point_cloud_processor.generate_ray_casting_grid_map(ox, oy, xy_resolution, True)
-        xy_res = np.array(occupancy_map).shape
-        cv.imshow("map", occupancy_map)
-        """
-
-        
-        nube_de_puntos = robot.getDetectionPointCloud()
-
-       
-        for pos in nube_de_puntos:
-            round_pos = [round((pos[0] * 850)+ 350), round((pos[1]  * 850) + 350)]
-            if round_pos[0] < 0 or round_pos[1] < 0:
-                continue
-            if round_pos[0] > final_image.shape[1] or round_pos[1] > final_image.shape[0]:
-                continue
-            final_image[round_pos[1]][round_pos[0]][:] = 255
-        
-
-        print("before saving")
-        
-        cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/final_image.png", final_image)
-        
-        #cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/flattened.png", flattened)
-        #cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/raw_img.png", img)
-        cv.imshow("final_image", final_image.astype(np.uint8))
-
-        print("FINAL IMG SHAPE", final_image.shape)
-        
-
-
-        cv.waitKey(1)
 
         # If it encountered a hole
         if isHole():

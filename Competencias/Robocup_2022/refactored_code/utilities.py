@@ -82,3 +82,21 @@ def divideLists(list1, list2):
     for item1, item2 in zip(list1, list2):
         finalList.append(item1 / item2)
     return finalList
+
+
+def draw_grid(image, square_size, offset = [0,0], color=255):
+    for y, row in enumerate(image):
+        for x, pixel in enumerate(row):
+            if (y + offset[1]) % square_size == 0 or (x + offset[0]) % square_size == 0:
+                image[y][x][:] = color
+
+def draw_poses(image, poses, color=255, back_image = None):
+    for pos in poses:
+        if pos[0] < 0 or pos[1] < 0:
+            continue
+        if pos[0] >= image.shape[1] or pos[1] >= image.shape[0]:
+            continue
+        if back_image is None:
+            image[pos[1]][pos[0]][:] = color
+        else:
+            image[pos[1]][pos[0]][:] = back_image[pos[1]][pos[0]][:]
