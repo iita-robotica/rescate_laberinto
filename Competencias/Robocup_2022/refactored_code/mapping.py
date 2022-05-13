@@ -6,9 +6,9 @@ import copy
 import point_cloud_processor
 
 class Grid:
-    def __init__(self, initial_shape):
+    def __init__(self, initial_shape, res=100):
         self.offsets = [initial_shape[0] // 2, initial_shape[1] // 2]
-        self.resolution = 100
+        self.resolution = res
         self.shape = initial_shape
         self.grid = np.zeros(self.shape, dtype=np.uint8)
 
@@ -26,13 +26,21 @@ class Grid:
             self.add_begining_column(-x)
     
     
-    def add_point(self, point):
+    def add_point(self, point, value=255):
         self.expand_grid_to_point(point)
         
         x, y = point
         x, y = x + self.offsets[0], y + self.offsets[1]
     
-        self.grid[y, x] = 255
+        self.grid[y, x] = value
+    
+    def sum_to_point(self, point, value):
+        self.expand_grid_to_point(point)
+        
+        x, y = point
+        x, y = x + self.offsets[0], y + self.offsets[1]
+    
+        self.grid[y, x] = min(255, self.grid[y, x] + value)
     
     def get_point(self, point):
         x, y = point
@@ -57,13 +65,25 @@ class Grid:
         self.shape = (self.shape[0], self.shape[1] + size)
         self.grid = np.hstack((np.zeros((self.shape[0], size), dtype=np.uint8), self.grid))
 
-    def print_grid(self):
+    def print_grid(self, max_size=(2000, 1000)):
         print("grid shape: ", self.grid.shape)
         grid1 = copy.deepcopy(self.grid)
         for y, row in enumerate(grid1):
             for x, pixel in enumerate(row):
                 if y % self.resolution == 0 or x % self.resolution == 0:
                     grid1[y][x] = 255
+
+        if grid1.shape[0] > max_size[0]:
+            ratio = max_size[0] / grid1.shape[0]
+
+            width = round(grid1.shape[1] * ratio)
+            grid1 = cv.resize(grid1, dsize=(width, max_size[0]))
+        
+        elif grid1.shape[1] > max_size[1]:
+            ratio = max_size[1] / grid1.shape[1]
+
+            height = round(grid1.shape[0] * ratio)
+            grid1 = cv.resize(grid1, dsize=(max_size[1], height))
 
         cv.imshow("grid", grid1)
         cv.waitKey(1)

@@ -6,8 +6,10 @@ import numpy as np
 
 from bresenham import bresenham
 
+MAP_SCALE = 850
+
 def processPointCloud(pc, robotPos):
-    return [[round((pos[0] * 850)+ robotPos[0]), round((pos[1]  * 850) + robotPos[1])] for pos in pc]
+    return [[round((pos[0] + robotPos[0]) * MAP_SCALE), round((pos[1]  + robotPos[1]) * MAP_SCALE)] for pos in pc]
 
     "For each point in the poincloud, sum its position with the position of the robot"
     """

@@ -110,7 +110,7 @@ class Lidar():
         self.hRadPerDetection = self.fov / self.horizontalRes
         self.vRadPerDetection = self.verticalFov / self.verticalRes
         self.detectRotOffset = 0  # math.pi * 0.75
-        self.maxDetectionDistance = 0.06 * 10
+        self.maxDetectionDistance = 0.06 * 5
         self.minDetectionDistance = 0.06 * 0.5
         self.pointIsClose = False
         self.pointIsCloseThresh = pointIsCloseThresh
@@ -169,9 +169,8 @@ class Lidar():
             depthArray = self.device.getLayerRangeImage(layer)
             actualHDetectionRot = self.detectRotOffset + ((2 * math.pi) - self.rotation)
             for item in depthArray:
-                if self.minDetectionDistance <= item:
-                    if item > self.maxDetectionDistance:
-                        item = self.maxDetectionDistance
+                if self.minDetectionDistance <= item <= self.maxDetectionDistance:
+                        #item = self.maxDetectionDistance
                     if item != float("inf") and item != float("inf") * -1 and item != 0:
                         x = item * math.cos(actualVDetectionRot)
                         x += self.distBias

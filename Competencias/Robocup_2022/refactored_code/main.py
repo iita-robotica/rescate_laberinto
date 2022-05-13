@@ -2,6 +2,8 @@ absuloute_dir = r'/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactor
 import sys
 import cv2 as cv
 import numpy as np
+import time
+import copy
 
 sys.path.append(absuloute_dir)
 import fixture_detection, camera_processing, mapping, pathfinding, point_cloud_processor, robot, state_machines, utilities
@@ -66,35 +68,59 @@ def seqCalibrateRobotRotation():
 doWallMapping = False
 doFloorMapping = False
 
-mi_grilla = mapping.Grid((10, 10))
+lidar_grid = mapping.Grid((10, 10), res=50)
 
 
 def do_mapping():
-    imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
-    camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
+    #imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
+    #camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
 
-    final_image = np.zeros(camera_final_image.shape, np.uint8)
+    #final_image = np.zeros(camera_final_image.shape, np.uint8)
+    final_image = np.zeros((700, 700), np.uint8)
 
-    
-    
     nube_de_puntos = robot.getDetectionPointCloud()
 
-    final_point_cloud = point_cloud_processor.processPointCloud(nube_de_puntos, (350, 350))
+    final_point_cloud = point_cloud_processor.processPointCloud(nube_de_puntos, robotPos=robot.position)
 
+    for point in final_point_cloud:
+        lidar_grid.sum_to_point(point, 10)
     
+    lidar_grid.print_grid(max_size=(600, 600))
     
-    seen_points = point_cloud_processor.get_intermediate_points(final_point_cloud, (350, 350))
+    #seen_points = point_cloud_processor.get_intermediate_points(final_point_cloud, (350, 350))
 
-    utilities.draw_poses(final_image, seen_points, back_image=camera_final_image)
+    #utilities.draw_poses(final_image, seen_points, back_image=camera_final_image)
+    
+    """
+    offsets = (int((robot.position[0] * 850) % 50), int((robot.position[1] * 850) % 50))
+
+    reference_image = copy.deepcopy(final_image)
+    
+    for y in range(final_image.shape[0] // 50):
+        for x in range(final_image.shape[1] // 50):
+            square_points = [
+                (y * 50)        + (50 - offsets[1]),
+                ((y + 1) * 50)  + (50 - offsets[1]), 
+                (x * 50)        + (50 - offsets[0]),
+                ((x + 1) * 50)  + (50 - offsets[0])]
+            square = reference_image[square_points[0]:square_points[1], square_points[2]:square_points[3]]
+            non_zero_count = np.count_nonzero(square)
+            if non_zero_count > 5:
+                print("Non zero count: ", non_zero_count)
+                print("max: ", np.max(square))
+                
+                cv.rectangle(final_image, (square_points[2], square_points[0]), (square_points[3], square_points[1]), (255, 0, 0), 3)
+                
     utilities.draw_poses(final_image, final_point_cloud, 255)
-
-    utilities.draw_grid(final_image, 50, (int((robot.position[0] * 850) % 50), int((robot.position[1] * 850) % 50)))
+    utilities.draw_grid(final_image, 50, offsets)
 
     cv.imshow("final_image", final_image.astype(np.uint8))
 
     print("FINAL IMG SHAPE", final_image.shape)
+    
 
     cv.waitKey(1)
+    """
 
 
 # Each timeStep
@@ -139,16 +165,28 @@ while robot.doLoop():
     elif stateManager.checkState("measure"):
         seq.startSequence()
         if seq.simpleEvent():
-            start_time = robot.time
+            initial_position = robot.position
+
+        seqMoveToCoords((initial_position[0] + 0.12, initial_position[1] + 0.12))
+
         seqMoveWheels(0, 0)
-        seqRotateToDegs(270)
-        seqPrint("Time taken:", str(robot.time - start_time))
+
+        seqRotateToDegs(90)
+
         seqMoveWheels(0, 0)
 
         if seq.simpleEvent():
-            start_time = robot.time
-        seqRotateToDegs(90)
-        seqPrint("Time taken:", str(robot.time - start_time))
+            start_time = time.time()
+
+        
+
+        seqRotateToDegs(270)
+
+        #seqMoveToCoords((initial_position[0] + 0.18, initial_position[1] + 0.12))
+
+        if seq.simpleEvent():
+            print("time taken: ", time.time() - start_time)
+
         seqMoveWheels(0, 0)
         
 
@@ -156,8 +194,21 @@ while robot.doLoop():
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
         seq.startSequence()
-        robot.autoDecideRotation = False
-        robot.rotationSensor = "gyro"
+        seqMoveWheels(0, 0)
+        if seq.simpleEvent():
+            initial_position = robot.position
+
+        seqMoveToCoords((initial_position[0] + 0.12, initial_position[1]))
+
+        if seq.simpleEvent():
+            initial_position = robot.position
+
+        seqMoveToCoords((initial_position[0], initial_position[1] + 0.12))
+        
+        seqMoveWheels(0, 0)
+
+        #robot.autoDecideRotation = False
+        #robot.rotationSensor = "gyro"
 
         """
         nube_de_puntos = robot.getDetectionPointCloud()
@@ -183,6 +234,9 @@ while robot.doLoop():
 
         do_mapping()
 
+        #imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
+        #cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/img.png", imgs[1])
+        #camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
 
         # If it encountered a hole
         if isHole():
@@ -190,8 +244,6 @@ while robot.doLoop():
             seq.simpleEvent(stateManager.changeState, "hole")
             seq.seqResetSequence()
         
-        seqMoveWheels(0, 0)
-        seqRotateToDegs(270)
 
         """
         seqMoveWheels(1, 1)
