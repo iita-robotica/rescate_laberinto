@@ -72,26 +72,32 @@ lidar_grid = mapping.Grid((10, 10), res=50)
 
 
 def do_mapping():
-    #imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
-    #camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
+    imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
+    camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
 
+    utilities.draw_grid(camera_final_image, 50)
+
+    cv.imshow("camera_final_image", camera_final_image)
     #final_image = np.zeros(camera_final_image.shape, np.uint8)
-    final_image = np.zeros((700, 700), np.uint8)
+    final_image = np.zeros((700, 700, 3), np.uint8)
 
     nube_de_puntos = robot.getDetectionPointCloud()
 
     final_point_cloud = point_cloud_processor.processPointCloud(nube_de_puntos, robotPos=robot.position)
+
+    camera_point_cloud = point_cloud_processor.processPointCloudForCamera(nube_de_puntos, robotPos=robot.position)
 
     for point in final_point_cloud:
         lidar_grid.sum_to_point(point, 10)
     
     lidar_grid.print_grid(max_size=(600, 600))
     
-    #seen_points = point_cloud_processor.get_intermediate_points(final_point_cloud, (350, 350))
+    seen_points = point_cloud_processor.get_intermediate_points(camera_point_cloud, (350, 350))
 
-    #utilities.draw_poses(final_image, seen_points, back_image=camera_final_image)
+    utilities.draw_poses(final_image, seen_points, back_image=camera_final_image)
+
     
-    """
+    
     offsets = (int((robot.position[0] * 850) % 50), int((robot.position[1] * 850) % 50))
 
     reference_image = copy.deepcopy(final_image)
@@ -111,7 +117,7 @@ def do_mapping():
                 
                 cv.rectangle(final_image, (square_points[2], square_points[0]), (square_points[3], square_points[1]), (255, 0, 0), 3)
                 
-    utilities.draw_poses(final_image, final_point_cloud, 255)
+    utilities.draw_poses(final_image, camera_point_cloud, 255)
     utilities.draw_grid(final_image, 50, offsets)
 
     cv.imshow("final_image", final_image.astype(np.uint8))
@@ -120,7 +126,7 @@ def do_mapping():
     
 
     cv.waitKey(1)
-    """
+    
 
 
 # Each timeStep
@@ -195,6 +201,10 @@ while robot.doLoop():
     elif stateManager.checkState("explore"):
         seq.startSequence()
         seqMoveWheels(0, 0)
+        seqMoveWheels(0.5, -0.5)
+        #seqRotateToDegs(270)
+
+        """
         if seq.simpleEvent():
             initial_position = robot.position
 
@@ -206,6 +216,7 @@ while robot.doLoop():
         seqMoveToCoords((initial_position[0], initial_position[1] + 0.12))
         
         seqMoveWheels(0, 0)
+        """
 
         #robot.autoDecideRotation = False
         #robot.rotationSensor = "gyro"
@@ -235,8 +246,23 @@ while robot.doLoop():
         do_mapping()
 
         #imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
-        #cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code/img.png", imgs[1])
         #camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
+
+        #utilities.draw_grid(camera_final_image, 50)
+
+        #img1 = robot.centerCamera.getImg()
+        #img1 = np.rot90(img1, 3, (0,1))
+        #img1 = camera_processing.upscale_image(img1, 3)
+        #flattened = camera_processing.flatten_image(img1)
+
+        #utilities.draw_grid(flattened, 100)
+        
+        #img1 = camera_processing.sharpen_image(img1)
+
+        #cv.imshow("img", camera_final_image)
+        #cv.imwrite(absuloute_dir + "/upscaled_img.png", camera_final_image)
+
+        cv.waitKey(1)
 
         # If it encountered a hole
         if isHole():

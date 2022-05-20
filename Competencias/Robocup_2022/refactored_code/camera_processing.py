@@ -3,29 +3,40 @@ import numpy as np
 import utilities
 import imutils
 
+def sharpen_image(image):
+    kernel = np.array([[-1,-1,-1], [-1,5,-1], [-1,-1,-1]])
+    return cv.filter2D(image, -1, kernel)
+
+def upscale_image(image, scale):
+    return cv.resize(image, (0,0), fx=scale, fy=scale, interpolation=cv.INTER_CUBIC)
+
 def flatten_image(image):
     tile_size = 100
     tiles_up = 2
+    tiles_down = 0
     tiles_side = 1
 
-    warp_coef_x = 1#1.2
-    warp_coef_y = 1#.037
+    warp_coef_x = 1.2
+    warp_coef_y = 1.0
     
     tile_size_x = tile_size * warp_coef_x
     tile_size_y = tile_size * warp_coef_y
 
     minimum_x = tile_size * tiles_side
     maximum_x = tile_size * (tiles_side + 1)
-    minimum_y = tile_size * (tiles_up - 1)
-    maximum_y = tile_size * tiles_up
+    minimum_y = tile_size * (tiles_up)
+    maximum_y = tile_size * (tiles_up  + 1)
 
-    img_points = np.array(([38, 30* 0.980], [91, 30* 0.980],  [111, 50 * 1.008],  [20, 50* 1.008],), dtype=np.float32)
+    img_points = np.array(([4, 17], [35, 17],  [31, 12],  [8, 12],), dtype=np.float32)
     final_points = np.array(([minimum_x, minimum_y],  [maximum_x, minimum_y], [maximum_x, maximum_y], [minimum_x, maximum_y],), dtype=np.float32)
 
     ipm_matrix = cv.getPerspectiveTransform(img_points, final_points)
     final_x = tile_size * ((tiles_side * 2) + 1)
-    final_y = tile_size * (tiles_up + 1)
-    ipm = cv.warpPerspective(image, ipm_matrix, (final_x, final_y), flags=cv.INTER_NEAREST)
+    final_y = tile_size * (tiles_up + 1 + tiles_down)
+    final_y_modiff = round(final_y * 0.95)
+    ipm = cv.warpPerspective(image, ipm_matrix, (final_x, final_y_modiff), flags=cv.INTER_NEAREST)
+
+    ipm = cv.resize(ipm, (final_x, final_y), interpolation=cv.INTER_CUBIC)
 
     return ipm
 
@@ -80,8 +91,12 @@ def rotate_image(image, robot_rotation):
 def get_floor_image(images, robot_rotation):
     flattened_images = []
     for img in images:
+        img = np.rot90(img, 3, (0,1))
         img = flatten_image(img)
+        #img = np.rot90(img, 2, (0,1))
+        img = np.flip(img, 0)
         flattened_images.append(img)
+
 
     x_red = 5
     y_red = 2

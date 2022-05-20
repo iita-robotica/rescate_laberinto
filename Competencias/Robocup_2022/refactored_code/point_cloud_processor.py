@@ -19,6 +19,9 @@ def processPointCloud(pc, robotPos):
     return newPC
     """
 
+def processPointCloudForCamera(pc, robotPos):
+    return [[int(pos[0]  * MAP_SCALE + 350), int(pos[1] * MAP_SCALE + 350)] for pos in pc]
+
 
 
 def get_intermediate_points(point_cloud, center_point=[0, 0]):
