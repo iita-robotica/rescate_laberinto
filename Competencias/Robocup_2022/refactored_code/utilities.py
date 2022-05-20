@@ -1,4 +1,12 @@
 import math
+import cv2 as cv
+import os
+
+script_dir = os.path.dirname(__file__)
+image_dir = os.path.join(script_dir, "images")
+
+def save_image(image, filename):
+    cv.imwrite(os.path.join(image_dir, filename), image)
 
 # Corrects the given angle in degrees to be in a range from 0 to 360
 def normalizeDegs(ang):
