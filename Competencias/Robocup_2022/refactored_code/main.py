@@ -1,11 +1,9 @@
-absuloute_dir = r'/home/ale/rescate_laberinto/Competencias/Robocup_2022/refactored_code'
 import sys
 import cv2 as cv
 import numpy as np
 import time
 import copy
 
-sys.path.append(absuloute_dir)
 import fixture_detection, camera_processing, mapping, pathfinding, point_cloud_processor, robot, state_machines, utilities
 
 # World constants
@@ -76,8 +74,8 @@ def do_mapping():
     camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
 
     utilities.draw_grid(camera_final_image, 50)
-
     cv.imshow("camera_final_image", camera_final_image)
+
     #final_image = np.zeros(camera_final_image.shape, np.uint8)
     final_image = np.zeros((700, 700, 3), np.uint8)
 
@@ -260,7 +258,7 @@ while robot.doLoop():
         #img1 = camera_processing.sharpen_image(img1)
 
         #cv.imshow("img", camera_final_image)
-        #cv.imwrite(absuloute_dir + "/upscaled_img.png", camera_final_image)
+        #cv.imwrite(absuloute_dir + "/upscaled_img.png", img1)
 
         cv.waitKey(1)
 
