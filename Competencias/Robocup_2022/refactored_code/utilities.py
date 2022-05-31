@@ -97,7 +97,10 @@ def draw_grid(image, square_size, offset = [0,0], color=255):
     for y, row in enumerate(image):
         for x, pixel in enumerate(row):
             if (y + offset[1]) % square_size == 0 or (x + offset[0]) % square_size == 0:
-                image[y][x][:] = color
+                if len(image.shape) == 3:
+                    image[y][x][:] = color
+                else:
+                    image[y][x] = color
 
 def draw_poses(image, poses, color=255, back_image = None, xx_yy_format = False):
     if xx_yy_format:

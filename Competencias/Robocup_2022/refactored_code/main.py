@@ -3,7 +3,8 @@ import numpy as np
 import time
 import copy
 
-from data_processing import data_extractor, fixture_detection, camera_processing
+from data_processing import data_extractor, fixture_detection, camera_processing, point_cloud_processor
+from data_structures import lidar_persistent_grid
 import utilities, state_machines, robot, mapping
 
 # World constants
@@ -58,8 +59,7 @@ def seqCalibrateRobotRotation():
     if seq.simpleEvent():
         robot.autoDecideRotation = True
 
-from data_structures import resizable_pixel_grid
-lidar_grid = resizable_pixel_grid.Grid((10, 10), res=50)
+lidar_grid = lidar_persistent_grid.LidarGrid(TILE_SIZE, 6, 100)
 
 doWallMapping = False
 doFloorMapping = False
@@ -120,17 +120,22 @@ while robot.doLoop():
         #seqRotateToDegs(270)
         if seq.simpleEvent():
             initial_position = robot.position
-        seqMoveToCoords((initial_position[0] + 0.24, initial_position[1]))
+        seqMoveToCoords((initial_position[0] + 0.12, initial_position[1]))
 
         if seq.simpleEvent():
             initial_position = robot.position
-        seqMoveToCoords((initial_position[0], initial_position[1] - 0.24))
+        seqMoveToCoords((initial_position[0], initial_position[1] + 0.32))
         
         seqMoveWheels(0, 0)
-        seqRotateToDegs(90)
+        #seqRotateToDegs(90)
         
         #robot.autoDecideRotation = False
         #robot.rotationSensor = "gyro"
+
+        point_cloud, _ = robot.getDetectionPointCloud()
+        point_cloud = point_cloud_processor.processPointCloud(point_cloud, robot.position)
+        lidar_grid.update(point_cloud)
+        lidar_grid.print_grid((600, 600))
 
         """
         nube_de_puntos = robot.getDetectionPointCloud()
@@ -153,8 +158,8 @@ while robot.doLoop():
         # robot.moveToCoords(coordenadas)
         # repetir
 
-        imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
-        data_extractor.get_floor_colors(imgs, robot.getDetectionPointCloud(), robot.rotation, robot.position)
+        #imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
+        #data_extractor.get_floor_colors(imgs, robot.getDetectionPointCloud(), robot.rotation, robot.position)
         
         print("rotation:", robot.rotation)
         
