@@ -1,5 +1,6 @@
 import math
 import cv2 as cv
+import numpy as np
 import os
 
 script_dir = os.path.dirname(__file__)
@@ -124,3 +125,19 @@ def draw_poses(image, poses, color=255, back_image = None, xx_yy_format = False)
             image[pos[1]][pos[0]][:] = color
         else:
             image[pos[1]][pos[0]][:] = back_image[pos[1]][pos[0]][:]
+
+def draw_squares_where_not_zero(image, square_size, offsets, color=(255, 255, 255)):
+    ref_image = image.copy()
+    for y in range(image.shape[0] // square_size):
+        for x in range(image.shape[1] // square_size):
+            square_points = [
+                (y * square_size)        + (square_size - offsets[1]),
+                ((y + 1) * square_size)  + (square_size - offsets[1]), 
+                (x * square_size)        + (square_size - offsets[0]),
+                ((x + 1) * square_size)  + (square_size - offsets[0])]
+            square = ref_image[square_points[0]:square_points[1], square_points[2]:square_points[3]]
+            non_zero_count = np.count_nonzero(square)
+            if non_zero_count > 0:
+                #print("Non zero count: ", non_zero_count)
+                #print("max: ", np.max(square))
+                cv.rectangle(image, (square_points[2], square_points[0]), (square_points[3], square_points[1]), color, 3)
