@@ -20,7 +20,6 @@ stateManager = state_machines.StateManager("init")
 # Resets flags that need to be in a certain value when changing sequence, for example when changing state
 def resetSequenceFlags():
     robot.delayFirstTime = True
-
 # Sequence manager
 seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
 
@@ -31,10 +30,6 @@ seqMoveWheels = seq.makeSimpleEvent(robot.moveWheels)
 seqRotateToDegs = seq.makeComplexEvent(robot.rotateToDegs)
 seqMoveToCoords = seq.makeComplexEvent(robot.moveToCoords)
 seqResetSequenceFlags = seq.makeSimpleEvent(resetSequenceFlags)
-
-def isHole():
-    # TODO
-    return False
 
 # Calculates offsets in the robot position, in case it doesn't start perfectly centerd
 def calibratePositionOffsets():
@@ -63,39 +58,33 @@ def seqCalibrateRobotRotation():
     if seq.simpleEvent():
         robot.autoDecideRotation = True
 
-doWallMapping = False
-doFloorMapping = False
-
 from data_structures import resizable_pixel_grid
 lidar_grid = resizable_pixel_grid.Grid((10, 10), res=50)
 
+doWallMapping = False
+doFloorMapping = False
 
 # Each timeStep
 while robot.doLoop():
     # Updates robot position and rotation, sensor positions, etc.
     robot.update()
+
     print("state: ", stateManager.state)
 
     # Runs once when starting the game
     if stateManager.checkState("init"):
         seq.startSequence()
-
         seqDelaySec(0.5)
-
         # Calculates offsets in the robot position, in case it doesn't start perfectly centerd
         seq.simpleEvent(calibratePositionOffsets)
-            
         # Informs the mapping components of the starting position of the robot
         # seq.simpleEvent(mapping.registerStart())
-        
         # Calibrates the rotation of the robot using the gps
         seqCalibrateRobotRotation()
-
         # Starts mapping walls
         if seq.simpleEvent():
             doWallMapping = True
             doFloorMapping = True
-
         # Changes state and resets the sequence
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
@@ -113,17 +102,13 @@ while robot.doLoop():
         seq.startSequence()
         if seq.simpleEvent():
             initial_position = robot.position
-
         seqMoveToCoords((initial_position[0] + 0.12, initial_position[1] + 0.12))
         seqMoveWheels(0, 0)
         seqRotateToDegs(90)
         seqMoveWheels(0, 0)
-
         if seq.simpleEvent():
             start_time = time.time()
-
         seqRotateToDegs(270)
-        #seqMoveToCoords((initial_position[0] + 0.18, initial_position[1] + 0.12))
         if seq.simpleEvent():
             print("time taken: ", time.time() - start_time)
         seqMoveWheels(0, 0)
@@ -133,19 +118,15 @@ while robot.doLoop():
         seq.startSequence()
         #seqMoveWheels(0.5, -0.5)
         #seqRotateToDegs(270)
-
         if seq.simpleEvent():
             initial_position = robot.position
-
         seqMoveToCoords((initial_position[0] + 0.24, initial_position[1]))
 
         if seq.simpleEvent():
             initial_position = robot.position
-
         seqMoveToCoords((initial_position[0], initial_position[1] - 0.24))
         
         seqMoveWheels(0, 0)
-
         seqRotateToDegs(90)
         
         #robot.autoDecideRotation = False
@@ -162,35 +143,20 @@ while robot.doLoop():
         mi_grilla.print_grid()
         """
         
+        # point_cloud = robot.getLidarPointCloud()
+        # images = robot.getCameraImages()
+        # grilla.update(point_cloud, images, robot.position, robot.rotation)
 
-        # lidar es robot.getLidar()
-        # camaras es robot.getCameraImages()
-        # grilla.update(lidar, camaras)
-
-        # Grilla es mapping.getGrilla()
-        # mejor moviemiento es AI.getMejorMovimiento(grilla)
-        # coordenadas es robot.getCoordenadas(mejor movimiento)
+        # grilla = mapping.getGrilla()
+        # mejor_moviemiento = agent.getAction(grilla)
+        # coordenadas = robot.getCoordenadas(mejor_movimiento)
         # robot.moveToCoords(coordenadas)
         # repetir
 
         imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
         data_extractor.get_floor_colors(imgs, robot.getDetectionPointCloud(), robot.rotation, robot.position)
-
-        # If it encountered a hole
-        if isHole():
-            # Changes state and resets the sequence
-            seq.simpleEvent(stateManager.changeState, "hole")
-            seq.seqResetSequence()
         
         print("rotation:", robot.rotation)
-
-    # What to do if it encounters a hole
-    elif stateManager.checkState("hole"):
-        # TODO
-        pass
-        # reportar obstáculo a mapping
-        # moverse para atras
-        # volver a "explore"
         
     # Reports a victim
     elif stateManager.checkState("report_victim"):
