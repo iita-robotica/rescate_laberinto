@@ -202,10 +202,9 @@ class RobotLayer:
     
     # Gets a point cloud with all the detections from lidar and distance sensorss
     def getDetectionPointCloud(self):
-
-        rawPointCloud = self.lidar.getPointCloud(layers=(2,3))
+        rawPointCloud, outOfBoundsCloud = self.lidar.getPointCloud(layers=(2,3))
         self.pointIsClose = self.lidar.pointIsClose
-        return rawPointCloud
+        return rawPointCloud, outOfBoundsCloud
     
     # Returns True if the simulation is running
     def doLoop(self):

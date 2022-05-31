@@ -73,33 +73,42 @@ def do_mapping():
     imgs = (robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg())
     camera_final_image = camera_processing.get_floor_image(imgs, robot.rotation)
 
-    utilities.draw_grid(camera_final_image, 50)
-    cv.imshow("camera_final_image", camera_final_image)
+    #offsets = (int((robot.position[0] * 850) % 50), int((robot.position[1] * 850) % 50))
+    #utilities.draw_grid(camera_final_image, 50, offsets)
+
+    #cv.imshow("camera_final_image", camera_final_image)
+
 
     #final_image = np.zeros(camera_final_image.shape, np.uint8)
     final_image = np.zeros((700, 700, 3), np.uint8)
 
-    nube_de_puntos = robot.getDetectionPointCloud()
+    nube_de_puntos, out_of_bounds_point_cloud = robot.getDetectionPointCloud()
 
     final_point_cloud = point_cloud_processor.processPointCloud(nube_de_puntos, robotPos=robot.position)
 
-    camera_point_cloud = point_cloud_processor.processPointCloudForCamera(nube_de_puntos, robotPos=robot.position)
+    camera_out_of_bounds_point_cloud = point_cloud_processor.processPointCloudForCamera(out_of_bounds_point_cloud, robotPos=robot.position)
 
+    camera_point_cloud = point_cloud_processor.processPointCloudForCamera(nube_de_puntos, robotPos=robot.position)
+    
+    """
     for point in final_point_cloud:
         lidar_grid.sum_to_point(point, 10)
+    """
     
-    lidar_grid.print_grid(max_size=(600, 600))
-    
-    seen_points = point_cloud_processor.get_intermediate_points(camera_point_cloud, (350, 350))
+    #lidar_grid.print_grid(max_size=(600, 600))
+    print("camera point cloud: ", camera_point_cloud)
+    print("camera out of bounds point cloud: ", camera_out_of_bounds_point_cloud)
+
+    total_camera_point_cloud = np.vstack((camera_point_cloud, camera_out_of_bounds_point_cloud))
+
+    seen_points = point_cloud_processor.get_intermediate_points(total_camera_point_cloud, (350, 350))
 
     utilities.draw_poses(final_image, seen_points, back_image=camera_final_image)
 
-    
-    
     offsets = (int((robot.position[0] * 850) % 50), int((robot.position[1] * 850) % 50))
 
     reference_image = copy.deepcopy(final_image)
-    
+  
     for y in range(final_image.shape[0] // 50):
         for x in range(final_image.shape[1] // 50):
             square_points = [
@@ -114,7 +123,7 @@ def do_mapping():
                 print("max: ", np.max(square))
                 
                 cv.rectangle(final_image, (square_points[2], square_points[0]), (square_points[3], square_points[1]), (255, 0, 0), 3)
-                
+
     utilities.draw_poses(final_image, camera_point_cloud, 255)
     utilities.draw_grid(final_image, 50, offsets)
 
@@ -122,7 +131,6 @@ def do_mapping():
 
     print("FINAL IMG SHAPE", final_image.shape)
     
-
     cv.waitKey(1)
     
 
@@ -198,23 +206,23 @@ while robot.doLoop():
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
         seq.startSequence()
-        seqMoveWheels(0, 0)
-        seqMoveWheels(0.5, -0.5)
+        #seqMoveWheels(0.5, -0.5)
         #seqRotateToDegs(270)
 
-        """
         if seq.simpleEvent():
             initial_position = robot.position
 
-        seqMoveToCoords((initial_position[0] + 0.12, initial_position[1]))
+        seqMoveToCoords((initial_position[0] + 0.24, initial_position[1]))
 
         if seq.simpleEvent():
             initial_position = robot.position
 
-        seqMoveToCoords((initial_position[0], initial_position[1] + 0.12))
+        seqMoveToCoords((initial_position[0], initial_position[1] - 0.24))
         
         seqMoveWheels(0, 0)
-        """
+
+        seqRotateToDegs(90)
+        
 
         #robot.autoDecideRotation = False
         #robot.rotationSensor = "gyro"
@@ -260,26 +268,12 @@ while robot.doLoop():
         #cv.imshow("img", camera_final_image)
         #cv.imwrite(absuloute_dir + "/upscaled_img.png", img1)
 
-        cv.waitKey(1)
-
         # If it encountered a hole
         if isHole():
             # Changes state and resets the sequence
             seq.simpleEvent(stateManager.changeState, "hole")
             seq.seqResetSequence()
         
-
-        """
-        seqMoveWheels(1, 1)
-        seqDelaySec(1)
-        seqRotateToDegs(180)
-        seqMoveWheels(1, 1)
-        seqDelaySec(0.8)
-        seqRotateToDegs(90)
-        seqMoveWheels(1, 1)
-        seqDelaySec(0.8)
-        seqMoveWheels(0, 0)
-        """
         print("rotation:", robot.rotation)
 
     # What to do if it encounters a hole

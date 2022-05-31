@@ -70,27 +70,41 @@ class Lidar():
         # print("Lidar vFov: ", self.verticalFov/ self.verticalRes)
 
         pointCloud = []
+
+        outOfBounds = []
         
         for layer in layers:
             actualVDetectionRot = (layer * self.vRadPerDetection) + self.verticalFov / 2
             depthArray = self.device.getLayerRangeImage(layer)
             actualHDetectionRot = self.detectRotOffset + ((2 * math.pi) - self.rotation)
             for item in depthArray:
-                if self.minDetectionDistance <= item <= self.maxDetectionDistance:
-                        #item = self.maxDetectionDistance
-                    if item != float("inf") and item != float("inf") * -1 and item != 0:
-                        x = item * math.cos(actualVDetectionRot)
-                        x += self.distBias
-                        x *= self.distCoeff
-                        x = x ** self.distFactor
+                if item >= self.maxDetectionDistance or item == float("inf"):
+                    x = self.maxDetectionDistance * math.cos(actualVDetectionRot)
+                    x += self.distBias
+                    x *= self.distCoeff
+                    x = x ** self.distFactor
 
-                        if utilities.degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > utilities.degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
-                            self.pointIsClose = True
+                    coords = utilities.getCoordsFromRads(actualHDetectionRot, x)
+                    outOfBounds.append([coords[0] - 0, (coords[1] * -1) - 0])
 
-                        coords = utilities.getCoordsFromRads(actualHDetectionRot, x)
-                        pointCloud.append([coords[0] - 0, (coords[1] * -1) - 0])
+                else:
+                    if item >= self.minDetectionDistance:
+                            #item = self.maxDetectionDistance
+                            if item != float("inf") and item != float("inf") * -1 and item != 0:
+                                x = item * math.cos(actualVDetectionRot)
+                                x += self.distBias
+                                x *= self.distCoeff
+                                x = x ** self.distFactor
+
+                                if utilities.degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > utilities.degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
+                                    self.pointIsClose = True
+
+                                coords = utilities.getCoordsFromRads(actualHDetectionRot, x)
+                                pointCloud.append([coords[0] - 0, (coords[1] * -1) - 0])
+
                 actualHDetectionRot += self.hRadPerDetection
-        return pointCloud
+
+        return pointCloud, outOfBounds
 
     # Sets the rotation of the sensors in radians
     def setRotationRadians(self, rads):

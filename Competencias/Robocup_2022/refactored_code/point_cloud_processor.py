@@ -20,7 +20,9 @@ def processPointCloud(pc, robotPos):
     """
 
 def processPointCloudForCamera(pc, robotPos):
-    return [[int(pos[0]  * MAP_SCALE + 350), int(pos[1] * MAP_SCALE + 350)] for pos in pc]
+    if len(pc) == 0:
+        return np.empty((0, 2), dtype=np.int)
+    return np.array([[int(pos[0]  * MAP_SCALE + 350), int(pos[1] * MAP_SCALE + 350)] for pos in pc], dtype=np.int)
 
 
 
