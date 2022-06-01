@@ -144,3 +144,30 @@ def draw_squares_where_not_zero(image, square_size, offsets, color=(255, 255, 25
                 #print("Non zero count: ", non_zero_count)
                 #print("max: ", np.max(square))
                 cv.rectangle(image, (square_points[2], square_points[0]), (square_points[3], square_points[1]), color, 3)
+
+def resize_image_to_fixed_size(image, size):
+    if image.shape[0] > size[0]:
+        ratio = size[0] / image.shape[0]
+
+        width = round(image.shape[1] * ratio)
+        final_image = cv.resize(image.astype(np.uint8), dsize=(width, size[0]))
+    
+    elif image.shape[1] > size[1]:
+        ratio = size[1] / image.shape[1]
+
+        height = round(image.shape[0] * ratio)
+        final_image = cv.resize(image.astype(np.uint8), dsize=(size[1], height))
+    
+    elif image.shape[1] >= image.shape[0]:
+        ratio = size[1] / image.shape[1]
+
+        height = round(image.shape[0] * ratio)
+        final_image = cv.resize(image.astype(np.uint8), dsize=(size[1], height), interpolation=cv.INTER_NEAREST)
+    
+    elif image.shape[0] >= image.shape[1]:
+        ratio = size[0] / image.shape[0]
+
+        width = round(image.shape[1] * ratio)
+        final_image = cv.resize(image.astype(np.uint8), dsize=(width, size[0]), interpolation=cv.INTER_NEAREST)
+    
+    return final_image
