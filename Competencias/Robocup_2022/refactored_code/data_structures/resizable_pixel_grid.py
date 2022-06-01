@@ -67,10 +67,8 @@ class Grid:
         self.grid = np.hstack((np.zeros((self.shape[0], size), dtype=np.int), self.grid))
 
     def print_grid(self, max_size=(2000, 1000)):
-        print("grid shape: ", self.grid.shape)
         grid1 = copy.deepcopy(self.grid)
-        #utilities.draw_grid(grid1, self.resolution, self.offsets)
-
+       
         grid1 = grid1 // self.value_divider
 
         grid1 = utilities.resize_image_to_fixed_size(grid1, max_size)

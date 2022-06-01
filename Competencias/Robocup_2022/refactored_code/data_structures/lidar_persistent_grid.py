@@ -24,7 +24,7 @@ class LidarGrid(resizable_pixel_grid.Grid):
     
     def print_bool(self, max_size=(600, 600)):
         grid1 = utilities.resize_image_to_fixed_size(self.get_bool_array(), max_size)
-        cv.imshow("grid", grid1 * 255)
+        cv.imshow("bool_grid", grid1 * 255)
         cv.waitKey(1)
     
     def update(self, point_cloud):
