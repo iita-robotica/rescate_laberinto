@@ -71,29 +71,9 @@ class Grid:
         grid1 = copy.deepcopy(self.grid)
         #utilities.draw_grid(grid1, self.resolution, self.offsets)
 
-        if grid1.shape[0] > max_size[0]:
-            ratio = max_size[0] / grid1.shape[0]
+        grid1 = grid1 // self.value_divider
 
-            width = round(grid1.shape[1] * ratio)
-            grid1 = cv.resize((grid1 // self.value_divider).astype(np.uint8), dsize=(width, max_size[0]))
-        
-        elif grid1.shape[1] > max_size[1]:
-            ratio = max_size[1] / grid1.shape[1]
-
-            height = round(grid1.shape[0] * ratio)
-            grid1 = cv.resize((grid1 // self.value_divider).astype(np.uint8), dsize=(max_size[1], height))
-        
-        elif grid1.shape[1] >= grid1.shape[0]:
-            ratio = max_size[1] / grid1.shape[1]
-
-            height = round(grid1.shape[0] * ratio)
-            grid1 = cv.resize((grid1 // self.value_divider).astype(np.uint8), dsize=(max_size[1], height), interpolation=cv.INTER_NEAREST)
-        
-        elif grid1.shape[0] >= grid1.shape[1]:
-            ratio = max_size[0] / grid1.shape[0]
-
-            width = round(grid1.shape[1] * ratio)
-            grid1 = cv.resize((grid1 // self.value_divider).astype(np.uint8), dsize=(width, max_size[0]), interpolation=cv.INTER_NEAREST)
+        grid1 = utilities.resize_image_to_fixed_size(grid1, max_size)
 
         cv.imshow("grid", grid1.astype(np.uint8))
         cv.waitKey(1)

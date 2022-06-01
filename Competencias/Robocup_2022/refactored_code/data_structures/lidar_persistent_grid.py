@@ -1,3 +1,8 @@
+import numpy as np
+import cv2 as cv
+
+import utilities
+
 from data_structures import resizable_pixel_grid
 
 class LidarGrid(resizable_pixel_grid.Grid):
@@ -16,6 +21,11 @@ class LidarGrid(resizable_pixel_grid.Grid):
     def sum_detection(self, point):
         point = [round(p * self.multiplier) for p in point]
         self.sum_to_point(point, 1)
+    
+    def print_bool(self, max_size=(600, 600)):
+        grid1 = utilities.resize_image_to_fixed_size(self.get_bool_array(), max_size)
+        cv.imshow("grid", grid1 * 255)
+        cv.waitKey(1)
     
     def update(self, point_cloud):
         for point in point_cloud:
