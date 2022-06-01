@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import cv2 as cv
 #REMEMBER TO COPY-PASTE THIS FUNCTIONS ON TO FINAL CODE
-sys.path.append(r"/home/ale/rescate_laberinto/Competencias/Robocup2022backup/FinalCode")
+sys.path.append(r"/home/ale/rescate_laberinto/Competencias/Robocup_2022backup/FinalCode")
 from AbstractionLayer import AbstractionLayer
 from StateMachines import StateManager
 timeStep = 16 * 2 

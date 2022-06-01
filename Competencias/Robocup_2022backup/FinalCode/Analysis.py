@@ -225,12 +225,24 @@ class Grid:
     
     def getArrayRepresentation(self):
         grid = []
+
         for y in self.grid:
             row = []
             for node in y:
                 row.append(node.getString())
             grid.append(row)
-        return np.array(grid)
+        min_x = self.size[1]
+        min_y = self.size[0]
+        max_x = 0
+        max_y = 0
+        for y, row in enumerate(grid):
+            for x, node in enumerate(row):
+                if node !="0":
+                    if x < min_x: min_x = x
+                    if y < min_y: min_y = y
+                    if x > max_x: max_x = x
+                    if y > max_y: max_y = y
+        return np.array(grid)[min_y:max_y+1, min_x:max_x+1]
                 
 
     def getNumpyPrintableArray(self):
@@ -272,7 +284,7 @@ class Grid:
                     else:
                         printableArray[x][y] = 50
         
-        return np.flip(printableArray, 1)
+        return np.rot90(np.flip(printableArray, 1), 1)
                 
 
 # aStarNode class for A* pathfinding (Not to be confused with the node grid)
@@ -658,6 +670,7 @@ class Analyst:
  
         if self.stoppedMoving:
             self.blockFront()
+            print("BLOCKED FRONT")
             self.calculatePath = True
 
         if len(self.__bestPath):

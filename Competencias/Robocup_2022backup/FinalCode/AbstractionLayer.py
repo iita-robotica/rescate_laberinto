@@ -150,11 +150,16 @@ class AbstractionLayer():
         self.analyst.registerVictim()
     
     def endGame(self):
-        #self.sendFinalArray()
+        self.sendFinalArray()
         self.robot.sendEnd()
 
     def sendFinalArray(self):
-        self.robot.sendArray(self.analyst.getArrayRepresentation())
+        arr = self.analyst.getArrayRepresentation()
+        """
+        with open("/home/ale/rescate_laberinto/Competencias/Robocup_2022backup/FinalCode/finalArray.txt", "w") as file:
+            file.write(np.array2string(arr, threshold=np.inf, max_line_width=np.inf))
+        """
+        self.robot.sendArray(arr)
 
     def isEnded(self):
         return self.analyst.ended
