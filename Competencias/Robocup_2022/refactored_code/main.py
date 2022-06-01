@@ -64,7 +64,7 @@ initial_position = robot.position
 def seqMoveToRelativeCoords(x, y):
     global initial_position
     if seq.simpleEvent():
-        initial_position = robot.position
+        initial_position = [round(p / TILE_SIZE) * TILE_SIZE for p in robot.position]
     seqMoveToCoords((initial_position[0] + x, initial_position[1] + y))
 
 def seqMoveToRelativeTile(x, y):
@@ -141,6 +141,8 @@ while robot.doLoop():
         
         seqMoveWheels(0, 0)
         #seqRotateToDegs(90)
+        seq.seqResetSequence()
+        
         
         #robot.autoDecideRotation = False
         #robot.rotationSensor = "gyro"
@@ -148,8 +150,9 @@ while robot.doLoop():
         point_cloud, _ = robot.getDetectionPointCloud()
         point_cloud = point_cloud_processor.processPointCloud(point_cloud, robot.position)
         lidar_grid.update(point_cloud)
-        #lidar_grid.print_grid((600, 600))
+        lidar_grid.print_grid((600, 600))
         lidar_grid.print_bool((600, 600))
+
 
         """
         nube_de_puntos = robot.getDetectionPointCloud()
@@ -176,6 +179,8 @@ while robot.doLoop():
         #data_extractor.get_floor_colors(imgs, robot.getDetectionPointCloud(), robot.rotation, robot.position)
         
         print("rotation:", robot.rotation)
+
+        
 
         
     # Reports a victim
