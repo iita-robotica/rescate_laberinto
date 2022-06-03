@@ -181,6 +181,16 @@ class Grid:
         x, y = point
         x, y = x + self.offsets[0], y + self.offsets[1]
         return self.grid[y, x]
+
+    def fill_verticies_around_wall(self, wall_node):
+        assert self.get_node(wall_node).node_type == "wall"
+        for a in ([-1, 0], [1, 0], [0, -1], [0, 1]):
+            x, y = wall_node
+            x += a[1]
+            y += a[0]
+            node = self.get_node((x, y))
+            if node.node_type == "vortex":
+                node.status = "occupied"
     
     def print_grid(self):
         for row in self.grid:

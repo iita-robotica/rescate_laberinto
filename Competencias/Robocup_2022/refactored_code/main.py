@@ -163,18 +163,22 @@ while robot.doLoop():
 
         for y, row in enumerate(grid):
             for x, value in enumerate(row):
-                xx = (x - offsets[0]) * 2
-                yy = (y - offsets[1]) * 2
+                xx = (x - offsets[0]) * 2 + 1
+                yy = (y - offsets[1]) * 2 + 1
 
                 #node_grid.add_node((xx, yy))
                 if "u" in value:
                     node_grid.get_node((xx, yy - 1)).status = "occupied"
+                    node_grid.fill_verticies_around_wall((xx, yy - 1))
                 if "d" in value:
                     node_grid.get_node((xx, yy + 1)).status = "occupied"
+                    node_grid.fill_verticies_around_wall((xx , yy + 1))
                 if "l" in value:
                     node_grid.get_node((xx - 1, yy)).status = "occupied"
+                    node_grid.fill_verticies_around_wall((xx - 1, yy))
                 if "r" in value:
                     node_grid.get_node((xx + 1, yy)).status = "occupied"
+                    node_grid.fill_verticies_around_wall((xx + 1, yy))
                 
                 
         node_grid.print_grid()
