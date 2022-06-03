@@ -107,6 +107,16 @@ class Grid:
         elif not x_div and not y_div:
             return "tile"
     
+    def get_type_node_poses(self, node_type):
+        grid = []
+        for y, row in enumerate(self.grid):
+            new_row = []
+            for x, node in enumerate(row):
+                if node.node_type == node_type:
+                    new_row.append((x, y))
+            grid.append(row)
+        return grid
+    
     def fill_nodes(self, grid):
         for i in range(grid.shape[0]):
             for j in range(grid.shape[1]):

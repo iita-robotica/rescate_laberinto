@@ -4,7 +4,7 @@ import time
 import copy
 
 from data_processing import data_extractor, fixture_detection, camera_processing, point_cloud_processor
-from data_structures import lidar_persistent_grid
+from data_structures import lidar_persistent_grid, expandable_node_grid
 import utilities, state_machines, robot, mapping
 
 # World constants
@@ -140,19 +140,52 @@ while robot.doLoop():
         seqMoveToRelativeTile(-4, 0)
         
         seqMoveWheels(0, 0)
-        #seqRotateToDegs(90)
-        seq.seqResetSequence()
+        seqRotateToDegs(0)
+        seqMoveWheels(0, 0)
+        #seq.seqResetSequence()
         
         
         #robot.autoDecideRotation = False
         #robot.rotationSensor = "gyro"
-
+        
         point_cloud, _ = robot.getDetectionPointCloud()
         point_cloud = point_cloud_processor.processPointCloud(point_cloud, robot.position)
         lidar_grid.update(point_cloud)
         lidar_grid.print_grid((600, 600))
         lidar_grid.print_bool((600, 600))
+        
+        tile_status = point_cloud_processor.get_tile_status(0, 0, 8, 8, lidar_grid.get_bool_array())
+        print("tile_status: ", list(tile_status))
 
+        grid, offsets = point_cloud_processor.transform_to_grid(lidar_grid)
+
+        node_grid = expandable_node_grid.Grid((1, 1))
+
+        for y, row in enumerate(grid):
+            for x, value in enumerate(row):
+                xx = (x - offsets[0]) * 2
+                yy = (y - offsets[1]) * 2
+
+                #node_grid.add_node((xx, yy))
+                if "u" in value:
+                    node_grid.get_node((xx, yy - 1)).status = "occupied"
+                if "d" in value:
+                    node_grid.get_node((xx, yy + 1)).status = "occupied"
+                if "l" in value:
+                    node_grid.get_node((xx - 1, yy)).status = "occupied"
+                if "r" in value:
+                    node_grid.get_node((xx + 1, yy)).status = "occupied"
+                
+                
+        node_grid.print_grid()
+
+
+        """
+        images = [robot.rightCamera.getImg(), robot.centerCamera.getImg(), robot.leftCamera.getImg()]
+        
+        lidar_point_cloud = robot.getDetectionPointCloud()
+        data_extractor.get_floor_colors(images, lidar_point_cloud, robot.rotation, robot.position)
+        """
 
         """
         nube_de_puntos = robot.getDetectionPointCloud()
