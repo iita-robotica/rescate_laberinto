@@ -171,3 +171,46 @@ def resize_image_to_fixed_size(image, size):
         final_image = cv.resize(image.astype(np.uint8), dsize=(width, size[0]), interpolation=cv.INTER_NEAREST)
     
     return final_image
+
+def dir2list(direction):
+    directions = {
+        "up": [0, -1],
+        "down": [0, 1],
+        "left": [-1, 0],
+        "right": [1, 0],
+        "up_left": [-1, -1],
+        "up_right": [1, -1],
+        "down_left": [-1, 1],
+        "down_right": [1, 1],
+        "u": [0, -1],
+        "d": [0, 1],
+        "l": [-1, 0],
+        "r": [1, 0],
+        "ul": [-1, -1],
+        "ur": [1, -1],
+        "dl": [-1, 1],
+        "dr": [1, 1]
+    }
+    return directions[direction]
+
+def list2dir(direction):
+    direction = tuple(direction)
+    directions = {
+        (0, -1): "up",
+        (0, 1): "down",
+        (-1, 0): "left",
+        (1, 0): "right",
+        (-1, -1): "up_left",
+        (1, -1): "up_right",
+        (-1, 1): "down_left",
+        (1, 1): "down_right",
+        (0, -1): "u",
+        (0, 1): "d",
+        (-1, 0): "l",
+        (1, 0): "r",
+        (-1, -1): "ul",
+        (1, -1): "ur",
+        (-1, 1): "dl",
+        (1, 1): "dr"
+    }
+    return directions[direction]
