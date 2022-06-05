@@ -19,86 +19,72 @@ from devices.comunicator import Comunicator
 
 # Abstraction layer for robot
 class RobotLayer:
-    def __init__(self, timeStep):
+    def __init__(self, time_step):
         # Maximum wheel speed
-        self.maxWheelSpeed = 6.28
+        self.max_wheel_speed = 6.28
         # The timestep
-        self.timeStep = timeStep
+        self.time_step = time_step
         # Robot object provided by webots
         self.robot = Robot()
-        self.prevRotation = 0
+        self.prev_rotation = 0
         self.rotation = 0
         self.position = [0, 0]
-        self.prevGlobalPosition = [0, 0]
-        self.positionOffsets = [0, 0]
+        self.prev_global_position = [0, 0]
+        self.position_offsets = [0, 0]
 
-        self.rotationSensor = "gyro"
+        self.rotation_sensor = "gyro"
 
         self.time = 0
-        self.rotateToDegsFirstTime = True
-        self.delayFirstTime = True
-        self.delayStart = self.robot.getTime()
+        self.rotate_to_degs_first_time = True
+        self.delay_first_time = True
+        self.delay_start = self.robot.getTime()
 
-        self.autoDecideRotation = True
-        self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.timeStep)
-        self.gps = Gps(self.robot.getDevice("gps"), self.timeStep)
-        self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep, 0.03, (0, 360))
-        self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
-        self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed)
+        self.auto_decide_rotation = True
+        self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.time_step)
+        self.gps = Gps(self.robot.getDevice("gps"), self.time_step)
+        self.lidar = Lidar(self.robot.getDevice("lidar"), self.time_step, 0.03, (0, 360))
+        self.left_wheel = Wheel(self.robot.getDevice("wheel1 motor"), self.max_wheel_speed)
+        self.right_wheel = Wheel(self.robot.getDevice("wheel2 motor"), self.max_wheel_speed)
 
-        self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
-        self.centerCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
-        self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
-        self.leftCamera = Camera(self.robot.getDevice("camera3"), self.timeStep)
+        self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.time_step)
+        self.center_camera = Camera(self.robot.getDevice("camera1"), self.time_step)
+        self.right_camera = Camera(self.robot.getDevice("camera2"), self.time_step)
+        self.left_camera = Camera(self.robot.getDevice("camera3"), self.time_step)
         
 
-        self.pointIsClose = False
+        self.point_is_close = False
 
-    def frontIsBlocked(self):
-        for sensor in (
-                self.frontRightSensor,
-                self.frontLeftSensor,
-                self.middleLeftSensor,
-                self.middleRightSensor,
-                self.sideLeftSensor,
-                self.sideRightSensor):
-
-            if sensor.isClose():
-                return True
-        else:
-            return False
-
-    def delaySec(self, delay):
+    def delay_sec(self, delay):
         print("Current delay: ", delay)
-        if self.delayFirstTime:
-            self.delayStart = self.robot.getTime()
-            self.delayFirstTime = False
+        if self.delay_first_time:
+            self.delay_start = self.robot.getTime()
+            self.delay_first_time = False
         else:
-            if self.time - self.delayStart >= delay:
+            if self.time - self.delay_start >= delay:
                 
-                self.delayFirstTime = True
+                self.delay_first_time = True
                 return True
         return False
 
     # Moves the wheels at the specified ratio
-    def moveWheels(self, leftRatio, rightRatio):
-        self.leftWheel.move(leftRatio)
-        self.rightWheel.move(rightRatio)
+    def move_wheels(self, left_ratio, right_ratio):
+        self.left_wheel.move(left_ratio)
+        self.right_wheel.move(right_ratio)
 
-    def rotateToDegs(self, degs, orientation="closest", maxSpeed=0.5):
+    def rotate_to_degs(self, degs, orientation="closest", max_speed=0.5):
         accuracy = 2
-        if self.rotateToDegsFirstTime:
+        if self.rotate_to_degs_first_time:
             # print("STARTED ROTATION")
-            self.rotateToDegsFirstTime = False
+            self.rotate_to_degs_first_time = False
         self.seqRotateToDegsInitialRot = self.rotation
         self.seqRotateToDegsinitialDiff = round(self.seqRotateToDegsInitialRot - degs)
         diff = self.rotation - degs
         moveDiff = max(round(self.rotation), degs) - min(self.rotation, degs)
         if diff > 180 or diff < -180:
             moveDiff = 360 - moveDiff
-        speedFract = min(utilities.mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
+        speedFract = min(utilities.mapVals(moveDiff, accuracy, 90, 0.2, 0.8), max_speed)
         if accuracy * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
-            self.rotateToDegsFirstTime = True
+            self.rotate_to_degs_first_time = True
             return True
         else:
             if orientation == "closest":
@@ -116,14 +102,14 @@ class RobotLayer:
 
             if moveDiff > 10:
                 if direction == "right":
-                    self.moveWheels(speedFract * -1, speedFract)
+                    self.move_wheels(speedFract * -1, speedFract)
                 elif direction == "left":
-                    self.moveWheels(speedFract, speedFract * -1)
+                    self.move_wheels(speedFract, speedFract * -1)
             else:
                 if direction == "right":
-                    self.moveWheels(speedFract * -0.5, speedFract)
+                    self.move_wheels(speedFract * -0.5, speedFract)
                 elif direction == "left":
-                    self.moveWheels(speedFract, speedFract * -0.5)
+                    self.move_wheels(speedFract, speedFract * -0.5)
             # print("speed fract: " +  str(speedFract))
             # print("target angle: " +  str(degs))
             # print("moveDiff: " + str(moveDiff))
@@ -135,7 +121,7 @@ class RobotLayer:
         # print("ROT IS FALSE")
         return False
     
-    def rotateSmoothlyToDegs(self, degs, orientation="closest", maxSpeed=0.5):
+    def rotate_smoothly_to_degs(self, degs, orientation="closest", maxSpeed=0.5):
         accuracy = 2
         seqRotateToDegsinitialDiff = round(self.rotation - degs)
         diff = self.rotation - degs
@@ -144,7 +130,7 @@ class RobotLayer:
             moveDiff = 360 - moveDiff
         speedFract = min(utilities.mapVals(moveDiff, accuracy, 90, 0.2, 0.8), maxSpeed)
         if accuracy * -1 < diff < accuracy or 360 - accuracy < diff < 360 + accuracy:
-            self.rotateToDegsFirstTime = True
+            self.rotate_to_degs_first_time = True
             return True
         else:
             if orientation == "closest":
@@ -160,9 +146,9 @@ class RobotLayer:
             else:
                 direction = orientation
             if direction == "right":
-                self.moveWheels(speedFract * -0.5, speedFract)
+                self.move_wheels(speedFract * -0.5, speedFract)
             elif direction == "left":
-                self.moveWheels(speedFract, speedFract * -0.5)
+                self.move_wheels(speedFract, speedFract * -0.5)
             # print("speed fract: " +  str(speedFract))
             # print("target angle: " +  str(degs))
             # print("moveDiff: " + str(moveDiff))
@@ -174,7 +160,7 @@ class RobotLayer:
         # print("ROT IS FALSE")
         return False
 
-    def moveToCoords(self, targetPos):
+    def move_to_coords(self, targetPos):
         errorMargin = 0.01
         descelerationStart = 0.5 * 0.12
         diffX = targetPos[0] - self.position[0]
@@ -195,25 +181,28 @@ class RobotLayer:
             # print("traget ang: " + str(ang))
             ratio = min(utilities.mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
             ratio = max(ratio, 0.8)
-            if self.rotateToDegs(ang):
-                self.moveWheels(ratio, ratio)
+            if self.rotate_to_degs(ang):
+                self.move_wheels(ratio, ratio)
                 # print("Moving")
         return False
     
     # Gets a point cloud with all the detections from lidar and distance sensorss
-    def getDetectionPointCloud(self):
-        rawPointCloud, outOfBoundsCloud = self.lidar.getPointCloud(layers=(2,3))
-        self.pointIsClose = self.lidar.pointIsClose
-        return rawPointCloud, outOfBoundsCloud
+    def get_detection_point_cloud(self):
+        point_clouds = self.lidar.getPointCloud(layers=(2,3))
+        self.point_is_close = self.lidar.pointIsClose
+        return point_clouds
+    
+    def get_camera_images(self):
+        return [self.right_camera.getImg(), self.center_camera.getImg(), self.left_camera.getImg()]
     
     # Returns True if the simulation is running
-    def doLoop(self):
-        return self.robot.step(self.timeStep) != -1
+    def do_loop(self):
+        return self.robot.step(self.time_step) != -1
     
-    def getWheelDirection(self):
-        if self.rightWheel.velocity + self.leftWheel.velocity == 0:
+    def get_wheel_direction(self):
+        if self.right_wheel.velocity + self.left_wheel.velocity == 0:
             return 0
-        return (self.rightWheel.velocity + self.leftWheel.velocity) / 2
+        return (self.right_wheel.velocity + self.left_wheel.velocity) / 2
     
     # Must run every TimeStep
     def update(self):
@@ -224,26 +213,26 @@ class RobotLayer:
         self.gyroscope.update(self.time)
 
         # Gets global position
-        self.prevGlobalPosition = self.position
+        self.prev_global_position = self.position
         self.position = self.gps.getPosition()
-        self.position[0] += self.positionOffsets[0]
-        self.position[1] += self.positionOffsets[1]
+        self.position[0] += self.position_offsets[0]
+        self.position[1] += self.position_offsets[1]
 
         # Decides wich sensor to use for roatation detection
         # if the robot is going srtaight i tuses the gps
         
-        if self.autoDecideRotation:
-            if self.gyroscope.getDiff() < 0.00001 and self.getWheelDirection() >= 0:
-                self.rotationSensor = "gps"
+        if self.auto_decide_rotation:
+            if self.gyroscope.getDiff() < 0.00001 and self.get_wheel_direction() >= 0:
+                self.rotation_sensor = "gps"
             # if it isn't going straight it uses the gyro
             else:
-                self.rotationSensor = "gyro"
+                self.rotation_sensor = "gyro"
 
         # Remembers the corrent rotation for the next timestep
-        self.prevRotation = self.rotation
+        self.prev_rotation = self.rotation
 
         # Gets global rotation
-        if self.rotationSensor == "gyro":
+        if self.rotation_sensor == "gyro":
             self.rotation = self.gyroscope.getDegrees()
             print("USING GYRO")
         else:
@@ -255,7 +244,6 @@ class RobotLayer:
 
         # Sets lidar rotation
         self.lidar.setRotationDegrees(self.rotation + 0)
-        
 
         #print("Delay time:", self.time - self.delayStart)
         

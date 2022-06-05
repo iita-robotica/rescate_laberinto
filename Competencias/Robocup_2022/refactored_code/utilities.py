@@ -105,20 +105,18 @@ def draw_grid(image, square_size, offset = [0,0], color=255):
 def draw_poses(image, poses, color=255, back_image = None, xx_yy_format = False):
     if xx_yy_format:
         cropped_poses = [[], []]
-        cropped_poses[0] = poses[0][poses[0] < image.shape[0]]
-        cropped_poses[1] = poses[1][poses[1] < image.shape[1]]
-
-        cropped_poses[0] = cropped_poses[0][cropped_poses[0] < back_image.shape[0]]
-        cropped_poses[1] = cropped_poses[1][cropped_poses[1] < back_image.shape[1]]
+        cropped_poses[0] = poses[0][poses[0] < min(image.shape[0], back_image.shape[0])]
+        cropped_poses[1] = poses[1][poses[1] < min(image.shape[1], back_image.shape[1])]
 
         print("back_image_shape", back_image.shape)
         print("image_shape", image.shape)
 
+        
         if back_image is None:
-            image[cropped_poses[1], cropped_poses[0]][:] = color
+            image[cropped_poses[1], cropped_poses[0], :] = color
         else:
-            image[cropped_poses[1]][cropped_poses[0]][:] = back_image[cropped_poses[1]][cropped_poses[0]][:]
-
+            image[cropped_poses[1], cropped_poses[0], :] = back_image[cropped_poses[1], cropped_poses[0], :]
+        
     for pos in poses:
         if pos[0] < 0 or pos[1] < 0:
             continue
