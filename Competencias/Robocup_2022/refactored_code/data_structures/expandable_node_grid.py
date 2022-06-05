@@ -1,6 +1,7 @@
 import numpy as np
 import cv2 as cv
 import copy
+import utilities
 
 """
 Requirements:
@@ -191,7 +192,16 @@ class Grid:
             node = self.get_node((x, y))
             if node.node_type == "vortex":
                 node.status = "occupied"
-    
+
+    def load_straight_wall(self, tile, direction):
+        assert self.get_node(tile).node_type == "tile"
+        list_direction = utilities.dir2list(direction)
+        wall = [t + d for t, d in zip(tile, list_direction)]
+
+        self.get_node((wall[0], wall[1])).status = "occupied"
+        self.fill_verticies_around_wall((wall[0], wall[1])) 
+
+
     def print_grid(self):
         for row in self.grid:
             for node in row:

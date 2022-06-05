@@ -3,7 +3,7 @@ import numpy as np
 import time
 import copy
 
-from data_processing import data_extractor, fixture_detection, camera_processing, point_cloud_processor
+from data_processing import camera_processor, data_extractor, fixture_detection, point_cloud_processor
 from data_structures import lidar_persistent_grid, expandable_node_grid
 import utilities, state_machines, robot, mapping
 
@@ -70,11 +70,10 @@ def seqMoveToRelativeCoords(x, y):
 def seqMoveToRelativeTile(x, y):
     seqMoveToRelativeCoords(x * TILE_SIZE, y * TILE_SIZE)
 
-lidar_grid = lidar_persistent_grid.LidarGrid(TILE_SIZE, 6, 100)
+mapper = mapping.Mapper(TILE_SIZE)
 
 doWallMapping = False
 doFloorMapping = False
-
 
 
 # Each timeStep
@@ -107,7 +106,7 @@ while robot.doLoop():
 
     elif stateManager.checkState("save_img"):
         img = robot.centerCamera.getImg()
-        img1 = camera_processing.flatten_image(img)
+        img1 = camera_processor.flatten_image(img)
         cv.imwrite("/home/ale/rescate_laberinto/Competencias/Robocup_2022/Refactored Code/img1.png", img1)
         #stateManager.changeState("stop")
     
@@ -148,40 +147,7 @@ while robot.doLoop():
         #robot.autoDecideRotation = False
         #robot.rotationSensor = "gyro"
         
-        point_cloud, _ = robot.getDetectionPointCloud()
-        point_cloud = point_cloud_processor.processPointCloud(point_cloud, robot.position)
-        lidar_grid.update(point_cloud)
-        lidar_grid.print_grid((600, 600))
-        lidar_grid.print_bool((600, 600))
-        
-        tile_status = point_cloud_processor.get_tile_status(0, 0, 8, 8, lidar_grid.get_bool_array())
-        print("tile_status: ", list(tile_status))
-
-        grid, offsets = point_cloud_processor.transform_to_grid(lidar_grid)
-
-        node_grid = expandable_node_grid.Grid((1, 1))
-
-        for y, row in enumerate(grid):
-            for x, value in enumerate(row):
-                xx = (x - offsets[0]) * 2 + 1
-                yy = (y - offsets[1]) * 2 + 1
-
-                #node_grid.add_node((xx, yy))
-                if "u" in value:
-                    node_grid.get_node((xx, yy - 1)).status = "occupied"
-                    node_grid.fill_verticies_around_wall((xx, yy - 1))
-                if "d" in value:
-                    node_grid.get_node((xx, yy + 1)).status = "occupied"
-                    node_grid.fill_verticies_around_wall((xx , yy + 1))
-                if "l" in value:
-                    node_grid.get_node((xx - 1, yy)).status = "occupied"
-                    node_grid.fill_verticies_around_wall((xx - 1, yy))
-                if "r" in value:
-                    node_grid.get_node((xx + 1, yy)).status = "occupied"
-                    node_grid.fill_verticies_around_wall((xx + 1, yy))
-                
-                
-        node_grid.print_grid()
+        mapper.update(robot.getDetectionPointCloud(), robot.position)
 
 
         """
