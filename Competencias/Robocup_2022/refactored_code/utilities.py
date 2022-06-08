@@ -105,8 +105,10 @@ def draw_grid(image, square_size, offset = [0,0], color=255):
 def draw_poses(image, poses, color=255, back_image = None, xx_yy_format = False):
     if xx_yy_format:
         cropped_poses = [[], []]
-        cropped_poses[0] = poses[0][poses[0] < min(image.shape[0], back_image.shape[0])]
-        cropped_poses[1] = poses[1][poses[1] < min(image.shape[1], back_image.shape[1])]
+        in_bounds_x = (poses[0] < min(image.shape[0], back_image.shape[0]) - 1) * (poses[0] > 0)
+        in_bounds_y = (poses[1] < min(image.shape[1], back_image.shape[1]) - 1) * (poses[1] > 0)
+        cropped_poses[0] = poses[0][in_bounds_x * in_bounds_y]
+        cropped_poses[1] = poses[1][in_bounds_x * in_bounds_y]
 
         print("back_image_shape", back_image.shape)
         print("image_shape", image.shape)
@@ -142,6 +144,20 @@ def draw_squares_where_not_zero(image, square_size, offsets, color=(255, 255, 25
                 #print("Non zero count: ", non_zero_count)
                 #print("max: ", np.max(square))
                 cv.rectangle(image, (square_points[2], square_points[0]), (square_points[3], square_points[1]), color, 3)
+
+def get_squares(image, square_size, offsets):
+    grid = []
+    for y in range(image.shape[0] // square_size):
+        row = []
+        for x in range(image.shape[1] // square_size):
+            square_points = [
+                (y * square_size)        + (square_size - offsets[1]),
+                ((y + 1) * square_size)  + (square_size - offsets[1]), 
+                (x * square_size)        + (square_size - offsets[0]),
+                ((x + 1) * square_size)  + (square_size - offsets[0])]
+            row.append(square_points)
+        grid.append(row)
+    return grid
 
 def resize_image_to_fixed_size(image, size):
     if image.shape[0] > size[0]:
@@ -212,3 +228,11 @@ def list2dir(direction):
         (1, 1): "dr"
     }
     return directions[direction]
+
+def is_color_in_range(color, rng):
+    minimums = rng[0]
+    maximums = rng[1]
+    for i, c in enumerate(color):
+        if c < minimums[i] or c > maximums[i]:
+            return False
+    return True
