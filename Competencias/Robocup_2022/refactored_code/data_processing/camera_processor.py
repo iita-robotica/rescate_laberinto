@@ -22,12 +22,13 @@ class CameraProcessor:
         minimum_x = self.tile_resolution * tiles_side
         maximum_x = self.tile_resolution * (tiles_side + 1)
         minimum_y = self.tile_resolution * (tiles_up)
-        maximum_y = self.tile_resolution * (tiles_up  + 1) - 15
+        maximum_y = self.tile_resolution * (tiles_up  + 1)  - 40
 
-        img_points = np.array(([4, 17], [35, 17],  [31, 12],  [8, 12],), dtype=np.float32)
+        #robot1_points = np.array(([4, 17], [35, 17],  [31, 12],  [8, 12],), dtype=np.float32)
+        img_points = np.array(([5, 6],  [35, 6], [31, 3], [8, 3], ), dtype=np.float32)
         final_points = np.array(([minimum_x, minimum_y],  [maximum_x, minimum_y], [maximum_x, maximum_y], [minimum_x, maximum_y],), dtype=np.float32)
 
-        ipm_matrix = cv.getPerspectiveTransform(img_points, final_points)
+        ipm_matrix = cv.getPerspectiveTransform(img_points, final_points, solveMethod=cv.DECOMP_SVD)
         
         final_x = self.tile_resolution * ((tiles_side * 2) + 1)
         final_y = self.tile_resolution * (tiles_up + 1 + tiles_down)
