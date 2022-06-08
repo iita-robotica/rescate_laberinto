@@ -79,7 +79,7 @@ class Lidar():
             actualHDetectionRot = self.detectRotOffset + ((2 * math.pi) - self.rotation)
             for item in depthArray:
                 if item >= self.maxDetectionDistance or item == float("inf"):
-                    x = self.maxDetectionDistance * math.cos(actualVDetectionRot)
+                    x = 10 * math.cos(actualVDetectionRot)
                     x += self.distBias
                     x *= self.distCoeff
                     x = x ** self.distFactor
