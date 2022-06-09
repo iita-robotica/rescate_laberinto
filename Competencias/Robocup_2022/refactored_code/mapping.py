@@ -41,8 +41,44 @@ class Mapper:
                 for direction in value:
                     self.node_grid.load_straight_wall((xx, yy),  direction)
 
+    @utilities.do_every_n_frames(5, 32)
+    def process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
+        floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
+        final_image = np.zeros(floor_image.shape, dtype=np.uint8)
+
+        ranged_floor_image = cv.inRange(cv.cvtColor(floor_image, cv.COLOR_BGR2HSV), (0, 0, 100), (1, 1, 255))
+        cv.imshow("floor_image", floor_image)
+
+        self.point_cloud_processor.center_point = (floor_image.shape[1] // 2, floor_image.shape[0] // 2)
+
+       
+        camera_point_cloud = self.point_cloud_processor.processPointCloudForCamera(total_point_cloud)
+        seen_points = self.point_cloud_processor.get_intermediate_points(camera_point_cloud)
+        print(seen_points)
+
+
+        utilities.draw_poses(final_image, seen_points, back_image=floor_image, xx_yy_format=True)
+        
+        
+        floor_colors = self.floor_color_extractor.get_floor_colors(final_image, robot_position)
+
+        #robot_tile = utilities.divideLists(robot_position, [self.tile_size, self.tile_size])
+        robot_tile = [int((x + 0.3) / self.tile_size - 0.5) for x in robot_position]
+        for floor_color in floor_colors:
+            tile = floor_color[0]
+            color = floor_color[1]
+            tile = utilities.multiplyLists(tile, [2, 2])
+            tile = utilities.sumLists(tile, [1, 1])
+            tile = utilities.substractLists(robot_tile, tile)
+            self.node_grid.get_node(tile).tile_type = color
+        
+        cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
+          
+        #self.lidar_grid.print_grid((600, 600))
+        #self.lidar_grid.print_bool((600, 600))          
+
     
-    def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None):
+    def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None, current_time=None):
         if robot_position is None or robot_rotation is None:
             return
         
@@ -51,41 +87,16 @@ class Mapper:
             self.load_point_cloud(in_bounds_point_cloud, robot_position)
             self.lidar_to_node_grid()
 
-        if point_cloud is not None and camera_images is not None:
-            floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
-            final_image = np.zeros(floor_image.shape, dtype=np.uint8)
-
-            ranged_floor_image = cv.inRange(cv.cvtColor(floor_image, cv.COLOR_BGR2HSV), (0, 0, 100), (1, 1, 255))
-            cv.imshow("floor_image", ranged_floor_image)
-
-            self.point_cloud_processor.center_point = (floor_image.shape[1] // 2, floor_image.shape[0] // 2)
-
+        if point_cloud is not None and camera_images is not None and current_time is not None:
             total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
-            camera_point_cloud = self.point_cloud_processor.processPointCloudForCamera(total_point_cloud)
-            seen_points = self.point_cloud_processor.get_intermediate_points(camera_point_cloud)
-
-            utilities.draw_poses(final_image, seen_points, back_image=floor_image, xx_yy_format=True)
-            
-
-            floor_colors = self.floor_color_extractor.get_floor_colors(final_image, robot_position)
-
-            robot_tile = utilities.divideLists(robot_position, [self.tile_size, self.tile_size])
-            robot_tile = [int(x) for x in robot_tile]
-            for floor_color in floor_colors:
-                tile = floor_color[0]
-                color = floor_color[1]
-                tile = utilities.multiplyLists(tile, [2, 2])
-                tile = utilities.sumLists(tile, [0, 0])
-                tile = utilities.substractLists(tile, robot_tile)
-                #self.node_grid.get_node(tile).tile_type = color
-
-            #cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
-
+            self.process_floor(current_time, camera_images, total_point_cloud, robot_position, robot_rotation)
             #self.lidar_grid.print_grid((600, 600))
             #self.lidar_grid.print_bool((600, 600))  
 
             self.node_grid.print_grid()
-            cv.waitKey(1)
+        
+        cv.waitKey(1) 
+            
     
     def get_node_grid(self):
         return copy.deepcopy(self.node_grid)

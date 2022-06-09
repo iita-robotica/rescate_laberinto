@@ -2,6 +2,7 @@ import math
 import cv2 as cv
 import numpy as np
 import os
+from functools import wraps
 
 script_dir = os.path.dirname(__file__)
 image_dir = os.path.join(script_dir, "images")
@@ -105,13 +106,18 @@ def draw_grid(image, square_size, offset = [0,0], color=255):
 def draw_poses(image, poses, color=255, back_image = None, xx_yy_format = False):
     if xx_yy_format:
         cropped_poses = [[], []]
-        in_bounds_x = (poses[0] < min(image.shape[0], back_image.shape[0]) - 1) * (poses[0] > 0)
-        in_bounds_y = (poses[1] < min(image.shape[1], back_image.shape[1]) - 1) * (poses[1] > 0)
+        if back_image is not None:
+            in_bounds_x = (poses[0] < min(image.shape[0], back_image.shape[0]) - 1) * (poses[0] > 0)
+            in_bounds_y = (poses[1] < min(image.shape[1], back_image.shape[1]) - 1) * (poses[1] > 0)
+        else:
+            in_bounds_x = (poses[0] < image.shape[0] - 1) * (poses[0] > 0)
+            in_bounds_y = (poses[1] < image.shape[1] - 1) * (poses[1] > 0)
+        
         cropped_poses[0] = poses[0][in_bounds_x * in_bounds_y]
         cropped_poses[1] = poses[1][in_bounds_x * in_bounds_y]
 
-        print("back_image_shape", back_image.shape)
-        print("image_shape", image.shape)
+        #print("back_image_shape", back_image.shape)
+        #print("image_shape", image.shape)
 
         
         if back_image is None:
@@ -236,3 +242,13 @@ def is_color_in_range(color, rng):
         if c < minimums[i] or c > maximums[i]:
             return False
     return True
+
+
+def do_every_n_frames(n, time_step):
+    def inner_function(func):
+        @wraps(func)
+        def wrapper(self, current_time, *args, **kwargs):
+            if (current_time // (time_step / 1000)) % n == 0:
+                return func(self, *args, **kwargs)
+        return wrapper
+    return inner_function

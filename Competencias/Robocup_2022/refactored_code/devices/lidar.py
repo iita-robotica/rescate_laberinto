@@ -103,6 +103,11 @@ class Lidar():
                                 pointCloud.append([coords[0] - 0, (coords[1] * -1) - 0])
 
                 actualHDetectionRot += self.hRadPerDetection
+        if len(outOfBounds) == 0:
+            outOfBounds = [[0, 0]]
+        
+        if len(pointCloud) == 0:
+            pointCloud = [[0, 0]]
 
         return pointCloud, outOfBounds
 

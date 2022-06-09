@@ -12,7 +12,7 @@ class FloorColorExtractor:
                     "normal":   
                         {   
                             "range":   ((0, 0, 100), (1, 1, 255)), 
-                            "threshold":0.1},
+                            "threshold":0.2},
 
                     "nothing":
                         {
@@ -22,8 +22,9 @@ class FloorColorExtractor:
                     "checkpoint":
                         {
                             "range":((100, 0, 70), (150, 100, 100)),
-                            "threshold":0.1},
+                            "threshold":0.2},
                     }
+        self.final_image = np.zeros((700, 700, 3), np.uint8)
         
     def get_square_color(self, image, square_points):
         square = image[square_points[0]:square_points[1], square_points[2]:square_points[3]]
@@ -62,10 +63,10 @@ class FloorColorExtractor:
         
         offsets = [int(o) for o in offsets]
 
-        final_image = floor_image.copy()
-        utilities.save_image(final_image, "floor_image.png")
+        
+        utilities.save_image(floor_image, "floor_image.png")
 
-        squares_grid = utilities.get_squares(final_image, self.tile_resolution, offsets)
+        squares_grid = utilities.get_squares(floor_image, self.tile_resolution, offsets)
 
         color_tiles = []
         for row in squares_grid:
@@ -77,8 +78,8 @@ class FloorColorExtractor:
                     color = (100, 100, 100)
                 else:
                     color = (0, 0, 0)
-
-                cv.rectangle(final_image, [square[2], square[0]], [square[3], square[1]], color, -1)
+                if color != (0, 0, 0):
+                    cv.rectangle(self.final_image, [square[2], square[0]], [square[3], square[1]], color, -1)
 
                 tile = [square[2], square[0]]
                 tile = utilities.substractLists(tile, (350 - offsets[0], 350 - offsets[1]))
@@ -88,9 +89,10 @@ class FloorColorExtractor:
                     print(tile, color_key)
                     color_tiles.append((tile, color_key))
 
-        utilities.draw_grid(final_image, self.tile_resolution, offset=grid_offsets)
-        cv.circle(final_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
-        cv.imshow("final_floor_image", final_image)        
+        drawing_image = self.final_image.copy()
+        utilities.draw_grid(drawing_image, self.tile_resolution, offset=grid_offsets)
+        cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
+        cv.imshow("final_floor_image", utilities.resize_image_to_fixed_size(drawing_image, (600, 600)))        
         return color_tiles
 
 

@@ -90,10 +90,10 @@ while robot.do_loop():
         lidar_point_cloud = robot.get_detection_point_cloud()
         images = robot.get_camera_images()
         utilities.save_image(images[1], "camera_image_center.png")
-        mapper.update(lidar_point_cloud, images, robot.position, robot.rotation)
+        mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
 
     else:
-        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation)
+        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
 
 
     # Updates state machine
@@ -125,7 +125,7 @@ while robot.do_loop():
         seq.startSequence()
         #seqMoveWheels(0.5, -0.5)
         #seqRotateToDegs(270)
-        
+        """
         seqMoveToRelativeTile(2, 0)
         seqMoveToRelativeTile(0, 6)
         seqMoveToRelativeTile(4, 0)
@@ -133,9 +133,9 @@ while robot.do_loop():
         seqMoveToRelativeTile(-2, 0)
         seqMoveToRelativeTile(0, -2)
         seqMoveToRelativeTile(-4, 0)
+        """
         
-        
-        #seqMoveWheels(-0.4, 0.4)
+        seqMoveWheels(-0.4, 0.4)
         #seqRotateToDegs(0)
         #seq.seqResetSequence()
         
