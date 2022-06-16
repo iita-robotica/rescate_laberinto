@@ -149,4 +149,5 @@ class PointCloudExtarctor:
             grid.append(row)
         factor = 10
         cv.imshow("bool_array_copy", cv.resize(bool_array_copy.astype(np.uint8), (point_cloud.shape[1] * factor, point_cloud.shape[0] * factor), interpolation=cv.INTER_NEAREST))
+        offsets = point_cloud.offsets
         return grid, [o // self.resolution for o in offsets]

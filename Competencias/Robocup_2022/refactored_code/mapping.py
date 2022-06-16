@@ -63,14 +63,22 @@ class Mapper:
         floor_colors = self.floor_color_extractor.get_floor_colors(final_image, robot_position)
 
         #robot_tile = utilities.divideLists(robot_position, [self.tile_size, self.tile_size])
-        robot_tile = [int((x + 0.3) / self.tile_size - 0.5) for x in robot_position]
+        robot_tile = [round((x + 0.03) / self.tile_size - 0.5) for x in robot_position]
+        robot_node = [t * 2 for t in robot_tile]
+        self.node_grid.get_node(robot_node).status = "occupied"
+
+        
         for floor_color in floor_colors:
             tile = floor_color[0]
             color = floor_color[1]
             tile = utilities.multiplyLists(tile, [2, 2])
+            #tile.reverse()
             tile = utilities.sumLists(tile, [1, 1])
-            tile = utilities.substractLists(robot_tile, tile)
+            tile = utilities.sumLists(tile, robot_node)
+            print(self.node_grid.get_node(tile).node_type)
             self.node_grid.get_node(tile).tile_type = color
+        
+        
         
         cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
           
