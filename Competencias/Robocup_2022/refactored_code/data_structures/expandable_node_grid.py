@@ -20,6 +20,9 @@ class Node():
         self.tile_type = tile_type if node_type == "tile" else "undefined"
         self.explored = explored
         self.is_robots_position = is_robots_position
+
+        self.mark1 = 0
+        self.mark2 = 0
         
         self.valid_node_type = ("tile", 
                                 "vortex",
@@ -40,6 +43,9 @@ class Node():
 
     # Returns a visual representation of the node in ASCII 
     def get_string(self):
+        if self.mark1:
+            return "\033[1;36;36m██" + "\033[0m"
+
         if self.status == "undefined":
             if not(self.node_type == "tile" and self.tile_type != "undefined"):    
                 return "??"
@@ -177,11 +183,21 @@ class Grid:
         if x < 0:
             self.add_begining_column(-x)
     
-    def get_node(self, point):
-        self.expand_grid_to_point(point)
+    def get_node(self, point, expand=True, phantom=False):
+        if expand:
+            self.expand_grid_to_point(point)
+        elif not self.is_in_grid(point):
+            if phantom:
+                return Node(self.get_node_type(point))
+            return None
         x, y = point
         x, y = x + self.offsets[0], y + self.offsets[1]
         return self.grid[y, x]
+    
+    def is_in_grid(self, point):
+        x, y = point
+        x, y = x + self.offsets[0], y + self.offsets[1]
+        return 0 <= x < self.grid.shape[1] and 0 <= y < self.grid.shape[0]
 
     def fill_verticies_around_wall(self, wall_node):
         assert self.get_node(wall_node).node_type == "wall"

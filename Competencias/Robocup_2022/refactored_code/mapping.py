@@ -23,6 +23,8 @@ class Mapper:
         # Data extractors
         self.point_cloud_extractor = data_extractor.PointCloudExtarctor(6, 5)
         self.floor_color_extractor = data_extractor.FloorColorExtractor(50)
+
+        self.robot_node = None
     
     def register_start(self):
         # TODO
@@ -65,7 +67,7 @@ class Mapper:
         #robot_tile = utilities.divideLists(robot_position, [self.tile_size, self.tile_size])
         robot_tile = [round((x + 0.03) / self.tile_size - 0.5) for x in robot_position]
         robot_node = [t * 2 for t in robot_tile]
-        self.node_grid.get_node(robot_node).status = "occupied"
+       
 
         
         for floor_color in floor_colors:
@@ -90,6 +92,27 @@ class Mapper:
         if robot_position is None or robot_rotation is None:
             return
         
+        robot_tile = [round((x + 0.03) / self.tile_size - 0.5) for x in robot_position]
+        robot_node = [t * 2 for t in robot_tile]
+
+        
+
+        robot_tile_center = [(rt + 0) * self.tile_size for rt in robot_tile]
+        dist = utilities.getDistance([rp - tc for rp, tc in (robot_position, robot_tile_center)])
+        print("distance to center", dist)
+        if abs(dist) < 0.01 or self.robot_node is None:
+            self.robot_node = robot_node
+            for row in self.node_grid.grid:
+                for node in row:
+                    node.is_robots_position = False
+
+            self.node_grid.get_node(self.robot_node).is_robots_position = True
+            self.node_grid.get_node(robot_node).mark1 = True
+
+        for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+                adj_node = utilities.sumLists(self.robot_node, adj)
+                self.node_grid.get_node(adj_node).explored = True
+
         if point_cloud is not None:
             in_bounds_point_cloud, out_of_bounds_point_cloud = point_cloud
             self.load_point_cloud(in_bounds_point_cloud, robot_position)

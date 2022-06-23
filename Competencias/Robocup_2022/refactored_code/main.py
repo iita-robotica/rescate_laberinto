@@ -6,6 +6,8 @@ import copy
 from data_processing import fixture_detection
 import utilities, state_machines, robot, mapping
 
+from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
+
 # World constants
 TIME_STEP = 32
 TILE_SIZE = 0.06
@@ -27,6 +29,8 @@ seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
 
 # Mapper
 mapper = mapping.Mapper(TILE_SIZE)
+
+closest_position_agent = ClosestPositionAgent()
 
 
 # Variables
@@ -89,7 +93,7 @@ while robot.do_loop():
     if do_mapping:
         lidar_point_cloud = robot.get_detection_point_cloud()
         images = robot.get_camera_images()
-        utilities.save_image(images[1], "camera_image_center.png")
+        #utilities.save_image(images[1], "camera_image_center.png")
         mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
 
     else:
@@ -135,13 +139,16 @@ while robot.do_loop():
         seqMoveToRelativeTile(-4, 0)
         """
         
-        seqMoveWheels(-0.4, 0.4)
+        #seqMoveWheels(-0.4, 0.4)
         #seqRotateToDegs(0)
         #seq.seqResetSequence()
         
         #data_extractor.get_floor_colors(images, lidar_point_cloud, robot.rotation, robot.position)
 
         grid = mapper.get_node_grid()
+        move = closest_position_agent.get_action(grid)
+        seqMoveToRelativeTile(move[0], move[1])
+        seq.seqResetSequence()
         # mejor_moviemiento = agent.get_action(grid)
         # coordenadas = getCoordenadas(mejor_movimiento)
         # robot.moveToCoords(coordenadas)
