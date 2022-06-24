@@ -137,7 +137,7 @@ while robot.do_loop():
         """
         
         #seqMoveWheels(-0.4, 0.4)
-        seqRotateToDegs(270)
+        seqRotateToDegs(90)
         seqMoveWheels(0, 0)
         #seq.seqResetSequence()
         
@@ -153,9 +153,9 @@ while robot.do_loop():
         for image in images:
             rot_img = np.rot90(image, -1)
 
-            victims = fixture_detection.findVictims(rot_img)
+            victims = fixture_detection.find_victims(rot_img)
             for vic in victims:
-                print("victim: ", fixture_detection.classifyFixture(vic))
+                print("victim: ", fixture_detection.classify_fixture(vic))
         
         print("rotation:", robot.rotation)
 
