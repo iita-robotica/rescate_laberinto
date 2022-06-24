@@ -29,12 +29,12 @@ def sumImages(images):
 
 def filterVictims(vicitms):
     finalVictims = []
-    for vic in zip(vicitms):
-        if 25 < vic["position"][0] < 60:
+    for vic in vicitms:
+        if 0 < vic["position"][0] < 60:
             finalVictims.append(vic)
     return finalVictims
 
-def findVicitims(image):
+def findVictims(image):
     """
     Finds victims in the image.
     Returns a list of dictionaries containing vicitims positions and images.
@@ -62,20 +62,6 @@ def findVicitims(image):
         x, y, w, h = cv.boundingRect(c)
         finalVicitms.append({"image":image[y:y + h, x:x + w], "position":(x, y)})
     return filterVictims(finalVicitms)
-
-def isClose(height):
-    return height > 45
-
-def isInCenter(pos):
-    return 15 < pos[1] < 70
-
-def getCloseVictims(vicitms):
-    finalVictims = []
-    for vic in vicitms:
-        height = vic["image"].shape[0]
-        if isClose(height) and isInCenter(vic["position"]):
-            finalVictims.append(vic)
-    return finalVictims
 
 def cropWhite(binaryImg):
     white = 255
@@ -164,7 +150,8 @@ def isFlammable(redPoints, whitePoints):
 def isOrganicPeroxide(redPoints, yellowPoints):
     return redPoints and yellowPoints
 
-def classifyFixture(img):
+def classifyFixture(vic):
+    img = vic["image"]
     possibleFixtureLetters = ["P", "O", "F", "C", "S", "H", "U"]
     letter = random.choice(possibleFixtureLetters)
     image = cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
@@ -189,7 +176,7 @@ def classifyFixture(img):
     
     if isVictim(colorPointCounts["black"], colorPointCounts["white"]):
         cv.imshow("black filter:", colorImgs["black"])
-        letter = classifyVictim(image)
+        letter = classifyVictim(vic)
         print("Victim:", letter)
         
     
