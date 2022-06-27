@@ -31,7 +31,6 @@ def sum_images(images):
 def filter_victims(victims):
     final_victims = []
     for vic in victims:
-        print("victim:", vic["position"], vic["image"].shape)
         if vic["image"].shape[1] > 15:
             final_victims.append(vic)
     return final_victims
@@ -167,7 +166,6 @@ def classify_fixture(vic):
 
     color_point_counts = {}
     for key, img in color_images.items():
-        print("image shape:", img.shape)
         all_points = np.where(img == 255)
         all_points = all_points[0]
         count = len(all_points)
