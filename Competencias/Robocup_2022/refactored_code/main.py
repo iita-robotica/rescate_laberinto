@@ -89,6 +89,7 @@ while robot.do_loop():
     # Updates robot position and rotation, sensor positions, etc.
     robot.update()
 
+    """
     # Loads data to mapping
     if do_mapping:
         lidar_point_cloud = robot.get_detection_point_cloud()
@@ -98,7 +99,7 @@ while robot.do_loop():
 
     else:
         mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
-
+    """
 
     # Updates state machine
     if stateManager.checkState("init"):
@@ -153,6 +154,14 @@ while robot.do_loop():
         # coordenadas = getCoordenadas(mejor_movimiento)
         # robot.moveToCoords(coordenadas)
         # repetir
+
+        images = robot.get_camera_images()
+        for image in images:
+            rot_img = np.rot90(image, -1)
+
+            victims = fixture_detection.find_victims(rot_img)
+            for vic in victims:
+                print("victim: ", fixture_detection.classify_fixture(vic))
         
         print("rotation:", robot.rotation)
 
