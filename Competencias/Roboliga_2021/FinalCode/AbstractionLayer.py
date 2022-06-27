@@ -184,11 +184,19 @@ class AbstractionLayer():
         if self.doWallMapping:
             print("Doing wall mapping")
 
-            if self.timeWithoutMoving > 10:
+            if self.timeWithoutMoving > 4:
                 self.analyst.stoppedMoving = True
+                print("front blocked by time")
             else:
                 self.analyst.stoppedMoving = False
-
+            
+            if self.robot.frontIsBlocked():
+                self.analyst.stoppedMoving = True
+                print("front blocked by sensor")
+            
+            if self.robot.pointIsClose:
+                self.analyst.stoppedMoving = True
+                print("front blocked by lidar")
 
             pointCloud = self.robot.getDetectionPointCloud()
             
@@ -209,6 +217,8 @@ class AbstractionLayer():
             self.analyst.loadColorDetection(trap, "hole")
         self.isTrap = len(trapsAtSides) or self.actualTileType == "hole"
         self.analyst.update(self.position, self.rotation)
+
+        self.robot.printFrontDistance()
 
         
 

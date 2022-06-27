@@ -102,7 +102,7 @@ class Gps:
 
 # Returns a point cloud of the detctions it makes
 class Lidar():
-    def __init__(self, device, timeStep):
+    def __init__(self, device, timeStep, pointIsCloseThresh, pointIsCloseRange):
         self.device = device
         self.device.enable(timeStep)
         self.x = 0
@@ -117,9 +117,14 @@ class Lidar():
         self.vRadPerDetection = self.verticalFov / self.verticalRes
         self.detectRotOffset = 0 #math.pi * 0.75
         self.maxDetectionDistance = 0.06 * 10
+        self.pointIsClose = False
+        self.pointIsCloseThresh = pointIsCloseThresh
+        self.pointIsCloseRange = pointIsCloseRange
 
     # Does a detection pass and returns a point cloud with the results
     def getPointCloud(self, layers=range(3)):
+        self.pointIsClose = False
+        
         #(degsToRads(359 - radsToDegs(self.rotation)))
         #rangeImage = self.device.getRangeImageArray()
         #print("Lidar vFov: ", self.verticalFov/ self.verticalRes)
@@ -134,6 +139,10 @@ class Lidar():
                     if item != float("inf") and item != float("inf") * -1 and item != 0:
                         x = item * math.cos(actualVDetectionRot)
                         x += 0.06 * 0.2
+
+                        if degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
+                            self.pointIsClose = True
+
                         coords = getCoordsFromRads(actualHDetectionRot, x)
                         pointCloud.append([coords[0] - 0, (coords[1] * -1) - 0])
                 actualHDetectionRot += self.hRadPerDetection
@@ -332,6 +341,23 @@ class DistanceSensor:
         sensorRotation = robotRotation + self.angle
         sensorPosition = getCoordsFromDegs(sensorRotation, self.distance)
         self.position = sumLists(sensorPosition, robotPosition)
+
+class FrontDistanceSensor():
+    def __init__(self, sensor, threshold, timeStep, offset=0):
+        self.sensor = sensor
+        self.timeStep = timeStep
+        self.sensor.enable(self.timeStep)
+        self.threshold = threshold
+        self.offset = offset
+    
+    def getValue(self):
+        return self.sensor.getValue() - self.offset
+    
+    def isClose(self):
+        return self.getValue() < self.threshold
+    
+
+
         
 # Abstraction layer for robot
 class RobotLayer:
@@ -351,17 +377,44 @@ class RobotLayer:
         self.delayStart = self.robot.getTime()
         self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.timeStep)
         self.gps = Gps(self.robot.getDevice("gps"), self.timeStep)
-        self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep)
+        self.lidar = Lidar(self.robot.getDevice("lidar"), self.timeStep, 0.03, (0, 360))
         self.leftWheel = Wheel(self.robot.getDevice("wheel1 motor"), self.maxWheelSpeed)
         self.rightWheel = Wheel(self.robot.getDevice("wheel2 motor"), self.maxWheelSpeed) 
         self.colorSensor = ColourSensor(self.robot.getDevice("colour_sensor"), 0.037, 32)
         self.leftGroundSensor = DistanceSensor(0.04, 0.0523, 45, self.robot.getDevice("distance sensor2"), self.timeStep)
         self.rightGroundSensor = DistanceSensor(0.04, 0.0523, -45, self.robot.getDevice("distance sensor1"), self.timeStep)
+        
+        
+        self.frontRightSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor5"), 0.001, self.timeStep)
+        self.middleRightSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor4"), 0.02, self.timeStep) #, 0.0195)
+        self.sideRightSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor3"), 0.03, self.timeStep) #, 0.086)
+
+        self.frontLeftSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor6"), 0.001, self.timeStep)
+        self.middleLeftSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor7"), 0.02, self.timeStep) #, 0.0195)
+        self.sideLeftSensor = FrontDistanceSensor(self.robot.getDevice("distance sensor8"), 0.03, self.timeStep) #, 0.086)
+
+
+
         self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.timeStep)
         self.rightCamera = Camera(self.robot.getDevice("camera2"), self.timeStep)
         self.leftCamera = Camera(self.robot.getDevice("camera1"), self.timeStep)
         self.victimClasifier = VictimClassifier()
 
+        self.pointIsClose = False
+
+    def printFrontDistance(self):
+        print("Front distance: ", self.frontRightSensor.getValue(), self.frontLeftSensor.getValue())
+        #print("Middle distance: ", self.middleRightSensor.getValue() - self.frontRightSensor.getValue(), self.middleLeftSensor.getValue() - self.frontRightSensor.getValue())
+        print("Middle distance: ", self.middleRightSensor.getValue(), self.middleLeftSensor.getValue())
+        print("Side distance: ", self.sideRightSensor.getValue(), self.sideLeftSensor.getValue())
+    
+    def frontIsBlocked(self):
+        for sensor in (self.frontRightSensor, self.frontLeftSensor, self.middleLeftSensor, self.middleRightSensor, self.sideLeftSensor, self.sideRightSensor):
+            if sensor.isClose():
+                return True
+        else:
+            return False
+    
     def getVictims(self):
         poses = []
         imgs = []
@@ -545,6 +598,8 @@ class RobotLayer:
     def getDetectionPointCloud(self):
 
         rawPointCloud = self.lidar.getPointCloud(layers=(2,3))
+        self.pointIsClose = self.lidar.pointIsClose
+
         processedPointCloud = []
         for point in rawPointCloud:
             procPoint = [point[0] + self.globalPosition[0], point[1] + self.globalPosition[1]]
