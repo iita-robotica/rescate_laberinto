@@ -85,16 +85,17 @@ while robot.do_loop():
     # Updates robot position and rotation, sensor positions, etc.
     robot.update()
 
+    """
     # Loads data to mapping
     if do_mapping:
         lidar_point_cloud = robot.get_detection_point_cloud()
         images = robot.get_camera_images()
-        utilities.save_image(images[1], "camera_image_center.png")
+        #utilities.save_image(images[1], "camera_image_center.png")
         mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
 
     else:
         mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
-
+    """
 
     # Updates state machine
     if stateManager.checkState("init"):
@@ -135,17 +136,26 @@ while robot.do_loop():
         seqMoveToRelativeTile(-4, 0)
         """
         
-        seqMoveWheels(-0.4, 0.4)
-        #seqRotateToDegs(0)
+        #seqMoveWheels(-0.4, 0.4)
+        seqRotateToDegs(90)
+        seqMoveWheels(0, 0)
         #seq.seqResetSequence()
         
         #data_extractor.get_floor_colors(images, lidar_point_cloud, robot.rotation, robot.position)
 
-        grid = mapper.get_node_grid()
+        #grid = mapper.get_node_grid()
         # mejor_moviemiento = agent.get_action(grid)
         # coordenadas = getCoordenadas(mejor_movimiento)
         # robot.moveToCoords(coordenadas)
         # repetir
+
+        images = robot.get_camera_images()
+        for image in images:
+            rot_img = np.rot90(image, -1)
+
+            victims = fixture_detection.find_victims(rot_img)
+            for vic in victims:
+                print("victim: ", fixture_detection.classify_fixture(vic))
         
         print("rotation:", robot.rotation)
 
