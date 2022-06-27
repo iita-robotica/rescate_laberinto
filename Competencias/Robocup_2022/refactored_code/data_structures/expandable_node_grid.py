@@ -53,6 +53,9 @@ class Node():
         if self.status == "occupied":
             return "\033[1;30;40m██" + "\033[0m"
 
+        elif self.is_robots_position:
+            return "\033[1;32;47m██"+ "\033[0m"
+
         elif self.node_type == "wall":
             """
             if self.status == "not_occupied":
