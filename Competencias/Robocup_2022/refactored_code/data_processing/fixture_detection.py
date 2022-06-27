@@ -16,7 +16,7 @@ class Filter:
 red_filter = Filter(lower_hsv=(73, 157, 127), upper_hsv=(179, 255, 255))
 yellow_filter = Filter(lower_hsv=(0, 157, 82), upper_hsv=(40, 255, 255))
 white_filter = Filter(lower_hsv=(0, 0, 200), upper_hsv=(0, 255, 255))
-black_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(0, 255, 10))
+black_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 10))
 vicitim_letter_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
 
 
@@ -25,12 +25,14 @@ def sum_images(images):
     for index, image in enumerate(images):
         final_img += image
         #cv.imshow(str(index), image)
+    final_img[final_img > 255] = 255
     return final_img
 
-def filter_vicitims(vicitms):
+def filter_victims(victims):
     final_victims = []
-    for vic in vicitms:
-        if vic["position"][0] < 100:
+    for vic in victims:
+        print("victim:", vic["position"], vic["image"].shape)
+        if vic["image"].shape[1] > 15:
             final_victims.append(vic)
     return final_victims
 
@@ -45,7 +47,7 @@ def find_victims(image):
                     black_filter.filter(image)]
 
     binary_image = sum_images(binary_images)
-    print(binary_image)
+    #print(binary_image)
     cv.imshow("binaryImage", binary_image)
     
     # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
@@ -62,7 +64,7 @@ def find_victims(image):
     for c in contours:
         x, y, w, h = cv.boundingRect(c)
         final_victims.append({"image":image[y:y + h, x:x + w], "position":(x, y)})
-    return filter_vicitims(final_victims)
+    return filter_victims(final_victims)
 
 def crop_white(binaryImg):
     white = 255
@@ -136,6 +138,7 @@ def classify_victim(victim):
     #print(finalLetter)
     return final_letter
 
+
 def is_poison(black_points, white_points):
     return black_points < 600 and white_points > 700 and white_points < 4000
 
@@ -150,6 +153,7 @@ def is_flammable(red_points, white_points):
 
 def is_organic_peroxide(red_points, yellow_points):
     return red_points and yellow_points
+
 
 def classify_fixture(vic):
     possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
@@ -170,6 +174,7 @@ def classify_fixture(vic):
         color_point_counts[key] = count
     
     print(color_point_counts)
+
     if is_poison(color_point_counts["black"], color_point_counts["white"]):
         print("Poison!")
         letter = "P"
