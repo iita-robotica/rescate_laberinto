@@ -128,7 +128,7 @@ while robot.do_loop():
         # Calculates offsets in the robot position, in case it doesn't start perfectly centerd
         seq.simpleEvent(calibratePositionOffsets)
         # Informs the mapping components of the starting position of the robot
-        seq.simpleEvent(mapper.register_start)
+        seq.simpleEvent(mapper.register_start, robot.position)
         # Calibrates the rotation of the robot using the gps
         seqCalibrateRobotRotation()
         # Starts mapping walls

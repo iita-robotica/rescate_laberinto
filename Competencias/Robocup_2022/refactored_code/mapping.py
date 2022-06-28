@@ -26,9 +26,13 @@ class Mapper:
 
         self.robot_node = None
     
-    def register_start(self):
-        # TODO
-        pass
+    def register_start(self, robot_position):
+        robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
+        robot_node = [int(t * 2) for t in robot_vortex]
+        for adj in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+            adj = utilities.sumLists(robot_node, adj)
+            self.node_grid.get_node(adj).tile_type = "start"
+        self.node_grid.get_node(robot_node).is_start = True
     
     def load_point_cloud(self, point_cloud, robot_position):
         point_cloud = self.point_cloud_processor.processPointCloud(point_cloud, robot_position)

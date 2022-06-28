@@ -15,8 +15,9 @@ class Filter:
 
 #red_filter = Filter(lower_hsv=(73, 157, 127), upper_hsv=(179, 255, 255))
 red_filter = Filter(lower_hsv=(160, 170, 127), upper_hsv=(170, 255, 255))
-yellow_filter = Filter(lower_hsv=(0, 157, 82), upper_hsv=(40, 255, 255))
-white_filter = Filter(lower_hsv=(0, 0, 200), upper_hsv=(0, 255, 255))
+#yellow_filter = Filter(lower_hsv=(0, 157, 82), upper_hsv=(40, 255, 255))
+yellow_filter = Filter(lower_hsv=(25, 157, 82), upper_hsv=(30, 255, 255))
+white_filter = Filter(lower_hsv=(0, 0, 200), upper_hsv=(0, 0, 255))
 black_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 10))
 vicitim_letter_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
 

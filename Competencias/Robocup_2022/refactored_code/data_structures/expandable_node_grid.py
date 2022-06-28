@@ -26,6 +26,7 @@ class Node:
         self.explored = explored
         self.is_robots_position = is_robots_position
         self.fixture = Fixture()
+        self.is_start = False
 
         self.mark1 = 0
         self.mark2 = 0

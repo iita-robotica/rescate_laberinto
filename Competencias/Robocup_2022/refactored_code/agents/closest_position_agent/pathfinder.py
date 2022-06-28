@@ -22,10 +22,10 @@ class aStarNode():
 def isTraversable(grid, index):
     node = grid.get_node(index, expand=False, phantom=True)
     if node.node_type == "tile":
-        raise ValueError("Invalid instance")
+        raise ValueError("Invalid instance: expected vortex, got tile")
         return node.tileType != "hole"
     if node.node_type == "wall":
-        raise ValueError("Invalid instance")
+        raise ValueError("Invalid instance: expected vortex, got wall")
         return not node.occupied
     if node.node_type == "vortex":
         if node.status == "occupied":
