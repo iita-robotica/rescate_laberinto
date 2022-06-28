@@ -49,7 +49,7 @@ class Mapper:
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
 
         ranged_floor_image = cv.inRange(cv.cvtColor(floor_image, cv.COLOR_BGR2HSV), (0, 0, 100), (1, 1, 255))
-        cv.imshow("floor_image", floor_image)
+        #cv.imshow("floor_image", floor_image)
 
         self.point_cloud_processor.center_point = (floor_image.shape[1] // 2, floor_image.shape[0] // 2)
 
@@ -82,35 +82,35 @@ class Mapper:
         
         
         
-        cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
+        #cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
           
         #self.lidar_grid.print_grid((600, 600))
         #self.lidar_grid.print_bool((600, 600))          
 
-    
+    def set_robot_node(self, robot_position):
+        robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
+        robot_node = [int(t * 2) for t in robot_vortex]
+        self.robot_node = robot_node
+        for row in self.node_grid.grid:
+            for node in row:
+                node.is_robots_position = False
+
+        self.node_grid.get_node(self.robot_node).is_robots_position = True
+
+
     def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None, current_time=None):
         if robot_position is None or robot_rotation is None:
             return
         
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
         robot_node = [int(t * 2) for t in robot_vortex]
-        robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
+        #robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
 
         print("robot_vortex:", robot_vortex)
-        print("robot_vortex_center:", robot_vortex_center)
 
-        dist = utilities.getDistance([rp - tc for rp, tc in zip(robot_position, robot_vortex_center)])
-        print("distance to center", dist)
-        if abs(dist) < 0.02 or self.robot_node is None:
-            self.robot_node = robot_node
-            for row in self.node_grid.grid:
-                for node in row:
-                    node.is_robots_position = False
-
-            self.node_grid.get_node(self.robot_node).is_robots_position = True
-            self.node_grid.get_node(self.robot_node).mark1 = True
+        if self.robot_node is None:
+            self.set_robot_node(robot_position)
         
-
         for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
                 adj_node = utilities.sumLists(robot_node, adj)
                 self.node_grid.get_node(adj_node).explored = True
@@ -126,7 +126,7 @@ class Mapper:
             #self.lidar_grid.print_grid((600, 600))
             #self.lidar_grid.print_bool((600, 600))  
 
-            self.node_grid.print_grid()
+            #self.node_grid.print_grid()
         
         cv.waitKey(1) 
             

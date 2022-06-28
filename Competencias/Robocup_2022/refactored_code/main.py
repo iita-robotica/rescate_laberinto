@@ -79,17 +79,16 @@ def seqMoveToRelativeCoords(x, y):
     global initial_position
     if seq.simpleEvent():
         initial_position = [round(p / TILE_SIZE) * TILE_SIZE for p in robot.position]
-    seqMoveToCoords((initial_position[0] + x, initial_position[1] + y))
+    return seqMoveToCoords((initial_position[0] + x, initial_position[1] + y))
 
 def seqMoveToRelativeTile(x, y):
-    seqMoveToRelativeCoords(x * TILE_SIZE, y * TILE_SIZE)
+    return seqMoveToRelativeCoords(x * TILE_SIZE, y * TILE_SIZE)
 
 # Each timeStep
 while robot.do_loop():
     # Updates robot position and rotation, sensor positions, etc.
     robot.update()
-
-    """
+    
     # Loads data to mapping
     if do_mapping:
         lidar_point_cloud = robot.get_detection_point_cloud()
@@ -99,7 +98,15 @@ while robot.do_loop():
 
     else:
         mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
-    """
+    
+
+    images = robot.get_camera_images()
+    for image in images:
+        rot_img = np.rot90(image, -1)
+
+        victims = fixture_detection.find_victims(rot_img)
+        for vic in victims:
+            print("victim: ", fixture_detection.classify_fixture(vic))
 
     # Updates state machine
     if stateManager.checkState("init"):
@@ -128,42 +135,16 @@ while robot.do_loop():
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
         seq.startSequence()
-        #seqMoveWheels(0.5, -0.5)
-        #seqRotateToDegs(270)
-        """
-        seqMoveToRelativeTile(2, 0)
-        seqMoveToRelativeTile(0, 6)
-        seqMoveToRelativeTile(4, 0)
-        seqMoveToRelativeTile(0, -4)
-        seqMoveToRelativeTile(-2, 0)
-        seqMoveToRelativeTile(0, -2)
-        seqMoveToRelativeTile(-4, 0)
-        """
-        
-        #seqMoveWheels(-0.4, 0.4)
-        #seqRotateToDegs(0)
-        #seq.seqResetSequence()
-        
-        #data_extractor.get_floor_colors(images, lidar_point_cloud, robot.rotation, robot.position)
 
         grid = mapper.get_node_grid()
         move = closest_position_agent.get_action(grid)
-        seqMoveToRelativeTile(move[0], move[1])
+        print("move: ", move)
+        if seqMoveToRelativeTile(move[0], move[1]):
+            mapper.set_robot_node(robot.position)
         seq.seqResetSequence()
-        # mejor_moviemiento = agent.get_action(grid)
-        # coordenadas = getCoordenadas(mejor_movimiento)
-        # robot.moveToCoords(coordenadas)
-        # repetir
 
-        images = robot.get_camera_images()
-        for image in images:
-            rot_img = np.rot90(image, -1)
-
-            victims = fixture_detection.find_victims(rot_img)
-            for vic in victims:
-                print("victim: ", fixture_detection.classify_fixture(vic))
-        
         print("rotation:", robot.rotation)
+        print("position:", robot.position)
 
     # Reports a victim
     elif stateManager.checkState("report_victim"):
