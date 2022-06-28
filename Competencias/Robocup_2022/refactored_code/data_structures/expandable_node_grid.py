@@ -12,14 +12,20 @@ Requirements:
 
 undefined = no conozco el tipo de casilla
 """
+class Fixture:
+    def __init__(self, exists=False, reported=False, type="undefined") -> None:
+        self.exists = exists
+        self.reported = reported
+        self.type = type
 
-class Node():
+class Node:
     def __init__(self, node_type:str, status:str="undefined", tile_type:str="undefined", curved:int=0, explored:bool=False, is_robots_position:bool=False):
         self.node_type = node_type
         self.status = status
         self.tile_type = tile_type if node_type == "tile" else "undefined"
         self.explored = explored
         self.is_robots_position = is_robots_position
+        self.fixture = Fixture()
 
         self.mark1 = 0
         self.mark2 = 0
