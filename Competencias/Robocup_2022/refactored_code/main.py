@@ -105,12 +105,19 @@ while robot.do_loop():
         rot_img = np.rot90(image, -1)
 
         victims = fixture_detection.find_victims(rot_img)
-        for vic in victims:
-            print("victim: ", fixture_detection.classify_fixture(vic))
+        if len(victims) > 0:
+            mapper.load_fixture(fixture_detection.classify_fixture(victims[0]))
+            break
 
+    
     # Updates state machine
     if stateManager.checkState("init"):
         pass
+
+    if mapper.get_fixture().exists and not mapper.get_fixture().reported:
+        if not stateManager.checkState("report_victim"):
+            seq.resetSequence()
+            stateManager.changeState("report_victim")
 
     print("state: ", stateManager.state)
 
@@ -130,7 +137,10 @@ while robot.do_loop():
         # Changes state and resets the sequence
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
-    
+
+    elif stateManager.checkState("stop"):
+        seq.startSequence()
+        seqMoveWheels(0, 0)
 
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
@@ -149,17 +159,16 @@ while robot.do_loop():
     # Reports a victim
     elif stateManager.checkState("report_victim"):
         seq.startSequence()
-        victims = mapper.get_node_grid().get_node(robot.position[0], robot.position[1]).victims
-        # If there is an unreported vicitm in the tile, reports the vicitim
-        for victim in victims:
-            if victim["reported"] == False:
-                seqDelaySec(3)
-                if seq.simpleEvent():
-                    robot.comunicator.sendVictim(robot.position, victim["letter"])
-                    victim["reported"] = True
-                if seq.simpleEvent():
-                    break
+        seqMoveWheels(0, 0)
+        if seq.simpleEvent():
+            print("STOPPED")
+        seqDelaySec(3)
+        if seq.simpleEvent():
+            fixture = mapper.get_fixture()
+            robot.comunicator.sendVictim(robot.position, fixture.type)
+            fixture.reported = True
         seq.simpleEvent(stateManager.changeState, "explore")
+        seq.seqResetSequence()
     
     elif stateManager.checkState("teleported"):
         seq.startSequence()

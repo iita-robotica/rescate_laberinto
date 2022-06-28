@@ -13,7 +13,8 @@ class Filter:
         #imgResult = cv.bitwise_and(img, img, mask=mask)
         return mask
 
-red_filter = Filter(lower_hsv=(73, 157, 127), upper_hsv=(179, 255, 255))
+#red_filter = Filter(lower_hsv=(73, 157, 127), upper_hsv=(179, 255, 255))
+red_filter = Filter(lower_hsv=(160, 170, 127), upper_hsv=(170, 255, 255))
 yellow_filter = Filter(lower_hsv=(0, 157, 82), upper_hsv=(40, 255, 255))
 white_filter = Filter(lower_hsv=(0, 0, 200), upper_hsv=(0, 255, 255))
 black_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 10))
@@ -31,7 +32,8 @@ def sum_images(images):
 def filter_victims(victims):
     final_victims = []
     for vic in victims:
-        if vic["image"].shape[1] > 15:
+        print("victim:", vic["position"], vic["image"].shape)
+        if vic["image"].shape[0] > 22 and vic["image"].shape[1] > 15:
             final_victims.append(vic)
     return final_victims
 

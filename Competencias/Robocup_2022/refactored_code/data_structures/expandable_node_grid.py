@@ -13,7 +13,7 @@ Requirements:
 undefined = no conozco el tipo de casilla
 """
 class Fixture:
-    def __init__(self, exists=False, reported=False, type="undefined") -> None:
+    def __init__(self, exists=False, reported=False, type="N") -> None:
         self.exists = exists
         self.reported = reported
         self.type = type

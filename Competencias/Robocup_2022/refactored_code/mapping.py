@@ -86,6 +86,13 @@ class Mapper:
           
         #self.lidar_grid.print_grid((600, 600))
         #self.lidar_grid.print_bool((600, 600))          
+    def load_fixture(self, letter):
+        fixture = self.node_grid.get_node(self.robot_node).fixture
+        fixture.exists = True
+        fixture.type = letter
+    
+    def get_fixture(self):
+        return self.node_grid.get_node(self.robot_node).fixture
 
     def set_robot_node(self, robot_position):
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
