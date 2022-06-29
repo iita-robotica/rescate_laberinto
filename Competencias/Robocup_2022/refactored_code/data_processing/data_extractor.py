@@ -78,8 +78,8 @@ class FloorColorExtractor:
                     color = (100, 100, 100)
                 else:
                     color = (0, 0, 0)
-                if color != (0, 0, 0):
-                    cv.rectangle(self.final_image, [square[2], square[0]], [square[3], square[1]], color, -1)
+                #if color != (0, 0, 0):
+                #cv.rectangle(self.final_image, [square[2], square[0]], [square[3], square[1]], color, -1)
 
                 tile = [square[2], square[0]]
                 tile = utilities.substractLists(tile, (350 - offsets[0], 350 - offsets[1]))
@@ -89,7 +89,7 @@ class FloorColorExtractor:
                     print(tile, color_key)
                     color_tiles.append((tile, color_key))
 
-        drawing_image = self.final_image.copy()
+        drawing_image = floor_image.copy() #self.final_image.copy()
         utilities.draw_grid(drawing_image, self.tile_resolution, offset=grid_offsets)
         cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
         cv.imshow("final_floor_image", utilities.resize_image_to_fixed_size(drawing_image, (600, 600)))        
