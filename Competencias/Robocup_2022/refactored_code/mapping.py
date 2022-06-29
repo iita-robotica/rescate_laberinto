@@ -5,6 +5,7 @@ import cv2 as cv
 import utilities
 from data_processing import camera_processor, data_extractor, point_cloud_processor
 from data_structures import lidar_persistent_grid, expandable_node_grid
+from algorithms.expandable_node_grid.bfs import bfs
 
 class Mapper:
     def __init__(self, tile_size):

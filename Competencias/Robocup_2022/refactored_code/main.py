@@ -5,8 +5,11 @@ import copy
 
 from data_processing import fixture_detection
 import utilities, state_machines, robot, mapping
+from algorithms.expandable_node_grid.bfs import bfs
 
 from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
+
+
 
 # World constants
 TIME_STEP = 32
@@ -84,6 +87,12 @@ def seqMoveToRelativeCoords(x, y):
 def seqMoveToRelativeTile(x, y):
     return seqMoveToRelativeCoords(x * TILE_SIZE, y * TILE_SIZE)
 
+def is_complete(grid, robot_node):
+        possible_nodes = bfs(grid, robot_node, 500)
+        if len(possible_nodes) == 0:
+            return True
+        return False
+
 # Each timeStep
 while robot.do_loop():
     # Updates robot position and rotation, sensor positions, etc.
@@ -108,8 +117,11 @@ while robot.do_loop():
         if len(victims) > 0:
             mapper.load_fixture(fixture_detection.classify_fixture(victims[0]))
             break
-
     
+    if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
+        seq.resetSequence()
+        stateManager.changeState("end")
+
     # Updates state machine
     if stateManager.checkState("init"):
         pass
@@ -178,3 +190,6 @@ while robot.do_loop():
         # Changes state and resets the sequence
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
+    
+    elif stateManager.checkState("end"):
+        robot.comunicator.sendEndOfPlay()

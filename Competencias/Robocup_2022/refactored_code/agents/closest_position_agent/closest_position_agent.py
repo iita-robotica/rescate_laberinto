@@ -1,9 +1,9 @@
 from agents.agent import Agent
 import utilities
 
-from algorithms.expandable_node_grid.a_star import aStar
+from algorithms.expandable_node_grid.a_star import a_star
 from algorithms.expandable_node_grid.bfs import bfs
-from algorithms.expandable_node_grid.traversable import isTraversable
+from algorithms.expandable_node_grid.traversable import is_traversable
 
 
 class ClosestPositionAgent(Agent):
@@ -62,7 +62,7 @@ class ClosestPositionAgent(Agent):
 
         if len(self.a_star_path) <= self.a_star_index:
             direction = utilities.substractLists(self.current_robot_node, self.previous_robot_node)
-            if isTraversable(grid, self.current_robot_node):
+            if is_traversable(grid, self.current_robot_node):
                 possible_nodes = bfs(grid, self.current_robot_node, 100)
             else:
                 possible_nodes = bfs(grid, self.previous_robot_node, 100)
@@ -73,10 +73,9 @@ class ClosestPositionAgent(Agent):
             else:
                 self.best_node = self.find_start_node(grid)
 
-            best_path = aStar(grid, self.current_robot_node, self.best_node)
+            best_path = a_star(grid, self.current_robot_node, self.best_node)
 
             if len(best_path) > 1:
-                
                 self.a_star_path = best_path[1:]
                 self.a_star_index = 0
 
