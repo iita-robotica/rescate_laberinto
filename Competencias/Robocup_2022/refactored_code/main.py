@@ -117,7 +117,9 @@ while robot.do_loop():
 
         victims = fixture_detection.find_victims(rot_img)
         if len(victims) > 0:
-            mapper.load_fixture(fixture_detection.classify_fixture(victims[0]))
+            letter = fixture_detection.classify_fixture(victims[0])
+            if letter is not None:
+                mapper.load_fixture(letter)
             break
     
     if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
