@@ -51,6 +51,12 @@ class ClosestPositionAgent(Agent):
         #return possibleNodes[-1][:2]
         return best_node[:2]
     
+    def check_path(self, grid):
+        for position in self.a_star_path:
+            if not is_traversable(grid, position):
+                return False
+        return True
+    
     def predict(self, grid):
         robot_node = self.find_robot_node(grid)
         
@@ -60,7 +66,7 @@ class ClosestPositionAgent(Agent):
         if self.previous_robot_node is None:
             self.previous_robot_node = self.current_robot_node
 
-        if len(self.a_star_path) <= self.a_star_index:
+        if len(self.a_star_path) <= self.a_star_index or not self.check_path(grid):
             direction = utilities.substractLists(self.current_robot_node, self.previous_robot_node)
             if is_traversable(grid, self.current_robot_node):
                 possible_nodes = bfs(grid, self.current_robot_node, 100)

@@ -59,9 +59,13 @@ class Node:
 
         if self.status == "occupied":
             return "\033[1;30;40m██" + "\033[0m"
+        
 
         elif self.is_robots_position:
             return "\033[1;32;47m██"+ "\033[0m"
+
+        elif self.explored:
+            return "\033[1;36;36m██" + "\033[0m"
 
         elif self.node_type == "wall":
             """
@@ -77,6 +81,7 @@ class Node:
             return "\033[1;30;47m<>"+ "\033[0m"
         
         elif self.node_type == "tile":
+            
             if self.tile_type == "start":
                 return "\033[1;32;47m██"+ "\033[0m"
             if self.tile_type == "hole":

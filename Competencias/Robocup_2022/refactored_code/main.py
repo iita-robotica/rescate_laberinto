@@ -85,7 +85,9 @@ def seqMoveToRelativeCoords(x, y):
     return seqMoveToCoords((initial_position[0] + x, initial_position[1] + y))
 
 def seqMoveToRelativeTile(x, y):
-    return seqMoveToRelativeCoords(x * TILE_SIZE, y * TILE_SIZE)
+    node = mapper.robot_node
+    tile = [node[0] // 2 + x, node[1] // 2 + y]
+    return seqMoveToCoords((tile[0] * TILE_SIZE, tile[1] * TILE_SIZE))
 
 def is_complete(grid, robot_node):
         possible_nodes = bfs(grid, robot_node, 500)

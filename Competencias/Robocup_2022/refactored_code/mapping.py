@@ -125,8 +125,8 @@ class Mapper:
             self.set_robot_node(robot_position)
         
         for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
-                adj_node = utilities.sumLists(robot_node, adj)
-                self.node_grid.get_node(adj_node).explored = True
+            adj_node = utilities.sumLists(robot_node, adj)
+            self.node_grid.get_node(adj_node).explored = True
 
         if point_cloud is not None:
             in_bounds_point_cloud, out_of_bounds_point_cloud = point_cloud
