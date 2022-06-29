@@ -83,14 +83,15 @@ class Mapper:
             tile = utilities.sumLists(tile, [1, 1])
             tile = utilities.sumLists(tile, robot_node)
             print(self.node_grid.get_node(tile).node_type)
-            self.node_grid.get_node(tile).tile_type = color
-        
+            if self.node_grid.get_node(tile).tile_type != "start":
+                self.node_grid.get_node(tile).tile_type = color
         
         
         #cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
           
         #self.lidar_grid.print_grid((600, 600))
-        #self.lidar_grid.print_bool((600, 600))          
+        #self.lidar_grid.print_bool((600, 600))
+        
     def load_fixture(self, letter):
         fixture = self.node_grid.get_node(self.robot_node).fixture
         fixture.exists = True
