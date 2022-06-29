@@ -1,10 +1,10 @@
-from algorithms.expandable_node_grid.traversable import isTraversable
+from algorithms.expandable_node_grid.traversable import is_traversable
 
-def isBfsAddable(grid, index):
+def is_bfs_addable(grid, index):
     node = grid.get_node(index, expand=False, phantom=True)
     if node.node_type == "vortex":
-        for adjacentPos in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
-            adjacent = [index[0] + adjacentPos[0], index[1] + adjacentPos[1]]
+        for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+            adjacent = [index[0] + adj[0], index[1] + adj[1]]
             if not grid.get_node(adjacent, expand=False, phantom=True).explored:
                 return True
         return False
@@ -31,7 +31,7 @@ def bfs(grid, start, limit="undefined"):
             if dist > limit:
                 break
         
-        if isBfsAddable(grid, coords[:2]):
+        if is_bfs_addable(grid, coords[:2]):
             found.append(coords)
 
         for newPosition in ((0, 1), (0, -1), (-1, 0), (1, 0)):
@@ -45,7 +45,7 @@ def bfs(grid, start, limit="undefined"):
                 continue
 
             # Make sure walkable terrain
-            if isTraversable(grid, neighbour[:2]):
+            if is_traversable(grid, neighbour[:2]):
                 visited.append(neighbour)
                 queue.append(neighbour)
 

@@ -1,4 +1,4 @@
-from algorithms.expandable_node_grid.traversable import isTraversable
+from algorithms.expandable_node_grid.traversable import is_traversable
 
 # aStarNode class for A* pathfinding (Not to be confused with the node grid)
 class aStarNode():
@@ -13,9 +13,9 @@ class aStarNode():
         return self.position == other.position
 
 # Returns a list of tuples as a path from the given start to the given end in the given maze
-def aStar(grid, start, end):
-    assert isTraversable(grid, start)
-    assert isTraversable(grid, end)
+def a_star(grid, start, end):
+    assert is_traversable(grid, start)
+    assert is_traversable(grid, end)
 
     # Create start and end node
     startNode = aStarNode(None, (start[0], start[1]))
@@ -53,7 +53,7 @@ def aStar(grid, start, end):
             # Get node position
             nodePosition = (currentNode.position[0] + (newPosition[0] * 2), currentNode.position[1] + (newPosition[1] * 2))
             # Make sure walkable terrain
-            if not isTraversable(grid, nodePosition):
+            if not is_traversable(grid, nodePosition):
                 continue
             # Create new node
             newNode = aStarNode(currentNode, nodePosition)
