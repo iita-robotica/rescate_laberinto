@@ -1,7 +1,9 @@
 from agents.agent import Agent
 import utilities
 
-from agents.closest_position_agent.pathfinder import aStar, bfs, isTraversable
+from algorithms.expandable_node_grid.a_star import aStar
+from algorithms.expandable_node_grid.bfs import bfs
+from algorithms.expandable_node_grid.traversable import isTraversable
 
 
 class ClosestPositionAgent(Agent):
