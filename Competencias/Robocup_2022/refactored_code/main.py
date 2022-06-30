@@ -38,6 +38,7 @@ closest_position_agent = ClosestPositionAgent()
 
 # Variables
 do_mapping = False
+do_victim_reporting = False
 
 
 # Functions
@@ -110,27 +111,30 @@ while robot.do_loop():
     else:
         mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
     
+    if do_mapping:
+        images = robot.get_camera_images()
+        for image in images:
+            rot_img = np.rot90(image, -1)
 
-    images = robot.get_camera_images()
-    for image in images:
-        rot_img = np.rot90(image, -1)
-
-        victims = fixture_detection.find_victims(rot_img)
-        if len(victims) > 0:
-            letter = fixture_detection.classify_fixture(victims[0])
-            if letter is not None:
-                mapper.load_fixture(letter)
-            break
+            victims = fixture_detection.find_victims(rot_img)
+            if len(victims) > 0:
+                letter = fixture_detection.classify_fixture(victims[0])
+                if letter is not None:
+                    mapper.load_fixture(letter)
+                break
     
     if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
         seq.resetSequence()
         stateManager.changeState("end")
+    
+    fixture_detection.tune_filter(robot.get_camera_images()[1])
 
     # Updates state machine
     if stateManager.checkState("init"):
         pass
-
-    if mapper.get_fixture().exists and not mapper.get_fixture().reported:
+    
+    
+    if mapper.get_fixture().exists and not mapper.get_fixture().reported and do_victim_reporting:
         if not stateManager.checkState("report_victim"):
             seq.resetSequence()
             stateManager.changeState("report_victim")
@@ -150,6 +154,11 @@ while robot.do_loop():
         # Starts mapping walls
         if seq.simpleEvent():
             do_mapping = True
+            do_victim_reporting = True
+        if seq.simpleEvent():
+            #do_mapping = False
+            #do_victim_reporting = False
+            pass
         # Changes state and resets the sequence
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()

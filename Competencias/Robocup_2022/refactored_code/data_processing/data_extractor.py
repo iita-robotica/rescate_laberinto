@@ -9,9 +9,9 @@ class FloorColorExtractor:
     def __init__(self, tile_resolution) -> None:
         self.tile_resolution = tile_resolution
         self.floor_color_ranges = {
-                    "normal":   
+                    "normal":
                         {   
-                            "range":   ((0, 0, 100), (1, 1, 255)), 
+                            "range":   ((0, 0, 37), (0, 0, 192)), 
                             "threshold":0.2},
 
                     "nothing":
@@ -21,7 +21,31 @@ class FloorColorExtractor:
                     
                     "checkpoint":
                         {
-                            "range":((100, 0, 70), (150, 100, 100)),
+                            "range":((95, 0, 65), (128, 122, 198)),
+                            "threshold":0.2},
+                    "hole":
+                        {
+                            "range":((0, 0, 10), (0, 0, 30)),
+                            "threshold":0.2},
+                    
+                    "swamp":
+                        {
+                            "range":((19, 112, 32), (19, 141, 166)),
+                            "threshold":0.2},
+
+                    "connection1-2":
+                        {
+                            "range":((120, 182, 49), (120, 204, 232)),
+                            "threshold":0.2},
+
+                    "connection1-3":
+                        {
+                            "range":((132, 156, 36), (133, 192, 185)),
+                            "threshold":0.2},
+
+                    "connection2-3":
+                        {
+                            "range":((0, 182, 49), (0, 204, 232)),
                             "threshold":0.2},
                     }
         self.final_image = np.zeros((700, 700, 3), np.uint8)
