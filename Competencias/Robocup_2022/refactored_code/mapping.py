@@ -22,7 +22,7 @@ class Mapper:
         self.camera_processor = camera_processor.CameraProcessor(100)
 
         # Data extractors
-        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(6, 5)
+        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6, threshold=5)
         self.floor_color_extractor = data_extractor.FloorColorExtractor(50)
 
         self.robot_node = None
@@ -136,8 +136,8 @@ class Mapper:
         if point_cloud is not None and camera_images is not None and current_time is not None:
             total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
             self.process_floor(current_time, camera_images, total_point_cloud, robot_position, robot_rotation)
-            #self.lidar_grid.print_grid((600, 600))
-            #self.lidar_grid.print_bool((600, 600))  
+            self.lidar_grid.print_grid((600, 600))
+            self.lidar_grid.print_bool((600, 600))  
 
             #self.node_grid.print_grid()
         

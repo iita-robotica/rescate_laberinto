@@ -92,7 +92,7 @@ class FloorColorExtractor:
         drawing_image = floor_image.copy() #self.final_image.copy()
         utilities.draw_grid(drawing_image, self.tile_resolution, offset=grid_offsets)
         cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
-        cv.imshow("final_floor_image", utilities.resize_image_to_fixed_size(drawing_image, (600, 600)))        
+        #cv.imshow("final_floor_image", utilities.resize_image_to_fixed_size(drawing_image, (600, 600)))        
         return color_tiles
 
 
@@ -131,6 +131,7 @@ class PointCloudExtarctor:
     def transform_to_grid(self, point_cloud):
         offsets = point_cloud.offsets
         offsets = [o % self.resolution for o in offsets]
+        offsets.reverse()
         grid = []
         bool_array_copy = point_cloud.get_bool_array()
         bool_array_copy = bool_array_copy.astype(np.uint8) * 100
@@ -148,6 +149,6 @@ class PointCloudExtarctor:
                 row.append(list(val))
             grid.append(row)
         factor = 10
-        #cv.imshow("bool_array_copy", cv.resize(bool_array_copy.astype(np.uint8), (point_cloud.shape[1] * factor, point_cloud.shape[0] * factor), interpolation=cv.INTER_NEAREST))
+        cv.imshow("point_cloud_with_squares", utilities.resize_image_to_fixed_size(bool_array_copy, (600, 600)))
         offsets = point_cloud.offsets
         return grid, [o // self.resolution for o in offsets]
