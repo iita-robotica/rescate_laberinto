@@ -28,26 +28,20 @@ class ClosestPositionAgent(Agent):
                 
 
 
-    def get_best_node(self, possible_nodes, start_node, orientation):
+    def get_best_node(self, possible_nodes):
         if len(possible_nodes) > 0:
             best_node = possible_nodes[0]
-            if best_node[:2] == list(start_node):
+            if best_node[:2] == list(self.current_robot_node):
                 best_node = possible_nodes[1]
 
-            """
-            for posNode in possibleNodes:
-                diff = utilities.substractLists(startNode, posNode[:2])
-                #print("Diff:", diff)
-                #print("Multiplied orientation: ", multiplyLists(orientation, [-2, -2]))
-                if posNode[2] > 1:
-                    break
-                
-                elif diff == utilities.multiplyLists(orientation, [-2, -2]):
-                    bestNode = posNode
-                    break
-            """
+            orientation = utilities.substractLists(self.current_robot_node, self.previous_robot_node)
+            forward_node = utilities.sumLists(self.current_robot_node, orientation)
+            for node in possible_nodes[:10]:
+                if list(node[:2]) == list(forward_node):
+                    best_node = forward_node
+
         else:
-            best_node = start_node
+            best_node = self.current_robot_node
         #return possibleNodes[-1][:2]
         return best_node[:2]
     
@@ -75,7 +69,7 @@ class ClosestPositionAgent(Agent):
 
             #print("Possible nodes:", possible_nodes)
             if len(possible_nodes):
-                self.best_node = self.get_best_node(possible_nodes, self.current_robot_node, direction)
+                self.best_node = self.get_best_node(possible_nodes)
             else:
                 self.best_node = self.find_start_node(grid)
 
