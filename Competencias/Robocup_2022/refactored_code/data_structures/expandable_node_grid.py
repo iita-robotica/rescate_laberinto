@@ -27,6 +27,7 @@ class Node:
         self.is_robots_position = is_robots_position
         self.fixture = Fixture()
         self.is_start = False
+        self.is_curved = False
 
         self.mark1 = 0
         self.mark2 = 0
@@ -39,7 +40,7 @@ class Node:
                                 "undefined",
                                 "not_occupied") #same tuple
 
-        self.tile_type_conv = ("undefined",
+        self.valid_tile_types = ("undefined",
                                 "normal",
                                 "start",
                                 "connection1-2",
@@ -47,6 +48,32 @@ class Node:
                                 "connection2-3", 
                                 "swamp", 
                                 "hole") #same tuple
+
+        self.tile_type_to_string = {
+            "undefined": "0",
+            "normal": "0",
+            "start": "5",
+            "connection1-2": "6",
+            "connection1-3": "7",
+            "connection2-3": "8",
+            "swamp": "3",
+            "hole": "2"
+        }
+       
+
+
+    def get_representation(self) -> str:
+        if self.node_type == "tile":
+            return self.tile_type_to_string[self.tile_type]
+
+        elif self.node_type == "vortex":
+            return str(int(self.status == "occupied" and not self.is_curved))
+        
+        elif self.node_type == "wall":
+            return str(int(self.status == "occupied"))
+        
+        else:
+            return "0"
 
     # Returns a visual representation of the node in ASCII 
     def get_string(self):
@@ -226,7 +253,7 @@ class Grid:
         wall = [t + d for t, d in zip(tile, list_direction)]
 
         self.get_node((wall[0], wall[1])).status = "occupied"
-        self.fill_verticies_around_wall((wall[0], wall[1])) 
+        self.fill_verticies_around_wall((wall[0], wall[1]))
 
 
     def print_grid(self):

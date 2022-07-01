@@ -146,3 +146,12 @@ class Mapper:
     
     def get_node_grid(self):
         return copy.deepcopy(self.node_grid)
+    
+    def get_grid_for_bonus(self):
+        final_grid = []
+        for row in self.get_node_grid().grid:
+            final_row = []
+            for node in row:
+                final_row.append(node.get_representation())
+            final_grid.append(final_row)
+        return np.array(final_grid)

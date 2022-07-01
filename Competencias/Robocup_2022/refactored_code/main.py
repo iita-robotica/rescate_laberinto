@@ -205,4 +205,5 @@ while robot.do_loop():
         seq.seqResetSequence()
     
     elif stateManager.checkState("end"):
+        robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
