@@ -113,14 +113,17 @@ while robot.do_loop():
     
     if do_mapping:
         images = robot.get_camera_images()
-        for image in images:
+        for index, image in enumerate(images):
+            angle = (index - 1) * 90
+
             rot_img = np.rot90(image, -1)
 
             victims = fixture_detection.find_victims(rot_img)
             if len(victims) > 0:
                 letter = fixture_detection.classify_fixture(victims[0])
                 if letter is not None:
-                    mapper.load_fixture(letter)
+                    mapper.load_fixture(letter, angle, robot.rotation)
+                    
                 break
     
     if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
@@ -187,11 +190,12 @@ while robot.do_loop():
         seqMoveWheels(0, 0)
         if seq.simpleEvent():
             print("STOPPED")
-        seqDelaySec(3)
+        seqDelaySec(1.2)
         if seq.simpleEvent():
             fixture = mapper.get_fixture()
             robot.comunicator.sendVictim(robot.position, fixture.type)
             fixture.reported = True
+            mapper.load_wall_fixture(letter, fixture.detection_angle)
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
     

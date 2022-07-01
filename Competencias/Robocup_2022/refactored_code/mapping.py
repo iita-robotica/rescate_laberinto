@@ -91,11 +91,51 @@ class Mapper:
           
         #self.lidar_grid.print_grid((600, 600))
         #self.lidar_grid.print_bool((600, 600))
+    
+    def degs_to_orientation(self, degs):
+        """divides degrees in up, left, right or down"""
+        if utilities.normalizeDegs(180 - 45) < degs < 180:
+            return "up", "right"
+        if 180 <= degs < utilities.normalizeDegs(180 + 45):
+            return "up", "left"
+
+        elif utilities.normalizeDegs(360 - 45) < degs <= 360:
+            return "down", "left"
+        elif 0 <= degs < utilities.normalizeDegs(0 + 45):
+            return "down", "right" 
         
-    def load_fixture(self, letter):
+        elif utilities.normalizeDegs(90 - 45) < degs < 90:
+            return "right", "down"
+        elif 90 <= degs < utilities.normalizeDegs(90 + 45):
+            return "right", "up"
+        
+        elif utilities.normalizeDegs(270 - 45) < degs < 270:
+            return "left", "up"
+        elif 270 <= degs < utilities.normalizeDegs(270 + 45):
+            return "left", "down"
+
+    
+    def load_wall_fixture(self, letter, image_angle):
+        print("images_angle:", image_angle)
+        orient = self.degs_to_orientation(utilities.normalizeDegs(image_angle))
+        print("orientation:", orient)
+        dir1, dir2 = orient
+        direction = utilities.dir2list(dir1)
+        direction = utilities.multiplyLists(direction, [2, 2])
+        direction = utilities.sumLists(direction, utilities.dir2list(dir2))
+        wall_index = utilities.sumLists(self.robot_node, direction)
+        assert self.node_grid.get_node(wall_index).node_type == "wall"
+        self.node_grid.get_node(wall_index).fixtures_in_wall.append(letter)
+
+        
+
+    def load_fixture(self, letter, camera_angle, robot_rotation):
         fixture = self.node_grid.get_node(self.robot_node).fixture
         fixture.exists = True
         fixture.type = letter
+
+        image_angle = utilities.normalizeDegs(camera_angle + robot_rotation)
+        fixture.detection_angle = image_angle
     
     def get_fixture(self):
         return self.node_grid.get_node(self.robot_node).fixture

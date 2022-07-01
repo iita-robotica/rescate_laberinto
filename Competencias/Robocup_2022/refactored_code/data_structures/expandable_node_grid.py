@@ -17,6 +17,7 @@ class Fixture:
         self.exists = exists
         self.reported = reported
         self.type = type
+        self.detection_angle = None
 
 class Node:
     def __init__(self, node_type:str, status:str="undefined", tile_type:str="undefined", curved:int=0, explored:bool=False, is_robots_position:bool=False):
@@ -26,6 +27,7 @@ class Node:
         self.explored = explored
         self.is_robots_position = is_robots_position
         self.fixture = Fixture()
+        self.fixtures_in_wall = []
         self.is_start = False
         self.is_curved = False
 
@@ -70,6 +72,8 @@ class Node:
             return str(int(self.status == "occupied" and not self.is_curved))
         
         elif self.node_type == "wall":
+            if len(self.fixtures_in_wall) > 0:
+                return str("".join(self.fixtures_in_wall))
             return str(int(self.status == "occupied"))
         
         else:
@@ -85,6 +89,8 @@ class Node:
                 return "??"
 
         if self.status == "occupied":
+            if self.node_type == "wall" and len(self.fixtures_in_wall) > 0:
+                return f"\033[1;35;40m{self.fixtures_in_wall[0]*2}" + "\033[0m"
             return "\033[1;30;40m██" + "\033[0m"
         
         elif self.is_robots_position:
