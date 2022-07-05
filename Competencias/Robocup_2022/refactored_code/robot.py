@@ -24,6 +24,8 @@ class RobotLayer:
         self.max_wheel_speed = 6.28
         # The timestep
         self.time_step = time_step
+
+        self.diameter = 0.074
         # Robot object provided by webots
         self.robot = Robot()
         self.prev_rotation = 0

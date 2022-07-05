@@ -49,11 +49,13 @@ class Node:
                                 "connection1-3", 
                                 "connection2-3", 
                                 "swamp", 
-                                "hole") #same tuple
+                                "hole",
+                                "checkpoint") #same tuple
 
         self.tile_type_to_string = {
             "undefined": "0",
             "normal": "0",
+            "checkpoint": "4",
             "start": "5",
             "connection1-2": "6",
             "connection1-3": "7",

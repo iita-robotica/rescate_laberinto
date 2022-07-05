@@ -14,7 +14,10 @@ class aStarNode():
 
 # Returns a list of tuples as a path from the given start to the given end in the given maze
 def a_star(grid, start, end):
-    assert is_traversable(grid, start)
+    #assert is_traversable(grid, start)
+    if not is_traversable(grid, start):
+        print("WARNING: Start position is not traversable")
+
     assert is_traversable(grid, end)
 
     # Create start and end node
