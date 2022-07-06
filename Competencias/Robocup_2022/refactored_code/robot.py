@@ -56,6 +56,8 @@ class RobotLayer:
 
         self.point_is_close = False
 
+        self.stuck_counter = 0
+
     def delay_sec(self, delay):
         print("Current delay: ", delay)
         if self.delay_first_time:
@@ -206,6 +208,12 @@ class RobotLayer:
             return 0
         return (self.right_wheel.velocity + self.left_wheel.velocity) / 2
     
+    def is_stuck_this_step(self):
+        return self.get_wheel_direction() > 0 and abs(utilities.getDistance(utilities.substractLists(self.position, self.prev_global_position))) < 0.005
+
+    def is_stuck(self):
+        return self.stuck_counter > 100
+
     # Must run every TimeStep
     def update(self):
         # Updates the current time
@@ -248,5 +256,10 @@ class RobotLayer:
         self.lidar.setRotationDegrees(self.rotation + 0)
 
         #print("Delay time:", self.time - self.delayStart)
+
+        if self.is_stuck_this_step():
+            self.stuck_counter += 1
+        else:
+            self.stuck_counter = 0
         
         self.comunicator.update()

@@ -101,9 +101,9 @@ def robot_fits(robot_node, show_debug=False):
     robot_diameter_in_nodes = int(math.ceil(robot.diameter * mapper.lidar_grid.multiplier))
     robot_radious_in_nodes = robot_diameter_in_nodes // 2
     min_x = int(robot_node[0] - robot_radious_in_nodes)
-    max_x = int(robot_node[0] + robot_radious_in_nodes)
+    max_x = int(robot_node[0] + robot_radious_in_nodes+ 1)
     min_y = int(robot_node[1] - robot_radious_in_nodes)
-    max_y = int(robot_node[1] + robot_radious_in_nodes)
+    max_y = int(robot_node[1] + robot_radious_in_nodes + 1)
     min_x = max(min_x, 0)
     max_x = min(max_x, mapper.lidar_grid.grid.shape[0])
     min_y = max(min_y, 0)
@@ -115,7 +115,10 @@ def robot_fits(robot_node, show_debug=False):
     square1 = square1 * 255
 
     if show_debug:
-        cv.imshow("square", square1.astype(np.uint8))
+        try:
+            cv.imshow("square", square1.astype(np.uint8))
+        except:
+            pass
 
     return np.count_nonzero(square)
 
@@ -185,8 +188,9 @@ while robot.do_loop():
     fixture_detection.tune_filter(robot.get_camera_images()[1])
 
     # Updates state machine
-    if stateManager.checkState("init"):
-        pass
+    if not stateManager.checkState("init"):
+        if robot.is_stuck():
+            mapper.block_front_vortex(robot.rotation)
     
     
     if mapper.get_fixture().exists and not mapper.get_fixture().reported and do_victim_reporting:

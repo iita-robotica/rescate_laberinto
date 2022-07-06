@@ -149,6 +149,12 @@ class Mapper:
                 node.is_robots_position = False
 
         self.node_grid.get_node(self.robot_node).is_robots_position = True
+    
+    def block_front_vortex(self, robot_rotation):
+        orientation = utilities.dir2list(self.degs_to_orientation(robot_rotation)[0])
+
+        front_node = [r + (f * 2) for r, f in zip(self.robot_node, orientation)]
+        self.node_grid.get_node(front_node).status = "occupied"
 
 
     def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None, current_time=None):
