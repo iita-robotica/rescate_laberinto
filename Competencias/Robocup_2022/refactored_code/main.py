@@ -189,7 +189,9 @@ while robot.do_loop():
 
     # Updates state machine
     if not stateManager.checkState("init"):
+        print("stuck_counter: ", robot.stuck_counter)
         if robot.is_stuck():
+            print("FRONT BLOCKED")
             mapper.block_front_vortex(robot.rotation)
     
     
