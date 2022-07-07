@@ -1,6 +1,8 @@
 def is_traversable(grid, index):
     node = grid.get_node(index, expand=False, phantom=True)
     if node.node_type == "vortex":
+        if node.explored:
+            return True
         if node.status == "occupied":
             return False
         traversable = True
