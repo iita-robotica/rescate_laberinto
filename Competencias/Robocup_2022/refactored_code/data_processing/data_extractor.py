@@ -129,15 +129,29 @@ class PointCloudExtarctor:
         self.threshold = threshold
         self.resolution = resolution
         self.straight_template = np.zeros((self.resolution + 1, self.resolution + 1), dtype=np.int)
-        self.straight_template[:][0] = 1
-        self.straight_template[:][1] = 2
+        self.straight_template[:][0:2] = 1
+        #self.straight_template[3:-3][0:2] = 2
         self.straight_template[0][0:2] = 0
         self.straight_template[-1][0:2] = 0
 
+        curved = [
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 1, 1, 0],
+            [0, 0, 1, 1, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+                ]
+
+
         self.templates = {}
 
-        for i, name in enumerate(["u", "l", "d", "r"]):
+        for i, name in enumerate([("u",), ("l",), ("d",), ("r",)]):
             self.templates[name] = np.rot90(self.straight_template, i)
+        
+        for i, name in enumerate([("u", "l"), ("d", "l"), ("d", "r"),  ("u", "r")]):
+            self.templates[name] = np.rot90(curved, i)
 
     def get_tile_status(self, min_x, min_y, max_x, max_y, point_cloud):
         counts = {}
@@ -157,7 +171,7 @@ class PointCloudExtarctor:
         names = []
         for name, count in counts.items():
             if count >= self.threshold:
-                names.append(name)
+                names += list(name)
         """
         if np.count_nonzero(square):
             cv.imshow(f"square" + str(names), (square*255).astype(np.uint8))

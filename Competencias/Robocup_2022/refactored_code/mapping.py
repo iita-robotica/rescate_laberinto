@@ -23,7 +23,7 @@ class Mapper:
         self.camera_processor = camera_processor.CameraProcessor(100)
 
         # Data extractors
-        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6, threshold=12)
+        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6, threshold=6)
         self.floor_color_extractor = data_extractor.FloorColorExtractor(50)
 
         self.robot_node = None
