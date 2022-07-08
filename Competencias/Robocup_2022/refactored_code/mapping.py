@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import cv2 as cv
+import math
 
 import utilities
 from data_processing import camera_processor, data_extractor, point_cloud_processor
@@ -22,7 +23,7 @@ class Mapper:
         self.camera_processor = camera_processor.CameraProcessor(100)
 
         # Data extractors
-        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6, threshold=5)
+        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6, threshold=12)
         self.floor_color_extractor = data_extractor.FloorColorExtractor(50)
 
         self.robot_node = None
@@ -61,7 +62,7 @@ class Mapper:
        
         camera_point_cloud = self.point_cloud_processor.processPointCloudForCamera(total_point_cloud)
         seen_points = self.point_cloud_processor.get_intermediate_points(camera_point_cloud)
-        print(seen_points)
+        #print(seen_points)
 
 
         utilities.draw_poses(final_image, seen_points, back_image=floor_image, xx_yy_format=True)
@@ -163,17 +164,21 @@ class Mapper:
         
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
         robot_node = [int(t * 2) for t in robot_vortex]
-        #robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
+        robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
+        
+        distance = math.sqrt(sum([(x - y) ** 2 for x, y in zip(robot_vortex_center, robot_position)]))
 
         print("robot_vortex:", robot_vortex)
 
         if self.robot_node is None:
             self.set_robot_node(robot_position)
         
-        for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
-            adj_node = utilities.sumLists(robot_node, adj)
-            self.node_grid.get_node(adj_node).explored = True
-        self.node_grid.get_node(robot_node).explored = True
+        if distance < 0.02:
+            for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+                adj_node = utilities.sumLists(robot_node, adj)
+                self.node_grid.get_node(adj_node).explored = True
+        if distance < 0.02:
+            self.node_grid.get_node(robot_node).explored = True
 
         if point_cloud is not None:
             in_bounds_point_cloud, out_of_bounds_point_cloud = point_cloud

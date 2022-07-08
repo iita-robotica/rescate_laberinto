@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+import copy
 
 import utilities
 from data_processing import camera_processor
@@ -127,8 +128,11 @@ class PointCloudExtarctor:
     def __init__(self, resolution, threshold):
         self.threshold = threshold
         self.resolution = resolution
-        self.straight_template = np.zeros((self.resolution, self.resolution), dtype=np.int)
-        self.straight_template[:][0:2] = 1
+        self.straight_template = np.zeros((self.resolution + 1, self.resolution + 1), dtype=np.int)
+        self.straight_template[:][0] = 1
+        self.straight_template[:][1] = 2
+        self.straight_template[0][0:2] = 0
+        self.straight_template[-1][0:2] = 0
 
         self.templates = {}
 
@@ -139,18 +143,26 @@ class PointCloudExtarctor:
         counts = {}
         for name in self.templates:
             counts[name] = 0
-        square = point_cloud[min_x:max_x, min_y:max_y]
-        if square.shape != (self.resolution, self.resolution):
+        square = point_cloud[min_x:max_x+1, min_y:max_y+1]
+        #print(square.shape)
+        
+        if square.shape != (self.resolution+1, self.resolution+1):
             return []
         for name, template in self.templates.items():
-            for i in range(self.resolution):
-                for j in range(self.resolution):
+            for i in range(self.resolution + 1):
+                for j in range(self.resolution + 1):
                     if square[i][j] == 1:
-                        counts[name] += template[i][j]
-
+                        counts[name] += copy.copy(template[i][j])
+        
+        names = []
         for name, count in counts.items():
             if count >= self.threshold:
-                yield name
+                names.append(name)
+        """
+        if np.count_nonzero(square):
+            cv.imshow(f"square" + str(names), (square*255).astype(np.uint8))
+        """
+        return names
 
     def transform_to_grid(self, point_cloud):
         offsets = point_cloud.offsets
@@ -170,6 +182,7 @@ class PointCloudExtarctor:
                 bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
                 
                 val = self.get_tile_status(min_x, min_y, max_x, max_y, point_cloud.get_bool_array())
+                
                 row.append(list(val))
             grid.append(row)
         factor = 10

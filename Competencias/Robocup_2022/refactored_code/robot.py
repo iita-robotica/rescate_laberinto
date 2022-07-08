@@ -212,7 +212,7 @@ class RobotLayer:
         return self.get_wheel_direction() > 0 and abs(utilities.getDistance(utilities.substractLists(self.position, self.prev_global_position))) < 0.000001
 
     def is_stuck(self):
-        return self.stuck_counter > 200
+        return self.stuck_counter > 100
 
     # Must run every TimeStep
     def update(self):

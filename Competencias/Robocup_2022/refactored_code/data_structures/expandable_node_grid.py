@@ -83,21 +83,28 @@ class Node:
 
     # Returns a visual representation of the node in ASCII 
     def get_string(self):
+
         if self.mark1:
             return "\033[1;36;36m██" + "\033[0m"
 
         if self.status == "undefined":
             if not(self.node_type == "tile" and self.tile_type != "undefined"):    
                 return "??"
+        
 
         if self.status == "occupied":
+            if self.node_type == "vortex" and self.explored:
+                return "\033[1;31;47m██"+ "\033[0m"
+
             if self.node_type == "wall" and len(self.fixtures_in_wall) > 0:
                 return f"\033[1;35;40m{self.fixtures_in_wall[0]*2}" + "\033[0m"
+            
             return "\033[1;30;40m██" + "\033[0m"
         
-        elif self.is_robots_position:
-            return "\033[1;32;47m██"+ "\033[0m"
-
+        
+        #elif self.is_robots_position:
+        #    return "\033[1;32;47m██"+ "\033[0m"
+        
         elif self.node_type == "wall":
             """
             if self.status == "not_occupied":
@@ -109,9 +116,30 @@ class Node:
             if self.status == "not_occupied":
                 return "\033[1;37;47m██"+ "\033[0m"
             """
+            if self.explored:
+                return "\033[1;32;47m██"+ "\033[0m"
+
             return "\033[1;30;47m<>"+ "\033[0m"
         
         elif self.node_type == "tile":
+
+            if self.explored:
+                if self.tile_type == "start":
+                    return "\033[1;32;47m█E"+ "\033[0m"
+                if self.tile_type == "hole":
+                    return "\033[0m  "+ "\033[0m"
+                if self.tile_type == "swamp":
+                    return "\033[1;33;40m█E"+ "\033[0m"
+                if self.tile_type == "checkpoint":
+                    return "\033[0m█E"+ "\033[0m"
+                if self.tile_type == "connection1-3":
+                    return "\033[1;35;47m█E"+ "\033[0m"
+                if self.tile_type == "connection1-2":
+                    return "\033[1;34;47m█E"+ "\033[0m"
+                if self.tile_type == "connection2-3":
+                    return "\033[1;31;47m█E"+ "\033[0m"
+                if self.tile_type == "normal":
+                    return "\033[1;37;47m█E"+ "\033[0m"
             
             if self.tile_type == "start":
                 return "\033[1;32;47m██"+ "\033[0m"
