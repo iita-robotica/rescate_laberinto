@@ -117,7 +117,7 @@ class FloorColorExtractor:
         drawing_image = floor_image.copy() #self.final_image.copy()
         utilities.draw_grid(drawing_image, self.tile_resolution, offset=grid_offsets)
         cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
-        #cv.imshow("final_floor_image", utilities.resize_image_to_fixed_size(drawing_image, (600, 600)))        
+        cv.imshow("final_floor_image", utilities.resize_image_to_fixed_size(drawing_image, (600, 600)))        
         return color_tiles
 
 
@@ -125,8 +125,8 @@ class FloorColorExtractor:
         
 
 class PointCloudExtarctor:
-    def __init__(self, resolution, threshold):
-        self.threshold = threshold
+    def __init__(self, resolution):
+        self.threshold = 8
         self.resolution = resolution
         self.straight_template = np.zeros((self.resolution + 1, self.resolution + 1), dtype=np.int)
         self.straight_template[:][0:2] = 1
@@ -134,15 +134,29 @@ class PointCloudExtarctor:
         self.straight_template[0][0:2] = 0
         self.straight_template[-1][0:2] = 0
 
+        straight = [
+            [0, 1, 2, 2, 2, 1, 0],
+            [0, 1, 2, 2, 2, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+                ]
+        
+        self.straight_template = np.array(straight)
+
         curved = [
             [0, 0, 0, 0, 0, 1, 0],
             [0, 0, 0, 1, 1, 1, 0],
-            [0, 0, 1, 1, 0, 0, 0],
+            [0, 0, 3, 1, 0, 0, 0],
             [0, 1, 1, 0, 0, 0, 0],
             [0, 1, 0, 0, 0, 0, 0],
             [1, 1, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
                 ]
+        
+        self.curved_template = np.array(curved)
 
 
         self.templates = {}
@@ -151,7 +165,7 @@ class PointCloudExtarctor:
             self.templates[name] = np.rot90(self.straight_template, i)
         
         for i, name in enumerate([("u", "l"), ("d", "l"), ("d", "r"),  ("u", "r")]):
-            self.templates[name] = np.rot90(curved, i)
+            self.templates[name] = np.rot90(self.curved_template, i)
 
     def get_tile_status(self, min_x, min_y, max_x, max_y, point_cloud):
         counts = {}

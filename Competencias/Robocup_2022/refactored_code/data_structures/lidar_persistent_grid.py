@@ -15,7 +15,7 @@ class LidarGrid(resizable_pixel_grid.Grid):
         self.shape = (self.res, self.res)
         super().__init__(self.shape, self.res)
         self.threshold = 100
-        self.delete_threshold = 4
+        self.delete_threshold = 2
 
     def get_bool_array(self):
         return self.grid > self.threshold

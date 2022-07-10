@@ -192,7 +192,7 @@ class RobotLayer:
     
     # Gets a point cloud with all the detections from lidar and distance sensorss
     def get_detection_point_cloud(self):
-        point_clouds = self.lidar.getPointCloud(layers=(1,))
+        point_clouds = self.lidar.getPointCloud(layers=(2, 3))
         self.point_is_close = self.lidar.pointIsClose
         return point_clouds
     
@@ -212,7 +212,7 @@ class RobotLayer:
         return self.get_wheel_direction() > 0 and abs(utilities.getDistance(utilities.substractLists(self.position, self.prev_global_position))) < 0.000001
 
     def is_stuck(self):
-        return self.stuck_counter > 100
+        return self.stuck_counter > 50
 
     # Must run every TimeStep
     def update(self):

@@ -23,10 +23,11 @@ class Mapper:
         self.camera_processor = camera_processor.CameraProcessor(100)
 
         # Data extractors
-        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6, threshold=6)
+        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6)
         self.floor_color_extractor = data_extractor.FloorColorExtractor(50)
 
         self.robot_node = None
+        self.robot_vortex_center = None
     
     def register_start(self, robot_position):
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
@@ -143,6 +144,7 @@ class Mapper:
 
     def set_robot_node(self, robot_position):
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
+        self.robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
         robot_node = [int(t * 2) for t in robot_vortex]
         self.robot_node = robot_node
         for row in self.node_grid.grid:
