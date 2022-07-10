@@ -13,11 +13,37 @@ class Filter:
         #imgResult = cv.bitwise_and(img, img, mask=mask)
         return mask
 
-red_filter = Filter(lower_hsv=(73, 157, 127), upper_hsv=(179, 255, 255))
-yellow_filter = Filter(lower_hsv=(0, 157, 82), upper_hsv=(40, 255, 255))
-white_filter = Filter(lower_hsv=(0, 0, 200), upper_hsv=(0, 255, 255))
-black_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 10))
+#red_filter = Filter(lower_hsv=(73, 157, 127), upper_hsv=(179, 255, 255))
+red_filter = Filter(lower_hsv=(160, 170, 127), upper_hsv=(170, 255, 255))
+#yellow_filter = Filter(lower_hsv=(0, 157, 82), upper_hsv=(40, 255, 255))
+yellow_filter = Filter(lower_hsv=(25, 157, 82), upper_hsv=(30, 255, 255))
+white_filter = Filter(lower_hsv=(0, 0, 207), upper_hsv=(0, 0, 207))
+black_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 0))
 vicitim_letter_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
+
+filter_for_tuning = white_filter
+
+cv.namedWindow("trackbars")
+
+cv.createTrackbar("min_h", "trackbars", filter_for_tuning.lower[0], 255, lambda x: None)
+cv.createTrackbar("max_h", "trackbars", filter_for_tuning.upper[0], 255, lambda x: None)
+
+cv.createTrackbar("min_s", "trackbars", filter_for_tuning.lower[1], 255, lambda x: None)
+cv.createTrackbar("max_s", "trackbars", filter_for_tuning.upper[1], 255, lambda x: None)
+
+cv.createTrackbar("min_v", "trackbars", filter_for_tuning.lower[2], 255, lambda x: None)
+cv.createTrackbar("max_v", "trackbars", filter_for_tuning.upper[2], 255, lambda x: None)
+
+def tune_filter(image):
+    min_h = cv.getTrackbarPos("min_h", "trackbars")
+    max_h = cv.getTrackbarPos("max_h", "trackbars")
+    min_s = cv.getTrackbarPos("min_s", "trackbars")
+    max_s = cv.getTrackbarPos("max_s", "trackbars")
+    min_v = cv.getTrackbarPos("min_v", "trackbars")
+    max_v = cv.getTrackbarPos("max_v", "trackbars")
+    filter_for_tuning = Filter((min_h, min_s, min_v), (max_h, max_s, max_v))
+    print(filter_for_tuning.lower, filter_for_tuning.upper)
+    cv.imshow("tunedImage", filter_for_tuning.filter(image))
 
 
 def sum_images(images):
@@ -32,7 +58,7 @@ def filter_victims(victims):
     final_victims = []
     for vic in victims:
         print("victim:", vic["position"], vic["image"].shape)
-        if vic["image"].shape[1] > 15:
+        if vic["image"].shape[0] > 25 and vic["image"].shape[1] > 20:
             final_victims.append(vic)
     return final_victims
 
@@ -154,6 +180,10 @@ def is_flammable(red_points, white_points):
 def is_organic_peroxide(red_points, yellow_points):
     return red_points and yellow_points
 
+def is_already_detected(point_counts):
+    if point_counts["white"] and not (point_counts["black"] + point_counts["red"] + point_counts["yellow"]):
+        return True
+
 
 def classify_fixture(vic):
     possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
@@ -167,7 +197,6 @@ def classify_fixture(vic):
 
     color_point_counts = {}
     for key, img in color_images.items():
-        print("image shape:", img.shape)
         all_points = np.where(img == 255)
         all_points = all_points[0]
         count = len(all_points)
@@ -196,5 +225,9 @@ def classify_fixture(vic):
     if is_flammable(color_point_counts["red"], color_point_counts["white"]):
         print("Flammable!")
         letter = "F"
+    
+    if is_already_detected(color_point_counts):
+        print("Already detected!")
+        letter = None
 
     return letter

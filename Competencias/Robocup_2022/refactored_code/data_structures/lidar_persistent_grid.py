@@ -10,13 +10,20 @@ class LidarGrid(resizable_pixel_grid.Grid):
         self.input_res = input_resolution
         self.res = resolution
         self.multiplier = self.res / self.input_res
+        self.frame = 0
         
         self.shape = (self.res, self.res)
         super().__init__(self.shape, self.res)
         self.threshold = 100
+        self.delete_threshold = 2
 
     def get_bool_array(self):
         return self.grid > self.threshold
+    
+    def clean_up(self):
+        print("Cleaning up lidar grid")
+        self.grid = self.grid * (self.grid > self.delete_threshold).astype(np.int)
+
     
     def sum_detection(self, point):
         point = [round(p * self.multiplier) for p in point]
@@ -28,8 +35,10 @@ class LidarGrid(resizable_pixel_grid.Grid):
         cv.waitKey(1)
     
     def update(self, point_cloud):
+        self.clean_up()
         for point in point_cloud:
             self.sum_detection(point)
+        self.frame += 1
 
         
     

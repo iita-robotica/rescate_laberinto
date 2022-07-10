@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+import copy
 
 import utilities
 from data_processing import camera_processor
@@ -9,9 +10,9 @@ class FloorColorExtractor:
     def __init__(self, tile_resolution) -> None:
         self.tile_resolution = tile_resolution
         self.floor_color_ranges = {
-                    "normal":   
+                    "normal":
                         {   
-                            "range":   ((0, 0, 100), (1, 1, 255)), 
+                            "range":   ((0, 0, 37), (0, 0, 192)), 
                             "threshold":0.2},
 
                     "nothing":
@@ -21,7 +22,31 @@ class FloorColorExtractor:
                     
                     "checkpoint":
                         {
-                            "range":((100, 0, 70), (150, 100, 100)),
+                            "range":((95, 0, 65), (128, 122, 198)),
+                            "threshold":0.2},
+                    "hole":
+                        {
+                            "range":((0, 0, 10), (0, 0, 30)),
+                            "threshold":0.2},
+                    
+                    "swamp":
+                        {
+                            "range":((19, 112, 32), (19, 141, 166)),
+                            "threshold":0.2},
+
+                    "connection1-2":
+                        {
+                            "range":((120, 182, 49), (120, 204, 232)),
+                            "threshold":0.2},
+
+                    "connection1-3":
+                        {
+                            "range":((132, 156, 36), (133, 192, 185)),
+                            "threshold":0.2},
+
+                    "connection2-3":
+                        {
+                            "range":((0, 182, 49), (0, 204, 232)),
                             "threshold":0.2},
                     }
         self.final_image = np.zeros((700, 700, 3), np.uint8)
@@ -78,8 +103,8 @@ class FloorColorExtractor:
                     color = (100, 100, 100)
                 else:
                     color = (0, 0, 0)
-                if color != (0, 0, 0):
-                    cv.rectangle(self.final_image, [square[2], square[0]], [square[3], square[1]], color, -1)
+                #if color != (0, 0, 0):
+                #cv.rectangle(self.final_image, [square[2], square[0]], [square[3], square[1]], color, -1)
 
                 tile = [square[2], square[0]]
                 tile = utilities.substractLists(tile, (350 - offsets[0], 350 - offsets[1]))
@@ -89,7 +114,7 @@ class FloorColorExtractor:
                     print(tile, color_key)
                     color_tiles.append((tile, color_key))
 
-        drawing_image = self.final_image.copy()
+        drawing_image = floor_image.copy() #self.final_image.copy()
         utilities.draw_grid(drawing_image, self.tile_resolution, offset=grid_offsets)
         cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
         cv.imshow("final_floor_image", utilities.resize_image_to_fixed_size(drawing_image, (600, 600)))        
@@ -100,37 +125,77 @@ class FloorColorExtractor:
         
 
 class PointCloudExtarctor:
-    def __init__(self, resolution, threshold):
-        self.threshold = threshold
+    def __init__(self, resolution):
+        self.threshold = 8
         self.resolution = resolution
-        self.straight_template = np.zeros((self.resolution, self.resolution), dtype=np.int)
+        self.straight_template = np.zeros((self.resolution + 1, self.resolution + 1), dtype=np.int)
         self.straight_template[:][0:2] = 1
+        #self.straight_template[3:-3][0:2] = 2
+        self.straight_template[0][0:2] = 0
+        self.straight_template[-1][0:2] = 0
+
+        straight = [
+            [0, 1, 2, 2, 2, 1, 0],
+            [0, 1, 2, 2, 2, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+                ]
+        
+        self.straight_template = np.array(straight)
+
+        curved = [
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 1, 1, 0],
+            [0, 0, 3, 1, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+                ]
+        
+        self.curved_template = np.array(curved)
+
 
         self.templates = {}
 
-        for i, name in enumerate(["u", "l", "d", "r"]):
+        for i, name in enumerate([("u",), ("l",), ("d",), ("r",)]):
             self.templates[name] = np.rot90(self.straight_template, i)
+        
+        for i, name in enumerate([("u", "l"), ("d", "l"), ("d", "r"),  ("u", "r")]):
+            self.templates[name] = np.rot90(self.curved_template, i)
 
     def get_tile_status(self, min_x, min_y, max_x, max_y, point_cloud):
         counts = {}
         for name in self.templates:
             counts[name] = 0
-        square = point_cloud[min_x:max_x, min_y:max_y]
-        if square.shape != (self.resolution, self.resolution):
+        square = point_cloud[min_x:max_x+1, min_y:max_y+1]
+        #print(square.shape)
+        
+        if square.shape != (self.resolution+1, self.resolution+1):
             return []
         for name, template in self.templates.items():
-            for i in range(self.resolution):
-                for j in range(self.resolution):
+            for i in range(self.resolution + 1):
+                for j in range(self.resolution + 1):
                     if square[i][j] == 1:
-                        counts[name] += template[i][j]
-
+                        counts[name] += copy.copy(template[i][j])
+        
+        names = []
         for name, count in counts.items():
             if count >= self.threshold:
-                yield name
+                names += list(name)
+        """
+        if np.count_nonzero(square):
+            cv.imshow(f"square" + str(names), (square*255).astype(np.uint8))
+        """
+        return names
 
     def transform_to_grid(self, point_cloud):
         offsets = point_cloud.offsets
         offsets = [o % self.resolution for o in offsets]
+        offsets.reverse()
         grid = []
         bool_array_copy = point_cloud.get_bool_array()
         bool_array_copy = bool_array_copy.astype(np.uint8) * 100
@@ -145,9 +210,10 @@ class PointCloudExtarctor:
                 bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
                 
                 val = self.get_tile_status(min_x, min_y, max_x, max_y, point_cloud.get_bool_array())
+                
                 row.append(list(val))
             grid.append(row)
         factor = 10
-        cv.imshow("bool_array_copy", cv.resize(bool_array_copy.astype(np.uint8), (point_cloud.shape[1] * factor, point_cloud.shape[0] * factor), interpolation=cv.INTER_NEAREST))
+        cv.imshow("point_cloud_with_squares", utilities.resize_image_to_fixed_size(bool_array_copy, (600, 600)))
         offsets = point_cloud.offsets
         return grid, [o // self.resolution for o in offsets]

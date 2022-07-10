@@ -12,14 +12,24 @@ Requirements:
 
 undefined = no conozco el tipo de casilla
 """
+class Fixture:
+    def __init__(self, exists=False, reported=False, type="N") -> None:
+        self.exists = exists
+        self.reported = reported
+        self.type = type
+        self.detection_angle = None
 
-class Node():
+class Node:
     def __init__(self, node_type:str, status:str="undefined", tile_type:str="undefined", curved:int=0, explored:bool=False, is_robots_position:bool=False):
         self.node_type = node_type
         self.status = status
         self.tile_type = tile_type if node_type == "tile" else "undefined"
         self.explored = explored
         self.is_robots_position = is_robots_position
+        self.fixture = Fixture()
+        self.fixtures_in_wall = []
+        self.is_start = False
+        self.is_curved = False
 
         self.mark1 = 0
         self.mark2 = 0
@@ -32,27 +42,69 @@ class Node():
                                 "undefined",
                                 "not_occupied") #same tuple
 
-        self.tile_type_conv = ("undefined",
+        self.valid_tile_types = ("undefined",
                                 "normal",
                                 "start",
                                 "connection1-2",
                                 "connection1-3", 
                                 "connection2-3", 
                                 "swamp", 
-                                "hole") #same tuple
+                                "hole",
+                                "checkpoint") #same tuple
+
+        self.tile_type_to_string = {
+            "undefined": "0",
+            "normal": "0",
+            "checkpoint": "4",
+            "start": "5",
+            "connection1-2": "6",
+            "connection1-3": "7",
+            "connection2-3": "8",
+            "swamp": "3",
+            "hole": "2"
+        }
+       
+
+
+    def get_representation(self) -> str:
+        if self.node_type == "tile":
+            return self.tile_type_to_string[self.tile_type]
+
+        elif self.node_type == "vortex":
+            return str(int(self.status == "occupied" and not self.is_curved))
+        
+        elif self.node_type == "wall":
+            if len(self.fixtures_in_wall) > 0:
+                return str("".join(self.fixtures_in_wall))
+            return str(int(self.status == "occupied"))
+        
+        else:
+            return "0"
 
     # Returns a visual representation of the node in ASCII 
     def get_string(self):
+
         if self.mark1:
             return "\033[1;36;36m██" + "\033[0m"
 
         if self.status == "undefined":
             if not(self.node_type == "tile" and self.tile_type != "undefined"):    
                 return "??"
+        
 
         if self.status == "occupied":
-            return "\033[1;30;40m██" + "\033[0m"
+            if self.node_type == "vortex" and self.explored:
+                return "\033[1;31;47m██"+ "\033[0m"
 
+            if self.node_type == "wall" and len(self.fixtures_in_wall) > 0:
+                return f"\033[1;35;40m{self.fixtures_in_wall[0]*2}" + "\033[0m"
+            
+            return "\033[1;30;40m██" + "\033[0m"
+        
+        
+        #elif self.is_robots_position:
+        #    return "\033[1;32;47m██"+ "\033[0m"
+        
         elif self.node_type == "wall":
             """
             if self.status == "not_occupied":
@@ -64,9 +116,31 @@ class Node():
             if self.status == "not_occupied":
                 return "\033[1;37;47m██"+ "\033[0m"
             """
+            if self.explored:
+                return "\033[1;32;47m██"+ "\033[0m"
+
             return "\033[1;30;47m<>"+ "\033[0m"
         
         elif self.node_type == "tile":
+
+            if self.explored:
+                if self.tile_type == "start":
+                    return "\033[1;32;47m█E"+ "\033[0m"
+                if self.tile_type == "hole":
+                    return "\033[0m  "+ "\033[0m"
+                if self.tile_type == "swamp":
+                    return "\033[1;33;40m█E"+ "\033[0m"
+                if self.tile_type == "checkpoint":
+                    return "\033[0m█E"+ "\033[0m"
+                if self.tile_type == "connection1-3":
+                    return "\033[1;35;47m█E"+ "\033[0m"
+                if self.tile_type == "connection1-2":
+                    return "\033[1;34;47m█E"+ "\033[0m"
+                if self.tile_type == "connection2-3":
+                    return "\033[1;31;47m█E"+ "\033[0m"
+                if self.tile_type == "normal":
+                    return "\033[1;37;47m█E"+ "\033[0m"
+            
             if self.tile_type == "start":
                 return "\033[1;32;47m██"+ "\033[0m"
             if self.tile_type == "hole":
@@ -215,7 +289,7 @@ class Grid:
         wall = [t + d for t, d in zip(tile, list_direction)]
 
         self.get_node((wall[0], wall[1])).status = "occupied"
-        self.fill_verticies_around_wall((wall[0], wall[1])) 
+        self.fill_verticies_around_wall((wall[0], wall[1]))
 
 
     def print_grid(self):

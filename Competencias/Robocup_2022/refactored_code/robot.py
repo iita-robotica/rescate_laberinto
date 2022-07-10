@@ -24,6 +24,8 @@ class RobotLayer:
         self.max_wheel_speed = 6.28
         # The timestep
         self.time_step = time_step
+
+        self.diameter = 0.074
         # Robot object provided by webots
         self.robot = Robot()
         self.prev_rotation = 0
@@ -53,6 +55,8 @@ class RobotLayer:
         
 
         self.point_is_close = False
+
+        self.stuck_counter = 0
 
     def delay_sec(self, delay):
         print("Current delay: ", delay)
@@ -188,7 +192,7 @@ class RobotLayer:
     
     # Gets a point cloud with all the detections from lidar and distance sensorss
     def get_detection_point_cloud(self):
-        point_clouds = self.lidar.getPointCloud(layers=(2,3))
+        point_clouds = self.lidar.getPointCloud(layers=(2, 3))
         self.point_is_close = self.lidar.pointIsClose
         return point_clouds
     
@@ -204,6 +208,12 @@ class RobotLayer:
             return 0
         return (self.right_wheel.velocity + self.left_wheel.velocity) / 2
     
+    def is_stuck_this_step(self):
+        return self.get_wheel_direction() > 0 and abs(utilities.getDistance(utilities.substractLists(self.position, self.prev_global_position))) < 0.00001
+
+    def is_stuck(self):
+        return self.stuck_counter > 50
+
     # Must run every TimeStep
     def update(self):
         # Updates the current time
@@ -246,5 +256,10 @@ class RobotLayer:
         self.lidar.setRotationDegrees(self.rotation + 0)
 
         #print("Delay time:", self.time - self.delayStart)
+
+        if self.is_stuck_this_step():
+            self.stuck_counter += 1
+        else:
+            self.stuck_counter = 0
         
         self.comunicator.update()

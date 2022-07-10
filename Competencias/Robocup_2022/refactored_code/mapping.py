@@ -1,10 +1,12 @@
 import numpy as np
 import copy
 import cv2 as cv
+import math
 
 import utilities
 from data_processing import camera_processor, data_extractor, point_cloud_processor
 from data_structures import lidar_persistent_grid, expandable_node_grid
+from algorithms.expandable_node_grid.bfs import bfs
 
 class Mapper:
     def __init__(self, tile_size):
@@ -21,14 +23,19 @@ class Mapper:
         self.camera_processor = camera_processor.CameraProcessor(100)
 
         # Data extractors
-        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(6, 5)
+        self.point_cloud_extractor = data_extractor.PointCloudExtarctor(resolution=6)
         self.floor_color_extractor = data_extractor.FloorColorExtractor(50)
 
         self.robot_node = None
+        self.robot_vortex_center = None
     
-    def register_start(self):
-        # TODO
-        pass
+    def register_start(self, robot_position):
+        robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
+        robot_node = [int(t * 2) for t in robot_vortex]
+        for adj in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+            adj = utilities.sumLists(robot_node, adj)
+            self.node_grid.get_node(adj).tile_type = "start"
+        self.node_grid.get_node(robot_node).is_start = True
     
     def load_point_cloud(self, point_cloud, robot_position):
         point_cloud = self.point_cloud_processor.processPointCloud(point_cloud, robot_position)
@@ -49,14 +56,14 @@ class Mapper:
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
 
         ranged_floor_image = cv.inRange(cv.cvtColor(floor_image, cv.COLOR_BGR2HSV), (0, 0, 100), (1, 1, 255))
-        cv.imshow("floor_image", floor_image)
+        #cv.imshow("floor_image", floor_image)
 
         self.point_cloud_processor.center_point = (floor_image.shape[1] // 2, floor_image.shape[0] // 2)
 
        
         camera_point_cloud = self.point_cloud_processor.processPointCloudForCamera(total_point_cloud)
         seen_points = self.point_cloud_processor.get_intermediate_points(camera_point_cloud)
-        print(seen_points)
+        #print(seen_points)
 
 
         utilities.draw_poses(final_image, seen_points, back_image=floor_image, xx_yy_format=True)
@@ -78,40 +85,102 @@ class Mapper:
             tile = utilities.sumLists(tile, [1, 1])
             tile = utilities.sumLists(tile, robot_node)
             print(self.node_grid.get_node(tile).node_type)
-            self.node_grid.get_node(tile).tile_type = color
+            if self.node_grid.get_node(tile).tile_type != "start":
+                self.node_grid.get_node(tile).tile_type = color
         
         
-        
-        cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
+        #cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))
           
         #self.lidar_grid.print_grid((600, 600))
-        #self.lidar_grid.print_bool((600, 600))          
+        #self.lidar_grid.print_bool((600, 600))
+    
+    def degs_to_orientation(self, degs):
+        """divides degrees in up, left, right or down"""
+        if utilities.normalizeDegs(180 - 45) < degs < 180:
+            return "up", "right"
+        if 180 <= degs < utilities.normalizeDegs(180 + 45):
+            return "up", "left"
+
+        elif utilities.normalizeDegs(360 - 45) < degs <= 360:
+            return "down", "left"
+        elif 0 <= degs < utilities.normalizeDegs(0 + 45):
+            return "down", "right" 
+        
+        elif utilities.normalizeDegs(90 - 45) < degs < 90:
+            return "right", "down"
+        elif 90 <= degs < utilities.normalizeDegs(90 + 45):
+            return "right", "up"
+        
+        elif utilities.normalizeDegs(270 - 45) < degs < 270:
+            return "left", "up"
+        elif 270 <= degs < utilities.normalizeDegs(270 + 45):
+            return "left", "down"
 
     
+    def load_wall_fixture(self, letter, image_angle):
+        print("images_angle:", image_angle)
+        orient = self.degs_to_orientation(utilities.normalizeDegs(image_angle))
+        print("orientation:", orient)
+        dir1, dir2 = orient
+        direction = utilities.dir2list(dir1)
+        direction = utilities.multiplyLists(direction, [2, 2])
+        direction = utilities.sumLists(direction, utilities.dir2list(dir2))
+        wall_index = utilities.sumLists(self.robot_node, direction)
+        assert self.node_grid.get_node(wall_index).node_type == "wall"
+        self.node_grid.get_node(wall_index).fixtures_in_wall.append(letter)
+
+        
+
+    def load_fixture(self, letter, camera_angle, robot_rotation):
+        fixture = self.node_grid.get_node(self.robot_node).fixture
+        fixture.exists = True
+        fixture.type = letter
+
+        image_angle = utilities.normalizeDegs(camera_angle + robot_rotation)
+        fixture.detection_angle = image_angle
+    
+    def get_fixture(self):
+        return self.node_grid.get_node(self.robot_node).fixture
+
+    def set_robot_node(self, robot_position):
+        robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
+        self.robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
+        robot_node = [int(t * 2) for t in robot_vortex]
+        self.robot_node = robot_node
+        for row in self.node_grid.grid:
+            for node in row:
+                node.is_robots_position = False
+
+        self.node_grid.get_node(self.robot_node).is_robots_position = True
+    
+    def block_front_vortex(self, robot_rotation):
+        orientation = utilities.dir2list(self.degs_to_orientation(robot_rotation)[0])
+
+        front_node = [r + (f * 2) for r, f in zip(self.robot_node, orientation)]
+        self.node_grid.get_node(front_node).status = "occupied"
+
+
     def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None, current_time=None):
         if robot_position is None or robot_rotation is None:
             return
         
-        robot_tile = [round((x + 0.03) / self.tile_size - 0.5) for x in robot_position]
-        robot_node = [t * 2 for t in robot_tile]
-
+        robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
+        robot_node = [int(t * 2) for t in robot_vortex]
+        robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
         
+        distance = math.sqrt(sum([(x - y) ** 2 for x, y in zip(robot_vortex_center, robot_position)]))
 
-        robot_tile_center = [(rt + 0) * self.tile_size for rt in robot_tile]
-        dist = utilities.getDistance([rp - tc for rp, tc in (robot_position, robot_tile_center)])
-        print("distance to center", dist)
-        if abs(dist) < 0.01 or self.robot_node is None:
-            self.robot_node = robot_node
-            for row in self.node_grid.grid:
-                for node in row:
-                    node.is_robots_position = False
+        print("robot_vortex:", robot_vortex)
 
-            self.node_grid.get_node(self.robot_node).is_robots_position = True
-            self.node_grid.get_node(robot_node).mark1 = True
-
-        for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
-                adj_node = utilities.sumLists(self.robot_node, adj)
+        if self.robot_node is None:
+            self.set_robot_node(robot_position)
+        
+        if distance < 0.02:
+            for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+                adj_node = utilities.sumLists(robot_node, adj)
                 self.node_grid.get_node(adj_node).explored = True
+        if distance < 0.02:
+            self.node_grid.get_node(robot_node).explored = True
 
         if point_cloud is not None:
             in_bounds_point_cloud, out_of_bounds_point_cloud = point_cloud
@@ -121,13 +190,22 @@ class Mapper:
         if point_cloud is not None and camera_images is not None and current_time is not None:
             total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
             self.process_floor(current_time, camera_images, total_point_cloud, robot_position, robot_rotation)
-            #self.lidar_grid.print_grid((600, 600))
-            #self.lidar_grid.print_bool((600, 600))  
+            self.lidar_grid.print_grid((600, 600))
+            self.lidar_grid.print_bool((600, 600))  
 
-            self.node_grid.print_grid()
+            #self.node_grid.print_grid()
         
         cv.waitKey(1) 
             
     
     def get_node_grid(self):
         return copy.deepcopy(self.node_grid)
+    
+    def get_grid_for_bonus(self):
+        final_grid = []
+        for row in self.get_node_grid().grid:
+            final_row = []
+            for node in row:
+                final_row.append(node.get_representation())
+            final_grid.append(final_row)
+        return np.array(final_grid)
