@@ -118,7 +118,7 @@ def classify_victim(victim):
 
     letter1 = crop_white(binary)
     letter1 = cv.resize(letter1, (100, 100), interpolation=cv.INTER_AREA)
-    letter = letter1[:,10:90]
+    letter = letter1[5:,10:90]
     letter = crop_white(letter)
     letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
     cv.imshow("letra", letter)
