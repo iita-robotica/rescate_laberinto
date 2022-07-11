@@ -18,11 +18,13 @@ class Comunicator:
         position = [int(position[0]), int(position[1])]
         message = struct.pack("i i c", position[0], position[1], letter)
         self.emmiter.send(message)
+        self.doGetWordInfo = False
 
     def sendLackOfProgress(self):
         self.doGetWordInfo = False
         message = struct.pack('c', 'L'.encode())  # message = 'L' to activate lack of progress
         self.emmiter.send(message)
+        self.doGetWordInfo = False
 
     def sendEndOfPlay(self):
         self.doGetWordInfo = False
@@ -57,7 +59,6 @@ class Comunicator:
     def update(self):
 
         if self.doGetWordInfo:
-            """
             self.requestGameData()
             if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
                 receivedData = self.receiver.getData()
@@ -67,7 +68,6 @@ class Comunicator:
                         self.gameScore = tup[1]
                         self.remainingTime = tup[2]
                         self.receiver.nextPacket() # Discard the current data packet
-            """
 
             self.lackOfProgress = False
             if self.receiver.getQueueLength() > 0:  # If receiver queue is not empty

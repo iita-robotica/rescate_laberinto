@@ -261,5 +261,3 @@ class RobotLayer:
             self.stuck_counter += 1
         else:
             self.stuck_counter = 0
-        
-        self.comunicator.update()

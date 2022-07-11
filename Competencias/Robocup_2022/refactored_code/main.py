@@ -9,6 +9,7 @@ import utilities, state_machines, robot, mapping
 from algorithms.expandable_node_grid.bfs import bfs
 
 from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
+from agents.go_back_agent.go_back_agent import GoBackAgent
 
 window_n = 0
 
@@ -16,7 +17,7 @@ window_n = 0
 # World constants
 TIME_STEP = 32
 TILE_SIZE = 0.06
-TIME_IN_ROUND = (8 * 60)
+TIME_IN_ROUND = 8 * 60
 
 
 # Components
@@ -36,6 +37,7 @@ seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
 mapper = mapping.Mapper(TILE_SIZE)
 
 closest_position_agent = ClosestPositionAgent()
+go_back_agent = GoBackAgent()
 
 
 # Variables
@@ -208,6 +210,9 @@ while robot.do_loop():
                     mapper.load_fixture(letter, angle, robot.rotation)
                     
                 break
+
+
+
     
     if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
         seq.resetSequence()
@@ -226,10 +231,15 @@ while robot.do_loop():
                 stateManager.changeState("stuck")
     
     
-    if mapper.get_fixture().exists and not mapper.get_fixture().reported and do_victim_reporting:
-        if not stateManager.checkState("report_victim"):
-            seq.resetSequence()
-            stateManager.changeState("report_victim")
+        if mapper.get_fixture().exists and not mapper.get_fixture().reported and do_victim_reporting:
+            if not stateManager.checkState("report_victim"):
+                seq.resetSequence()
+                stateManager.changeState("report_victim")
+
+        elif robot.comunicator.remainingTime < 30:
+            if not stateManager.checkState("go_back") and not stateManager.checkState("end"):
+                seq.resetSequence()
+                stateManager.changeState("go_back")
 
     print("state: ", stateManager.state)
 
@@ -303,7 +313,8 @@ while robot.do_loop():
         robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
     
-    elif stateManager.changeState("stuck"):
+    elif stateManager.checkState("stuck"):
+        print("IS IN STUCK")
         seq.startSequence()
         if seq.simpleEvent():
             robot.auto_decide_rotation = False
@@ -316,6 +327,27 @@ while robot.do_loop():
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
     
+    elif stateManager.checkState("go_back"):
+        print("IS IN GO BACK")
+        seq.startSequence()
+        grid = mapper.get_node_grid()
+        move = go_back_agent.get_action(grid)
+        print("move: ", move)
+        if move is None:
+            stateManager.changeState("end")
+            seq.seqResetSequence()
+        else:
+            node = mapper.robot_node
+
+            if seqMoveToRelativeTile(move[0], move[1]):
+                mapper.set_robot_node(robot.position)
+            seq.seqResetSequence()
+
+            print("rotation:", robot.rotation)
+            print("position:", robot.position)
+
+    print("robot time:", robot.comunicator.remainingTime)
+    robot.comunicator.update()
     window_n = 0
         
 

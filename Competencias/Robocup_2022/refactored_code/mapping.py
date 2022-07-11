@@ -28,10 +28,13 @@ class Mapper:
 
         self.robot_node = None
         self.robot_vortex_center = None
+
+        self.start_node = None
     
     def register_start(self, robot_position):
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
         robot_node = [int(t * 2) for t in robot_vortex]
+        self.start_node = robot_node
         for adj in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
             adj = utilities.sumLists(robot_node, adj)
             self.node_grid.get_node(adj).tile_type = "start"
