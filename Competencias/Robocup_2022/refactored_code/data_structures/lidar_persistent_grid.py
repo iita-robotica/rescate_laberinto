@@ -5,6 +5,8 @@ import utilities
 
 from data_structures import resizable_pixel_grid
 
+from flags import SHOW_DEBUG
+
 class LidarGrid(resizable_pixel_grid.Grid):
     def __init__(self, input_resolution, resolution, threshold=0):
         self.input_res = input_resolution
@@ -21,7 +23,8 @@ class LidarGrid(resizable_pixel_grid.Grid):
         return self.grid > self.threshold
     
     def clean_up(self):
-        print("Cleaning up lidar grid")
+        if SHOW_DEBUG:
+            print("Cleaning up lidar grid")
         self.grid = self.grid * (self.grid > self.delete_threshold).astype(np.int)
 
     

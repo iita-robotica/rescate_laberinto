@@ -16,6 +16,7 @@ from devices.gyroscope import Gyroscope
 
 from devices.comunicator import Comunicator
 
+from flags import SHOW_DEBUG
 
 # Abstraction layer for robot
 class RobotLayer:
@@ -59,7 +60,8 @@ class RobotLayer:
         self.stuck_counter = 0
 
     def delay_sec(self, delay):
-        print("Current delay: ", delay)
+        if SHOW_DEBUG:
+            print("Current delay: ", delay)
         if self.delay_first_time:
             self.delay_start = self.robot.getTime()
             self.delay_first_time = False
@@ -173,10 +175,10 @@ class RobotLayer:
         # print("Used global Pos: ", self.position)
         # print("diff in pos: " + str(diffX) + " , " + str(diffY))
         dist = utilities.getDistance((diffX, diffY))
-        print("Dist: "+ str(dist))
+        if SHOW_DEBUG: print("Dist: "+ str(dist))
         if errorMargin * -1 < dist < errorMargin:
             # self.robot.move(0,0)
-            print("FinisehedMove")
+            if SHOW_DEBUG: print("FinisehedMove")
             return True
         else:
             
@@ -190,9 +192,10 @@ class RobotLayer:
                 # print("Moving")
         return False
     
-    # Gets a point cloud with all the detections from lidar and distance sensorss
+    # Gets a point cloud with all the detections from lidar and distance sensors
+    
     def get_detection_point_cloud(self):
-        point_clouds = self.lidar.getPointCloud(layers=(2, 3))
+        point_clouds = self.lidar.getPointCloud(self.time, layers=(2, 3))
         self.point_is_close = self.lidar.pointIsClose
         return point_clouds
     
@@ -244,9 +247,11 @@ class RobotLayer:
         # Gets global rotation
         if self.rotation_sensor == "gyro":
             self.rotation = self.gyroscope.getDegrees()
-            print("USING GYRO")
+            if SHOW_DEBUG:
+                print("USING GYRO")
         else:
-            print("USING GPS")
+            if SHOW_DEBUG:
+                print("USING GPS")
             val = self.gps.getRotation()
             if val is not None:
                 self.rotation = val

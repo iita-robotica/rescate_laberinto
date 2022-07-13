@@ -11,6 +11,8 @@ from algorithms.expandable_node_grid.bfs import bfs
 from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
 from agents.go_back_agent.go_back_agent import GoBackAgent
 
+from flags import SHOW_DEBUG
+
 window_n = 0
 
 
@@ -129,13 +131,14 @@ def robot_fits(robot_node, show_debug=False):
     return np.count_nonzero(square)
 
 def correct_position(robot_position):
-    print("INITIAL POSITION: ", robot_position)
+    if SHOW_DEBUG:
+        print("INITIAL POSITION: ", robot_position)
     max_correction = 2
     exageration_factor = 1
     robot_node = [round(p * mapper.lidar_grid.multiplier) for p in robot_position]
     robot_node = [robot_node[0] + mapper.lidar_grid.offsets[0], robot_node[1] + mapper.lidar_grid.offsets[1]]
 
-    best_node = {"pos":robot_node, "dist":0, "amount":robot_fits(robot_node, show_debug=True)}
+    best_node = {"pos":robot_node, "dist":0, "amount":robot_fits(robot_node, show_debug=SHOW_DEBUG)}
 
     orientation = [abs(r - c) for r, c in zip(mapper.robot_vortex_center, robot_position)]
 
@@ -144,10 +147,8 @@ def correct_position(robot_position):
         for x in range(-max_correction, max_correction + 1):
             possible_pos = [robot_node[0] + (x * exageration_factor), robot_node[1] + (y * exageration_factor)]
             distance = math.sqrt(abs(x) ** (2) + abs(y) ** 2)
-            amount_of_nodes = robot_fits(possible_pos, show_debug=True)
+            amount_of_nodes = robot_fits(possible_pos, show_debug=SHOW_DEBUG)
             
-            print("varying in x")
-
             if amount_of_nodes < best_node["amount"]:
                 best_node["pos"] = [p - 0.0 for p in possible_pos]
                 best_node["dist"] = distance
@@ -165,7 +166,7 @@ def correct_position(robot_position):
             distance = math.sqrt(abs(x) ** (2) + abs(y) ** 2)
             amount_of_nodes = robot_fits(possible_pos)
 
-            print("varying in y")
+            #print("varying in y")
 
             if amount_of_nodes < best_node["amount"]:
                 best_node["pos"] = [p - 0.0 for p in possible_pos]
@@ -178,7 +179,7 @@ def correct_position(robot_position):
                     best_node["amount"] = amount_of_nodes
 
     final_pos = [(p - o) / mapper.lidar_grid.multiplier for p, o in zip(best_node["pos"], mapper.lidar_grid.offsets)]
-    print("CORRECTED POSITION: ", final_pos)
+    #print("CORRECTED POSITION: ", final_pos)
     return final_pos
 
 # Each timeStep
@@ -211,20 +212,20 @@ while robot.do_loop():
                     
                 break
 
-
-
     
     if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
         seq.resetSequence()
         stateManager.changeState("end")
     
-    fixture_detection.tune_filter(robot.get_camera_images()[1])
+    #fixture_detection.tune_filter(robot.get_camera_images()[1])
 
     # Updates state machine
     if not stateManager.checkState("init"):
-        print("stuck_counter: ", robot.stuck_counter)
+        if SHOW_DEBUG:
+            print("stuck_counter: ", robot.stuck_counter)
         if robot.is_stuck():
-            print("FRONT BLOCKED")
+            if SHOW_DEBUG:
+                print("FRONT BLOCKED")
             mapper.block_front_vortex(robot.rotation)
             if not stateManager.checkState("stuck"):
                 seq.resetSequence()
@@ -241,7 +242,8 @@ while robot.do_loop():
                 seq.resetSequence()
                 stateManager.changeState("go_back")
 
-    print("state: ", stateManager.state)
+    if SHOW_DEBUG:
+        print("state: ", stateManager.state)
 
     # Runs once when starting the game
     if stateManager.checkState("init"):
@@ -275,21 +277,23 @@ while robot.do_loop():
 
         grid = mapper.get_node_grid()
         move = closest_position_agent.get_action(grid)
-        print("move: ", move)
+        if SHOW_DEBUG:
+            print("move: ", move)
         node = mapper.robot_node
 
         if seqMoveToRelativeTile(move[0], move[1]):
             mapper.set_robot_node(robot.position)
         seq.seqResetSequence()
 
-        print("rotation:", robot.rotation)
-        print("position:", robot.position)
+        if SHOW_DEBUG:
+            print("rotation:", robot.rotation)
+            print("position:", robot.position)
 
     # Reports a victim
     elif stateManager.checkState("report_victim"):
         seq.startSequence()
         seqMoveWheels(0, 0)
-        if seq.simpleEvent():
+        if seq.simpleEvent() and SHOW_DEBUG:
             print("STOPPED")
         seqDelaySec(1.2)
         if seq.simpleEvent():
@@ -314,7 +318,8 @@ while robot.do_loop():
         robot.comunicator.sendEndOfPlay()
     
     elif stateManager.checkState("stuck"):
-        print("IS IN STUCK")
+        if SHOW_DEBUG:
+            print("IS IN STUCK")
         seq.startSequence()
         if seq.simpleEvent():
             robot.auto_decide_rotation = False
@@ -328,11 +333,13 @@ while robot.do_loop():
         seq.seqResetSequence()
     
     elif stateManager.checkState("go_back"):
-        print("IS IN GO BACK")
+        if SHOW_DEBUG:
+            print("IS IN GO BACK")
         seq.startSequence()
         grid = mapper.get_node_grid()
         move = go_back_agent.get_action(grid)
-        print("move: ", move)
+        if SHOW_DEBUG:
+            print("move: ", move)
         if move is None:
             stateManager.changeState("end")
             seq.seqResetSequence()
@@ -343,10 +350,12 @@ while robot.do_loop():
                 mapper.set_robot_node(robot.position)
             seq.seqResetSequence()
 
-            print("rotation:", robot.rotation)
-            print("position:", robot.position)
+            if SHOW_DEBUG:
+                print("rotation:", robot.rotation)
+                print("position:", robot.position)
 
-    print("robot time:", robot.comunicator.remainingTime)
+    if SHOW_DEBUG:
+        print("robot time:", robot.comunicator.remainingTime)
     robot.comunicator.update()
     window_n = 0
         

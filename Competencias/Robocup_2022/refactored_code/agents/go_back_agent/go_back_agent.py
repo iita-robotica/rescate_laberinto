@@ -3,6 +3,8 @@ import utilities
 
 from algorithms.expandable_node_grid.a_star import a_star
 
+from flags import SHOW_DEBUG
+
 class GoBackAgent(Agent):
     def __init__(self):
         super().__init__(["up", "down", "left", "right"])
@@ -43,9 +45,10 @@ class GoBackAgent(Agent):
                 self.a_star_path = best_path[1:]
                 self.a_star_index = 0
 
-        for node in self.a_star_path:
-            grid.get_node(node).mark1 = True
-        grid.print_grid()
+        if SHOW_DEBUG:
+            for node in self.a_star_path:
+                grid.get_node(node).mark1 = True
+            grid.print_grid()
 
         move = utilities.substractLists(self.a_star_path[self.a_star_index], self.current_robot_node)
         move = utilities.multiplyLists(move, [0.5, 0.5])
@@ -53,9 +56,10 @@ class GoBackAgent(Agent):
         if self.current_robot_node == list(self.a_star_path[self.a_star_index]):
             self.a_star_index += 1
 
-        print("Best node:", self.best_node)
-        print("Start node:", self.current_robot_node)
-        print("AStar path: ", self.a_star_path)
+        if SHOW_DEBUG:
+            print("Best node:", self.best_node)
+            print("Start node:", self.current_robot_node)
+            print("AStar path: ", self.a_star_path)
 
 
         return [int(m) for m in move]

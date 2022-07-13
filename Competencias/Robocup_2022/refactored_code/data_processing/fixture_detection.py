@@ -2,6 +2,8 @@ import cv2 as cv
 import numpy as np
 import random
 
+from flags import SHOW_DEBUG
+
 class Filter:
     def __init__(self, lower_hsv, upper_hsv):
         self.lower = np.array(lower_hsv)
@@ -23,6 +25,7 @@ vicitim_letter_filter = Filter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
 
 filter_for_tuning = white_filter
 
+"""
 cv.namedWindow("trackbars")
 
 cv.createTrackbar("min_h", "trackbars", filter_for_tuning.lower[0], 255, lambda x: None)
@@ -33,7 +36,7 @@ cv.createTrackbar("max_s", "trackbars", filter_for_tuning.upper[1], 255, lambda 
 
 cv.createTrackbar("min_v", "trackbars", filter_for_tuning.lower[2], 255, lambda x: None)
 cv.createTrackbar("max_v", "trackbars", filter_for_tuning.upper[2], 255, lambda x: None)
-
+"""
 def tune_filter(image):
     min_h = cv.getTrackbarPos("min_h", "trackbars")
     max_h = cv.getTrackbarPos("max_h", "trackbars")
@@ -57,7 +60,8 @@ def sum_images(images):
 def filter_victims(victims):
     final_victims = []
     for vic in victims:
-        print("victim:", vic["position"], vic["image"].shape)
+        if SHOW_DEBUG:
+            print("victim:", vic["position"], vic["image"].shape)
         if vic["image"].shape[0] > 25 and vic["image"].shape[1] > 20:
             final_victims.append(vic)
     return final_victims
@@ -74,7 +78,8 @@ def find_victims(image):
 
     binary_image = sum_images(binary_images)
     #print(binary_image)
-    cv.imshow("binaryImage", binary_image)
+    if SHOW_DEBUG:
+        cv.imshow("binaryImage", binary_image)
     
     # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
     contours, _ = cv.findContours(binary_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -121,9 +126,10 @@ def classify_victim(victim):
     letter = letter1[5:,10:90]
     letter = crop_white(letter)
     letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
-    cv.imshow("letra", letter)
-    cv.imshow("letra1", letter1)
-    cv.imshow("thresh", binary)
+    if SHOW_DEBUG:
+        cv.imshow("letra", letter)
+        cv.imshow("letra1", letter1)
+        cv.imshow("thresh", binary)
     letter_color = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
     area_width = 20
     area_height = 30
@@ -137,9 +143,10 @@ def classify_victim(victim):
         "middle": letter[areas["middle"][0][0]:areas["middle"][0][1], areas["middle"][1][0]:areas["middle"][1][1]],
         "bottom": letter[areas["bottom"][0][0]:areas["bottom"][0][1], areas["bottom"][1][0]:areas["bottom"][1][1]]
         }
-    cv.rectangle(letter_color,(areas["top"][1][0], areas["top"][0][0]), (areas["top"][1][1], areas["top"][0][1]), (0, 255, 0), 1)
-    cv.rectangle(letter_color, (areas["middle"][1][0], areas["middle"][0][0]), (areas["middle"][1][1], areas["middle"][0][1]), (0, 0, 255), 1)
-    cv.rectangle(letter_color,(areas["bottom"][1][0], areas["bottom"][0][0]), (areas["bottom"][1][1], areas["bottom"][0][1]), (225, 0, 255), 1)
+    if SHOW_DEBUG:
+        cv.rectangle(letter_color,(areas["top"][1][0], areas["top"][0][0]), (areas["top"][1][1], areas["top"][0][1]), (0, 255, 0), 1)
+        cv.rectangle(letter_color, (areas["middle"][1][0], areas["middle"][0][0]), (areas["middle"][1][1], areas["middle"][0][1]), (0, 0, 255), 1)
+        cv.rectangle(letter_color,(areas["bottom"][1][0], areas["bottom"][0][0]), (areas["bottom"][1][1], areas["bottom"][0][1]), (225, 0, 255), 1)
     counts = {}
     for key in images.keys():
         count = 0
@@ -202,7 +209,8 @@ def classify_fixture(vic):
         count = len(all_points)
         color_point_counts[key] = count
     
-    print(color_point_counts)
+    if SHOW_DEBUG:
+        print(color_point_counts)
 
     if is_poison(color_point_counts["black"], color_point_counts["white"]):
         print("Poison!")

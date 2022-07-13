@@ -1,4 +1,4 @@
-
+from flags import SHOW_DEBUG
 
 # Manages states
 class StateManager:
@@ -27,9 +27,10 @@ class SequenceManager:
         if self.resetFunction is not None:
             self.resetFunction()
         self.linePointer = 1
-        print("----------------")
-        print("reseting sequence")
-        print("----------------")
+        if SHOW_DEBUG:
+            print("----------------")
+            print("reseting sequence")
+            print("----------------")
 
     def seqResetSequence(self):
         if self.check():
