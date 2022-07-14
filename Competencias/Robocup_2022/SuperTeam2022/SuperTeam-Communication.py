@@ -1,4 +1,4 @@
-from controller import Robot, Emitter, Reciever
+from controller import Robot, Emitter
 import struct
 
 robot = Robot()
