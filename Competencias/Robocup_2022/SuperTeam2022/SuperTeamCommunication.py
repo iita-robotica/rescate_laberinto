@@ -17,18 +17,18 @@ class communication():
     def check_for_new_messages(self):
         return self.team_receiver.getQueueLength() > 0
 
-    def decode_message(self, message: str) -> dict:
+    def decode_message(self):
         struct_fmt = "T"
         message = struct.unpack(struct_fmt, message)
         data = {
             "robot_id:" (message[0],)
         }
-        return "message: " + data
+        return data
 
     def recieve_messages_to_team(self) -> dict:
         message = self.team_receiver.getData()
         self.team_receiver.nextPacket()
-        return self.decode_message(message)
+        return self.decode_message()
 
     def send_messages_to_other_team(self):
         struct_fmt = "T"
