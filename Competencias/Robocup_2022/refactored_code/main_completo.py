@@ -50,7 +50,7 @@ def tune_filter(image):
     min_v = cv.getTrackbarPos("min_v", "trackbars")
     max_v = cv.getTrackbarPos("max_v", "trackbars")
     filter_for_tuning = Filter((min_h, min_s, min_v), (max_h, max_s, max_v))
-    #print(filter_for_tuning.lower, filter_for_tuning.upper)
+    print(filter_for_tuning.lower, filter_for_tuning.upper)
     cv.imshow("tunedImage", filter_for_tuning.filter(image))
 
 
@@ -65,7 +65,7 @@ def sum_images(images):
 def filter_victims(victims):
     final_victims = []
     for vic in victims:
-        #print("victim:", vic["position"], vic["image"].shape)
+        print("victim:", vic["position"], vic["image"].shape)
         if vic["image"].shape[0] > 25 and vic["image"].shape[1] > 20:
             final_victims.append(vic)
     return final_victims
@@ -81,6 +81,7 @@ def find_victims(image):
                     black_filter.filter(image)]
 
     binary_image = sum_images(binary_images)
+    #print(binary_image)
     cv.imshow("binaryImage", binary_image)
     
     # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
@@ -209,32 +210,32 @@ def classify_fixture(vic):
         count = len(all_points)
         color_point_counts[key] = count
     
-    #print(color_point_counts)
+    print(color_point_counts)
 
     if is_poison(color_point_counts["black"], color_point_counts["white"]):
-        #print("Poison!")
+        print("Poison!")
         letter = "P"
     
     if is_victim(color_point_counts["black"], color_point_counts["white"]):
         cv.imshow("black filter:", color_images["black"])
         letter = classify_victim(vic)
-        #print("Victim:", letter)
+        print("Victim:", letter)
         
     
     if is_corrosive(color_point_counts["black"], color_point_counts["white"]):
-        #print("Corrosive!")
+        print("Corrosive!")
         letter = "C"
     
     if is_organic_peroxide(color_point_counts["red"], color_point_counts["yellow"]):
-       # print("organic peroxide!")
+        print("organic peroxide!")
         letter = "O"
     
     if is_flammable(color_point_counts["red"], color_point_counts["white"]):
-       # print("Flammable!")
+        print("Flammable!")
         letter = "F"
     
     if is_already_detected(color_point_counts):
-       # print("Already detected!")
+        print("Already detected!")
         letter = None
 
     return letter
@@ -526,9 +527,9 @@ class SequenceManager:
         if self.resetFunction is not None:
             self.resetFunction()
         self.linePointer = 1
-        #print("----------------")
-        #print("reseting sequence")
-        #print("----------------")
+        print("----------------")
+        print("reseting sequence")
+        print("----------------")
 
     def seqResetSequence(self):
         if self.check():
@@ -940,11 +941,11 @@ class Comunicator:
         self.doGetWordInfo = False
         exit_mes = struct.pack('c', b'E')
         self.emmiter.send(exit_mes)
-        #print("Ended!!!!!")
+        print("Ended!!!!!")
 
     def sendMap(self, npArray):
         # Get shape
-        #print(npArray)
+        print(npArray)
         s = npArray.shape
         # Get shape as bytes
         s_bytes = struct.pack('2i', *s)
@@ -984,11 +985,11 @@ class Comunicator:
             self.lackOfProgress = False
             if self.receiver.getQueueLength() > 0:  # If receiver queue is not empty
                 receivedData = self.receiver.getData()
-                #print(receivedData)
+                print(receivedData)
                 if len(receivedData) < 2:
                     tup = struct.unpack('c', receivedData)  # Parse data into character
                     if tup[0].decode("utf-8") == 'L':  # 'L' means lack of progress occurred
-                        #print("Detected Lack of Progress!")
+                        print("Detected Lack of Progress!")
                         self.lackOfProgress = True
                     self.receiver.nextPacket()  # Discard the current data packetelse:
         else:
@@ -1039,7 +1040,7 @@ class RobotLayer:
         self.stuck_counter = 0
 
     def delay_sec(self, delay):
-        #print("Current delay: ", delay)
+        print("Current delay: ", delay)
         if self.delay_first_time:
             self.delay_start = self.robot.getTime()
             self.delay_first_time = False
@@ -1149,11 +1150,14 @@ class RobotLayer:
         descelerationStart = 0.5 * 0.12
         diffX = targetPos[0] - self.position[0]
         diffY = targetPos[1] - self.position[1]
+        # print("Target Pos: ", targetPos)
+        # print("Used global Pos: ", self.position)
+        # print("diff in pos: " + str(diffX) + " , " + str(diffY))
         dist = getDistance((diffX, diffY))
-        #print("Dist: "+ str(dist))
+        print("Dist: "+ str(dist))
         if errorMargin * -1 < dist < errorMargin:
             # self.robot.move(0,0)
-            #print("FinisehedMove")
+            print("FinisehedMove")
             return True
         else:
             
@@ -1221,9 +1225,9 @@ class RobotLayer:
         # Gets global rotation
         if self.rotation_sensor == "gyro":
             self.rotation = self.gyroscope.getDegrees()
-            #print("USING GYRO")
+            print("USING GYRO")
         else:
-            #print("USING GPS")
+            print("USING GPS")
             val = self.gps.getRotation()
             if val is not None:
                 self.rotation = val
@@ -1465,7 +1469,7 @@ class FloorColorExtractor:
                 tile = divideLists(tile, [self.tile_resolution, self.tile_resolution])
                 tile = [int(t) for t in tile]
                 if color_key != "nothing":
-                    #print(tile, color_key)
+                    print(tile, color_key)
                     color_tiles.append((tile, color_key))
 
         drawing_image = floor_image.copy() #self.final_image.copy()
@@ -1473,6 +1477,10 @@ class FloorColorExtractor:
         cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
         cv.imshow("final_floor_image", resize_image_to_fixed_size(drawing_image, (600, 600)))        
         return color_tiles
+
+
+        
+        
 
 class PointCloudExtarctor:
     def __init__(self, resolution):
@@ -1567,6 +1575,8 @@ class PointCloudExtarctor:
         cv.imshow("point_cloud_with_squares", resize_image_to_fixed_size(bool_array_copy, (600, 600)))
         offsets = point_cloud.offsets
         return grid, [o // self.resolution for o in offsets]
+
+
 
 # from data_procesing import point_cloud_processor
 ##############################################################################################
@@ -1712,7 +1722,7 @@ class LidarGrid(Grid):
         return self.grid > self.threshold
     
     def clean_up(self):
-       # print("Cleaning up lidar grid")
+        print("Cleaning up lidar grid")
         self.grid = self.grid * (self.grid > self.delete_threshold).astype(np.int)
 
     
@@ -1730,6 +1740,10 @@ class LidarGrid(Grid):
         for point in point_cloud:
             self.sum_detection(point)
         self.frame += 1
+
+        
+    
+
 
 # from data_structures import expandable_node_grid
 ##############################################################################################
@@ -2027,6 +2041,8 @@ class Grid:
         for row in self.grid:
             for node in row:
                 print(node, end="")
+            print()
+        print()
     
 if __name__ == "__main__":
     grid = Grid((10, 10))
@@ -2222,7 +2238,7 @@ class Mapper:
             #tile.reverse()
             tile = sumLists(tile, [1, 1])
             tile = sumLists(tile, robot_node)
-            #print(self.node_grid.get_node(tile).node_type)
+            print(self.node_grid.get_node(tile).node_type)
             if self.node_grid.get_node(tile).tile_type != "start":
                 self.node_grid.get_node(tile).tile_type = color
         
@@ -2256,9 +2272,9 @@ class Mapper:
 
     
     def load_wall_fixture(self, letter, image_angle):
-        #print("images_angle:", image_angle)
+        print("images_angle:", image_angle)
         orient = self.degs_to_orientation(normalizeDegs(image_angle))
-       # print("orientation:", orient)
+        print("orientation:", orient)
         dir1, dir2 = orient
         direction = dir2list(dir1)
         direction = multiplyLists(direction, [2, 2])
@@ -2310,15 +2326,10 @@ class Mapper:
         
         distance = math.sqrt(sum([(x - y) ** 2 for x, y in zip(robot_vortex_center, robot_position)]))
 
-<<<<<<< HEAD
-        #print("robot_vortex:", robot_vortex)
-
-=======
         print("robot_vortex:", robot_vortex)
         
         tiempo_calculos = int(time.time() * 1000)
         print("     Tiempo calculos funcion mapper.update:", tiempo_calculos - tiempo_inicio)
->>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
         if self.robot_node is None:
             self.set_robot_node(robot_position)
         
@@ -2416,6 +2427,8 @@ class aStarNode():
 # Returns a list of tuples as a path from the given start to the given end in the given maze
 def a_star(grid, start, end):
     #assert is_traversable(grid, start)
+    if not is_traversable(grid, start):
+        print("WARNING: Start position is not traversable")
 
     assert is_traversable(grid, end)
 
@@ -2568,15 +2581,9 @@ class ClosestPositionAgent(Agent):
         if self.current_robot_node == list(self.a_star_path[self.a_star_index]):
             self.a_star_index += 1
 
-<<<<<<< HEAD
-        #print("Best node:", self.best_node)
-        #print("Start node:", self.current_robot_node)
-        #print("AStar path: ", self.a_star_path)
-=======
         # print("Best node:", self.best_node)
         # print("Start node:", self.current_robot_node)
         # print("AStar path: ", self.a_star_path)
->>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
 
 
         return [int(m) for m in move]
@@ -2633,7 +2640,7 @@ def calibratePositionOffsets():
         round((actualTile[0] * TILE_SIZE) - robot.position[0]) + TILE_SIZE // 2,
         round((actualTile[1] * TILE_SIZE) - robot.position[1]) + TILE_SIZE // 2]
     robot.position_offsets = [robot.position_offsets[0] % TILE_SIZE, robot.position_offsets[1] % TILE_SIZE]
-    #print("positionOffsets: ", robot.position_offsets)
+    print("positionOffsets: ", robot.position_offsets)
 
 def seqCalibrateRobotRotation():
     # Calibrates the robot rotation using the gps
@@ -2691,19 +2698,17 @@ def robot_fits(robot_node, show_debug=False):
     square1 = square1 * 255
 
     if show_debug:
-        cv.imshow(f"square{window_n}", square1.astype(np.uint8))
-        #print(f"Showing square{window_n}")
-        
+        try:
+            cv.imshow(f"square{window_n}", square1.astype(np.uint8))
+            print(f"Showing square{window_n}")
+        except:
+            print(f"Error showing square{window_n}")
     window_n += 1
 
     return np.count_nonzero(square)
 
 def correct_position(robot_position):
-<<<<<<< HEAD
-    #print("INITIAL POSITION: ", robot_position)
-=======
     # print("INITIAL POSITION: ", robot_position)
->>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
     max_correction = 2
     exageration_factor = 1
     robot_node = [round(p * mapper.lidar_grid.multiplier) for p in robot_position]
@@ -2739,7 +2744,7 @@ def correct_position(robot_position):
             distance = math.sqrt(abs(x) ** (2) + abs(y) ** 2)
             amount_of_nodes = robot_fits(possible_pos)
 
-            #print("varying in y")
+            print("varying in y")
 
             if amount_of_nodes < best_node["amount"]:
                 best_node["pos"] = [p - 0.0 for p in possible_pos]
@@ -2752,11 +2757,7 @@ def correct_position(robot_position):
                     best_node["amount"] = amount_of_nodes
 
     final_pos = [(p - o) / mapper.lidar_grid.multiplier for p, o in zip(best_node["pos"], mapper.lidar_grid.offsets)]
-<<<<<<< HEAD
-   # print("CORRECTED POSITION: ", final_pos)
-=======
     # print("CORRECTED POSITION: ", final_pos)
->>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
     return final_pos
 import time
 
@@ -2780,10 +2781,6 @@ while robot.do_loop():
         images = robot.get_camera_images()
         #utilities.save_image(images[1], "camera_image_center.png")
         mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
-        tiempo_mapper_update = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de mapper.update {tiempo_mapper_update - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
         tiempo_if_mapping_uno = int(time.time() * 1000)
         print("----------------------------------------------------")
         print(f"Tiempo de if_mapping_uno {tiempo_if_mapping_uno - tiempo_loop} milisegundos")
@@ -2918,6 +2915,8 @@ while robot.do_loop():
     elif stateManager.checkState("report_victim"):
         seq.startSequence()
         seqMoveWheels(0, 0)
+        if seq.simpleEvent():
+            print("STOPPED")
         seqDelaySec(1.2)
         if seq.simpleEvent():
             fixture = mapper.get_fixture()
