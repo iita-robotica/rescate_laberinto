@@ -2184,6 +2184,7 @@ class Mapper:
 
     @do_every_n_frames(5, 32)
     def process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
+        
         floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
 
@@ -2293,6 +2294,8 @@ class Mapper:
 
 
     def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None, current_time=None):
+        tiempo_inicio = int(time.time() * 1000)
+        print("     Tiempo inicio funcion mapper.update:", tiempo_inicio)
         if robot_position is None or robot_rotation is None:
             return
         
@@ -2302,8 +2305,15 @@ class Mapper:
         
         distance = math.sqrt(sum([(x - y) ** 2 for x, y in zip(robot_vortex_center, robot_position)]))
 
+<<<<<<< HEAD
         #print("robot_vortex:", robot_vortex)
 
+=======
+        print("robot_vortex:", robot_vortex)
+        
+        tiempo_calculos = int(time.time() * 1000)
+        print("     Tiempo calculos funcion mapper.update:", tiempo_calculos - tiempo_inicio)
+>>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
         if self.robot_node is None:
             self.set_robot_node(robot_position)
         
@@ -2314,11 +2324,18 @@ class Mapper:
         if distance < 0.02:
             self.node_grid.get_node(robot_node).explored = True
 
+        tiempo_distancia = int(time.time() * 1000)
+        print("     Tiempo if_distancia funcion mapper.update:", tiempo_distancia - tiempo_inicio)
+        
         if point_cloud is not None:
             in_bounds_point_cloud, out_of_bounds_point_cloud = point_cloud
             self.load_point_cloud(in_bounds_point_cloud, robot_position)
             self.lidar_to_node_grid()
-
+        
+        
+        tiempo_point_cloud_uno = int(time.time() * 1000)
+        print("     Tiempo if_point_cloud_uno funcion mapper.update:", tiempo_point_cloud_uno - tiempo_inicio)
+            
         if point_cloud is not None and camera_images is not None and current_time is not None:
             total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
             self.process_floor(current_time, camera_images, total_point_cloud, robot_position, robot_rotation)
@@ -2326,7 +2343,9 @@ class Mapper:
             self.lidar_grid.print_bool((600, 600))  
 
             #self.node_grid.print_grid()
-        
+        tiempo_point_cloud_dos = int(time.time() * 1000)
+        print("     Tiempo if_point_cloud_dos funcion mapper.update:", tiempo_point_cloud_dos - tiempo_inicio)
+            
         cv.waitKey(1) 
             
     
@@ -2544,9 +2563,15 @@ class ClosestPositionAgent(Agent):
         if self.current_robot_node == list(self.a_star_path[self.a_star_index]):
             self.a_star_index += 1
 
+<<<<<<< HEAD
         #print("Best node:", self.best_node)
         #print("Start node:", self.current_robot_node)
         #print("AStar path: ", self.a_star_path)
+=======
+        # print("Best node:", self.best_node)
+        # print("Start node:", self.current_robot_node)
+        # print("AStar path: ", self.a_star_path)
+>>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
 
 
         return [int(m) for m in move]
@@ -2669,7 +2694,11 @@ def robot_fits(robot_node, show_debug=False):
     return np.count_nonzero(square)
 
 def correct_position(robot_position):
+<<<<<<< HEAD
     #print("INITIAL POSITION: ", robot_position)
+=======
+    # print("INITIAL POSITION: ", robot_position)
+>>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
     max_correction = 2
     exageration_factor = 1
     robot_node = [round(p * mapper.lidar_grid.multiplier) for p in robot_position]
@@ -2686,7 +2715,7 @@ def correct_position(robot_position):
             distance = math.sqrt(abs(x) ** (2) + abs(y) ** 2)
             amount_of_nodes = robot_fits(possible_pos, show_debug=False)
             
-            print("varying in x")
+            # print("varying in x")
 
             if amount_of_nodes < best_node["amount"]:
                 best_node["pos"] = [p - 0.0 for p in possible_pos]
@@ -2718,7 +2747,11 @@ def correct_position(robot_position):
                     best_node["amount"] = amount_of_nodes
 
     final_pos = [(p - o) / mapper.lidar_grid.multiplier for p, o in zip(best_node["pos"], mapper.lidar_grid.offsets)]
+<<<<<<< HEAD
    # print("CORRECTED POSITION: ", final_pos)
+=======
+    # print("CORRECTED POSITION: ", final_pos)
+>>>>>>> d619eeca55fb2b1b5dcde9409135288e057906da
     return final_pos
 import time
 
@@ -2868,13 +2901,14 @@ while robot.do_loop():
             mapper.set_robot_node(robot.position)
         seq.seqResetSequence()
 
+        """
         print("rotation:", robot.rotation)
         print("position:", robot.position)
         tiempo_state_explorer = int(time.time() * 1000)
         print("----------------------------------------------------")
         print(f"Tiempo de state_explorer {tiempo_state_explorer - tiempo_loop} milisegundos")
         print("----------------------------------------------------")
-
+        """
     # Reports a victim
     elif stateManager.checkState("report_victim"):
         seq.startSequence()
