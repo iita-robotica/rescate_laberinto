@@ -2695,7 +2695,7 @@ def correct_position(robot_position):
     robot_node = [round(p * mapper.lidar_grid.multiplier) for p in robot_position]
     robot_node = [robot_node[0] + mapper.lidar_grid.offsets[0], robot_node[1] + mapper.lidar_grid.offsets[1]]
 
-    best_node = {"pos":robot_node, "dist":0, "amount":robot_fits(robot_node, show_debug=True)}
+    best_node = {"pos":robot_node, "dist":0, "amount":robot_fits(robot_node, show_debug=False)}
 
     orientation = [abs(r - c) for r, c in zip(mapper.robot_vortex_center, robot_position)]
 
@@ -2704,7 +2704,7 @@ def correct_position(robot_position):
         for x in range(-max_correction, max_correction + 1):
             possible_pos = [robot_node[0] + (x * exageration_factor), robot_node[1] + (y * exageration_factor)]
             distance = math.sqrt(abs(x) ** (2) + abs(y) ** 2)
-            amount_of_nodes = robot_fits(possible_pos, show_debug=True)
+            amount_of_nodes = robot_fits(possible_pos, show_debug=False)
             
             print("varying in x")
 
@@ -2740,22 +2740,39 @@ def correct_position(robot_position):
     final_pos = [(p - o) / mapper.lidar_grid.multiplier for p, o in zip(best_node["pos"], mapper.lidar_grid.offsets)]
     print("CORRECTED POSITION: ", final_pos)
     return final_pos
+import time
 
+hora_actual = int(time.time() * 1000)
+print("Hora Actual en milsegundos")
 # Each timeStep
 while robot.do_loop():
+    tiempo_loop = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo de time_step {tiempo_loop} milisegundos")
+    print("----------------------------------------------------")
     # Updates robot position and rotation, sensor positions, etc.
-    robot.update()
-    
+    robot.update()    
+    tiempo_update = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo de update {tiempo_update - tiempo_loop} milisegundos")
+    print("----------------------------------------------------")
     # Loads data to mapping
     if do_mapping:
         lidar_point_cloud = robot.get_detection_point_cloud()
         images = robot.get_camera_images()
         #utilities.save_image(images[1], "camera_image_center.png")
         mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
-
+        tiempo_if_mapping_uno = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de if_mapping_uno {tiempo_if_mapping_uno - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
     else:
-        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
-    
+        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)        
+        tiempo_else_mapping_uno = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de else_mapping_uno {tiempo_else_mapping_uno - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
+        
     if do_mapping:
         images = robot.get_camera_images()
         for index, image in enumerate(images):
@@ -2771,11 +2788,26 @@ while robot.do_loop():
                     
                 break
     
+    tiempo_mapping_dos = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo de mapping_dos {tiempo_mapping_dos - tiempo_loop} milisegundos")
+    print("----------------------------------------------------")
+    
     if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
         seq.resetSequence()
         stateManager.changeState("end")
+        
+    tiempo_is_complete = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo de is_complete {tiempo_is_complete - tiempo_loop} milisegundos")
+    print("----------------------------------------------------")
     
     tune_filter(robot.get_camera_images()[1])
+    
+    tiempo_tune_filter = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo de tune_filter {tiempo_tune_filter - tiempo_loop} milisegundos")
+    print("----------------------------------------------------")
 
     # Updates state machine
     if not stateManager.checkState("init"):
@@ -2787,6 +2819,10 @@ while robot.do_loop():
                 seq.resetSequence()
                 stateManager.changeState("stuck")
     
+    tiempo_update_state_machine = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo de update_state_machine {tiempo_update_state_machine - tiempo_loop} milisegundos")
+    print("----------------------------------------------------")
     
     if mapper.get_fixture().exists and not mapper.get_fixture().reported and do_victim_reporting:
         if not stateManager.checkState("report_victim"):
@@ -2794,6 +2830,11 @@ while robot.do_loop():
             stateManager.changeState("report_victim")
 
     print("state: ", stateManager.state)
+    
+    tiempo_mapper_fixture = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo de mapper_fixture {tiempo_mapper_fixture - tiempo_loop} milisegundos")
+    print("----------------------------------------------------")
 
     # Runs once when starting the game
     if stateManager.checkState("init"):
@@ -2817,9 +2858,18 @@ while robot.do_loop():
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
 
+        tiempo_state_init = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de state_init {tiempo_state_init - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
+    
     elif stateManager.checkState("stop"):
         seq.startSequence()
         seqMoveWheels(0, 0)
+        tiempo_check_state_stop = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de check_state_stop {tiempo_check_state_stop - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
 
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
@@ -2836,6 +2886,10 @@ while robot.do_loop():
 
         print("rotation:", robot.rotation)
         print("position:", robot.position)
+        tiempo_state_explorer = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de state_explorer {tiempo_state_explorer - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
 
     # Reports a victim
     elif stateManager.checkState("report_victim"):
@@ -2851,6 +2905,11 @@ while robot.do_loop():
             mapper.load_wall_fixture(letter, fixture.detection_angle)
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
+        
+        tiempo_state_report_victim = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de state_report_victim {tiempo_state_report_victim - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
     
     elif stateManager.checkState("teleported"):
         seq.startSequence()
@@ -2860,10 +2919,19 @@ while robot.do_loop():
         # Changes state and resets the sequence
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
+        tiempo_state_teleported = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de state_teleported {tiempo_state_teleported - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
+        
     
     elif stateManager.checkState("end"):
         robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
+        tiempo_check_state_end = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de check_state_end {tiempo_check_state_end - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
     
     elif stateManager.changeState("stuck"):
         seq.startSequence()
@@ -2877,8 +2945,13 @@ while robot.do_loop():
             robot.auto_decide_rotation = True
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
+        tiempo_state_stuck = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de state_stuck {tiempo_state_stuck - tiempo_loop} milisegundos")
+        print("----------------------------------------------------")
     
     window_n = 0
-        
-
-
+    tiempo_final_loop = int(time.time() * 1000)
+    print("----------------------------------------------------")
+    print(f"Tiempo final_loop {tiempo_final_loop - tiempo_loop} milisegundos")
+    print("----------------------------------------------------")   

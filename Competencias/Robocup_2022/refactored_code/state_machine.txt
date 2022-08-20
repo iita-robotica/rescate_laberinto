@@ -1,0 +1,5 @@
+Maquina de Estados:
+
+    * calibratePositionOffsets
+    * seqCalibrateRobotRotation
+    * 

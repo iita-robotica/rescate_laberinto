@@ -1,6 +1,5 @@
+""" Class for the colour sensor """
 import utilities
-
-# Reads the colour sensor
 class ColourSensor:
     def __init__(self, sensor, distancefromCenter, timeStep):
         self.distance = distancefromCenter
@@ -10,11 +9,9 @@ class ColourSensor:
         self.r = 0
         self.g = 0
         self.b = 0
-    
     def setPosition(self, robotGlobalPosition, robotGlobalRotation):
         realPosition = utilities.getCoordsFromDegs(robotGlobalRotation, self.distance)
         self.position = [robotGlobalPosition[0] + realPosition[0], robotGlobalPosition[1] + realPosition[1]]
-    
     def __update(self):
         colour = self.sensor.getImage()
         # print("Colourimg:", colour)
