@@ -2206,8 +2206,9 @@ class Mapper:
         floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
         
-        tiempo_inicio_pro = time.time()
-        print("tiempo_inicio_procces_floor: ", tiempo_inicio_procces_floor)
+        tiempo_floor_image = time.time()
+        print("tiempo_inicio_procces_floor: ",
+              tiempo_inicio_procces_floor - tiempo_inicio_procces_floor)
         
         ranged_floor_image = cv.inRange(cv.cvtColor(floor_image, cv.COLOR_BGR2HSV), (0, 0, 100), (1, 1, 255))
         #cv.imshow("floor_image", floor_image)
