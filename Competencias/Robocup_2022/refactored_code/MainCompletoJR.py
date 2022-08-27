@@ -1539,11 +1539,14 @@ class PointCloudExtarctor:
         return names
 
     def transform_to_grid(self, point_cloud):
+        tiempo_inicio_de_funcion = int(time.time() * 1000)
         offsets = point_cloud.offsets
         offsets = [o % self.resolution for o in offsets]
         offsets.reverse()
+
         grid = []
         bool_array_copy = point_cloud.get_bool_array().astype(np.uint8) * 100
+
         for x in range(offsets[0], bool_array_copy.shape[0] - self.resolution, self.resolution):
             row = []
             for y in range(offsets[1], bool_array_copy.shape[1] - self.resolution, self.resolution):
@@ -1552,14 +1555,19 @@ class PointCloudExtarctor:
                 max_x = x + self.resolution
                 max_y = y + self.resolution
                 #print(min_x, min_y, max_x, max_y)
-                bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
+                #bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
                 val = self.get_tile_status(min_x, min_y, max_x, max_y, point_cloud.get_bool_array())
                 row.append(list(val))
             grid.append(row)
+        tiempo_fors_bool_array = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de ForsCopyBoolArray {tiempo_fors_bool_array - tiempo_inicio_de_funcion} milisegundos")
+        print("----------------------------------------------------")
         factor = 10
         #cv.imshow("point_cloud_with_squares", resize_image_to_fixed_size(bool_array_copy, (600, 600)))
         offsets = point_cloud.offsets
         return grid, [o // self.resolution for o in offsets]
+        
 
 
 
