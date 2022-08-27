@@ -1439,18 +1439,11 @@ class FloorColorExtractor:
     def get_floor_colors(self, floor_image, robot_position):
 
         grid_offsets = [(((p + 0) % 0.06) / 0.06) * 50 for p in robot_position]
-        
         grid_offsets = [int(o) for o in grid_offsets]
-
         offsets = [((((p + 0.03) % 0.06) - 0.03) / 0.06) * 50 for p in robot_position]
-        
         offsets = [int(o) for o in offsets]
-
-        
         save_image(floor_image, "floor_image.png")
-
         squares_grid = get_squares(floor_image, self.tile_resolution, offsets)
-
         color_tiles = []
         for row in squares_grid:
             for square in row:
@@ -1471,16 +1464,11 @@ class FloorColorExtractor:
                 if color_key != "nothing":
                    # print(tile, color_key)
                     color_tiles.append((tile, color_key))
-
-        drawing_image = floor_image.copy() #self.final_image.copy()
-        draw_grid(drawing_image, self.tile_resolution, offset=grid_offsets)
-        cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
-        cv.imshow("final_floor_image", resize_image_to_fixed_size(drawing_image, (600, 600)))        
+        #drawing_image = floor_image.copy() #self.final_image.copy()
+        #draw_grid(drawing_image, self.tile_resolution, offset=grid_offsets)
+        #cv.circle(drawing_image, (350 - offsets[0], 350 - offsets[1]), 10, (255, 0, 0), -1)
+        #cv.imshow("final_floor_image", resize_image_to_fixed_size(drawing_image, (600, 600)))        
         return color_tiles
-
-
-        
-        
 
 class PointCloudExtarctor:
     def __init__(self, resolution):
@@ -2201,36 +2189,50 @@ class Mapper:
     @do_every_n_frames(5, 32)
     def process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
         tiempo_inicio_procces_floor = int(time.time() * 1000)
-        #print("tiempo_inicio_procces_floor: ", tiempo_inicio_procces_floor)
+        print("----------------------------------------------------")
+        print(f"Tiempo de inicio_process_floor {tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
         
         floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
-        
-        tiempo_inicio_pro = time.time()
-      #  print("tiempo_inicio_procces_floor: ", tiempo_inicio_procces_floor)
-        
-        ranged_floor_image = cv.inRange(cv.cvtColor(floor_image, cv.COLOR_BGR2HSV), (0, 0, 100), (1, 1, 255))
-        #cv.imshow("floor_image", floor_image)
+        tiempo_camera_point_cloud1 = int(time.time() * 1000)
+        print("--------------------------------------------------")
+        print(f"Tiempo de camera_point_cloud1 {tiempo_camera_point_cloud1 - tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
 
         self.point_cloud_processor.center_point = (floor_image.shape[1] // 2, floor_image.shape[0] // 2)
+        tiempo_camera_point_cloud2 = int(time.time() * 1000)
+        print("--------------------------------------------------")
+        print(f"Tiempo de camera_point_cloud2 {tiempo_camera_point_cloud2 - tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
 
-       
         camera_point_cloud = self.point_cloud_processor.processPointCloudForCamera(total_point_cloud)
-        seen_points = self.point_cloud_processor.get_intermediate_points(camera_point_cloud)
-        #print(seen_points)
-
+        tiempo_camera_point_cloud3 = int(time.time() * 1000)
+        print("--------------------------------------------------")
+        print(f"Tiempo de camera_point_cloud3 {tiempo_camera_point_cloud3 - tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
+        tiempo_camera_point_cloud = int(time.time() * 1000)
+        print("--------------------------------------------------")
+        print(f"Tiempo de camera_point_cloud {tiempo_camera_point_cloud - tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
 
         # draw_poses(final_image, seen_points, back_image=floor_image, xx_yy_format=True)
         
         
-        floor_colors = self.floor_color_extractor.get_floor_colors(final_image, robot_position)
 
+        tiempo_robot_tile = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de Robot_tile {tiempo_robot_tile - tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
         #robot_tile = divideLists(robot_position, [self.tile_size, self.tile_size])
         robot_tile = [round((x + 0.03) / self.tile_size - 0.5) for x in robot_position]
         robot_node = [t * 2 for t in robot_tile]
-       
 
-        
+        floor_colors = self.floor_color_extractor.get_floor_colors(final_image, robot_position)
+        tiempo_floor_colors1 = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de floor_colors1 {tiempo_floor_colors1 - tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
         for floor_color in floor_colors:
             tile = floor_color[0]
             color = floor_color[1]
@@ -2242,7 +2244,10 @@ class Mapper:
             if self.node_grid.get_node(tile).tile_type != "start":
                 self.node_grid.get_node(tile).tile_type = color
         
-        
+        tiempo_floor_colors2 = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"Tiempo de floor_colors2 {tiempo_floor_colors2 - tiempo_inicio_procces_floor} milisegundos")
+        print("----------------------------------------------------")
         #cv.imshow('final_image', resize_image_to_fixed_size(final_image, (600, 600)))
           
         #self.lidar_grid.print_grid((600, 600))
@@ -2767,11 +2772,7 @@ while robot.do_loop():
     print(f"Tiempo de time_step {tiempo_loop} milisegundos")
     print("----------------------------------------------------")
     # Updates robot position and rotation, sensor positions, etc.
-    robot.update()     
-    tiempo_update = int(time.time() * 1000)
-    print("----------------------------------------------------")
-    print(f"Tiempo de update {tiempo_update - tiempo_loop} milisegundos")
-    print("----------------------------------------------------")
+    robot.update()
     # Loads data to mapping
     if do_mapping:
         lidar_point_cloud = robot.get_detection_point_cloud()
@@ -2784,10 +2785,6 @@ while robot.do_loop():
         print("----------------------------------------------------")
     else:
         mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)        
-        tiempo_else_mapping_uno = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de else_mapping_uno {tiempo_else_mapping_uno - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
         
     if do_mapping:
         images = robot.get_camera_images()
@@ -2805,25 +2802,16 @@ while robot.do_loop():
                 break
     
     tiempo_mapping_dos = int(time.time() * 1000)
-    print("----------------------------------------------------")
-    print(f"Tiempo de mapping_dos {tiempo_mapping_dos - tiempo_loop} milisegundos")
-    print("----------------------------------------------------")
     
     if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
         seq.resetSequence()
         stateManager.changeState("end")
         
     tiempo_is_complete = int(time.time() * 1000)
-    print("----------------------------------------------------")
-    print(f"Tiempo de is_complete {tiempo_is_complete - tiempo_loop} milisegundos")
-    print("----------------------------------------------------")
     
     tune_filter(robot.get_camera_images()[1])
     
     tiempo_tune_filter = int(time.time() * 1000)
-    print("----------------------------------------------------")
-    print(f"Tiempo de tune_filter {tiempo_tune_filter - tiempo_loop} milisegundos")
-    print("----------------------------------------------------")
 
     # Updates state machine
     if not stateManager.checkState("init"):
@@ -2835,22 +2823,12 @@ while robot.do_loop():
                 seq.resetSequence()
                 stateManager.changeState("stuck")
     
-    tiempo_update_state_machine = int(time.time() * 1000)
-    print("----------------------------------------------------")
-    print(f"Tiempo de update_state_machine {tiempo_update_state_machine - tiempo_loop} milisegundos")
-    print("----------------------------------------------------")
-    
     if mapper.get_fixture().exists and not mapper.get_fixture().reported and do_victim_reporting:
         if not stateManager.checkState("report_victim"):
             seq.resetSequence()
             stateManager.changeState("report_victim")
 
     print("state: ", stateManager.state)
-    
-    tiempo_mapper_fixture = int(time.time() * 1000)
-    print("----------------------------------------------------")
-    print(f"Tiempo de mapper_fixture {tiempo_mapper_fixture - tiempo_loop} milisegundos")
-    print("----------------------------------------------------")
 
     # Runs once when starting the game
     if stateManager.checkState("init"):
@@ -2873,19 +2851,10 @@ while robot.do_loop():
         # Changes state and resets the sequence
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
-
-        tiempo_state_init = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de state_init {tiempo_state_init - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
     
     elif stateManager.checkState("stop"):
         seq.startSequence()
         seqMoveWheels(0, 0)
-        tiempo_check_state_stop = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de check_state_stop {tiempo_check_state_stop - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
 
     # Explores and maps the maze
     elif stateManager.checkState("explore"):
@@ -2936,19 +2905,11 @@ while robot.do_loop():
         # Changes state and resets the sequence
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
-        tiempo_state_teleported = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de state_teleported {tiempo_state_teleported - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
         
     
     elif stateManager.checkState("end"):
         robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
-        tiempo_check_state_end = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de check_state_end {tiempo_check_state_end - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
     
     elif stateManager.changeState("stuck"):
         seq.startSequence()
@@ -2962,13 +2923,9 @@ while robot.do_loop():
             robot.auto_decide_rotation = True
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
-        tiempo_state_stuck = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de state_stuck {tiempo_state_stuck - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
     
     window_n = 0
     tiempo_final_loop = int(time.time() * 1000)
     print("----------------------------------------------------")
     print(f"Tiempo final_loop {tiempo_final_loop - tiempo_loop} milisegundos")
-    print("----------------------------------------------------")   
+    print("----------------------------------------------------")
