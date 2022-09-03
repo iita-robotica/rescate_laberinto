@@ -2929,3 +2929,4 @@ while robot.do_loop():
     print("----------------------------------------------------")
     print(f"Tiempo final_loop {tiempo_final_loop - tiempo_loop} milisegundos")
     print("----------------------------------------------------")
+    

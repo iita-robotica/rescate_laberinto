@@ -51,8 +51,7 @@ def tune_filter(image):
     max_v = cv.getTrackbarPos("max_v", "trackbars")
     filter_for_tuning = Filter((min_h, min_s, min_v), (max_h, max_s, max_v))
     # print(filter_for_tuning.lower, filter_for_tuning.upper)
-    cv.imshow("tunedImage", filter_for_tuning.filter(image))
-
+    #cv.imshow("tunedImage", filter_for_tuning.filter(image))
 
 def sum_images(images):
     final_img = images[0]
@@ -82,7 +81,7 @@ def find_victims(image):
 
     binary_image = sum_images(binary_images)
     #print(binary_image)
-    cv.imshow("binaryImage", binary_image)
+    #cv.imshow("binaryImage", binary_image)
     
     # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
     contours, _ = cv.findContours(binary_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -129,9 +128,9 @@ def classify_victim(victim):
     letter = letter1[:,10:90]
     letter = crop_white(letter)
     letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
-    cv.imshow("letra", letter)
-    cv.imshow("letra1", letter1)
-    cv.imshow("thresh", binary)
+    #cv.imshow("letra", letter)
+    #cv.imshow("letra1", letter1)
+    #cv.imshow("thresh", binary)
     letter_color = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
     area_width = 20
     area_height = 30
@@ -172,7 +171,6 @@ def classify_victim(victim):
     #print(finalLetter)
     return final_letter
 
-
 def is_poison(black_points, white_points):
     return black_points < 600 and white_points > 700 and white_points < 4000
 
@@ -191,7 +189,6 @@ def is_organic_peroxide(red_points, yellow_points):
 def is_already_detected(point_counts):
     if point_counts["white"] and not (point_counts["black"] + point_counts["red"] + point_counts["yellow"]):
         return True
-
 
 def classify_fixture(vic):
     possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
@@ -295,7 +292,6 @@ def getCoordsFromDegs(deg, distance):
 def getRadsFromCoords(coords):
     return math.atan2(coords[0], coords[1])
 
-
 def getDegsFromCoords(coords):
     rads = math.atan2(coords[0], coords[1])
     return radsToDegs(rads)
@@ -334,7 +330,6 @@ def divideLists(list1, list2):
     for item1, item2 in zip(list1, list2):
         finalList.append(item1 / item2)
     return finalList
-
 
 def draw_grid(image, square_size, offset = [0,0], color=255):
     for y, row in enumerate(image):
@@ -410,25 +405,21 @@ def get_squares(image, square_size, offsets):
 def resize_image_to_fixed_size(image, size):
     if image.shape[0] > size[0]:
         ratio = size[0] / image.shape[0]
-
         width = round(image.shape[1] * ratio)
         final_image = cv.resize(image.astype(np.uint8), dsize=(width, size[0]))
     
     elif image.shape[1] > size[1]:
         ratio = size[1] / image.shape[1]
-
         height = round(image.shape[0] * ratio)
         final_image = cv.resize(image.astype(np.uint8), dsize=(size[1], height))
     
     elif image.shape[1] >= image.shape[0]:
         ratio = size[1] / image.shape[1]
-
         height = round(image.shape[0] * ratio)
         final_image = cv.resize(image.astype(np.uint8), dsize=(size[1], height), interpolation=cv.INTER_NEAREST)
     
     elif image.shape[0] >= image.shape[1]:
         ratio = size[0] / image.shape[0]
-
         width = round(image.shape[1] * ratio)
         final_image = cv.resize(image.astype(np.uint8), dsize=(width, size[0]), interpolation=cv.INTER_NEAREST)
     
@@ -485,7 +476,6 @@ def is_color_in_range(color, rng):
             return False
     return True
 
-
 def do_every_n_frames(n, time_step):
     def inner_function(func):
         @wraps(func)
@@ -494,7 +484,6 @@ def do_every_n_frames(n, time_step):
                 return func(self, *args, **kwargs)
         return wrapper
     return inner_function
-
 
 # import state_machines
 ##############################################################################################
@@ -595,7 +584,6 @@ class SequenceManager:
                     return True
             return False
         return event
-
 
 # import robot
 ##############################################################################################
@@ -765,7 +753,6 @@ class Lidar():
                     x *= self.distCoeff
                     x = x ** self.distFactor
 
-
                     if degsToRads(self.pointIsCloseRange[0]) > actualHDetectionRot > degsToRads(self.pointIsCloseRange[1]) and x < self.pointIsCloseThresh:
                         self.pointIsClose = True
 
@@ -778,15 +765,11 @@ class Lidar():
     # Does a detection pass and returns a point cloud with the results
     def getPointCloud(self, layers=range(3)):
         self.pointIsClose = False
-        
         # (degsToRads(359 - radsToDegs(self.rotation)))
         # rangeImage = self.device.getRangeImageArray()
         # print("Lidar vFov: ", self.verticalFov/ self.verticalRes)
-
         pointCloud = []
-
         outOfBounds = []
-        
         for layer in layers:
             actualVDetectionRot = (layer * self.vRadPerDetection) + self.verticalFov / 2
             depthArray = self.device.getLayerRangeImage(layer)
@@ -797,7 +780,6 @@ class Lidar():
                     x += self.distBias
                     x *= self.distCoeff
                     x = x ** self.distFactor
-
                     coords = getCoordsFromRads(actualHDetectionRot, x)
                     outOfBounds.append([coords[0] - 0, (coords[1] * -1) - 0])
 
@@ -981,7 +963,6 @@ class Comunicator:
                         self.remainingTime = tup[2]
                         self.receiver.nextPacket() # Discard the current data packet
             """
-
             self.lackOfProgress = False
             if self.receiver.getQueueLength() > 0:  # If receiver queue is not empty
                 receivedData = self.receiver.getData()
@@ -1245,8 +1226,6 @@ class RobotLayer:
         
         self.comunicator.update()
 
-
-
 # import mapping
 ##############################################################################################
 ###################################  MAPPING  ################################################
@@ -1358,8 +1337,6 @@ class CameraProcessor:
 
 if __name__ == "__main__":
     pass
-
-
 
 # from data_processing import data_extractor
 ##############################################################################################
@@ -1504,7 +1481,6 @@ class PointCloudExtarctor:
         
         self.curved_template = np.array(curved)
 
-
         self.templates = {}
 
         for i, name in enumerate([("u",), ("l",), ("d",), ("r",)]):
@@ -1555,7 +1531,7 @@ class PointCloudExtarctor:
                 max_x = x + self.resolution
                 max_y = y + self.resolution
                 #print(min_x, min_y, max_x, max_y)
-                #bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
+                # bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
                 val = self.get_tile_status(min_x, min_y, max_x, max_y, point_cloud.get_bool_array())
                 row.append(list(val))
             grid.append(row)
@@ -1568,9 +1544,6 @@ class PointCloudExtarctor:
         offsets = point_cloud.offsets
         return grid, [o // self.resolution for o in offsets]
         
-
-
-
 # from data_procesing import point_cloud_processor
 ##############################################################################################
 #############################  POINT CLOUD PROCESSOR  ########################################
@@ -1600,10 +1573,8 @@ class PointCloudProcessor:
             seen_y = np.hstack((seen_y, yy))
         return seen_x, seen_y
 
-
 if __name__ == '__main__':
     pass
-
 
 # from data_structures import lidar_persistent_grid
 ##############################################################################################
@@ -1625,7 +1596,6 @@ class Grid:
     def expand_grid_to_point(self, point):
         x, y = point
         x, y = x + self.offsets[0], y + self.offsets[1]
-
         if y + 1 > self.shape[0]:
             self.add_end_row(y - self.shape[0] +1)
         if x + 1 > self.shape[1]:
@@ -1635,21 +1605,16 @@ class Grid:
         if x < 0:
             self.add_begining_column(-x)
     
-    
     def add_point(self, point, value=255):
         self.expand_grid_to_point(point)
-        
         x, y = point
         x, y = x + self.offsets[0], y + self.offsets[1]
-    
         self.grid[y, x] = value
     
     def sum_to_point(self, point, value):
         self.expand_grid_to_point(point)
-        
         x, y = point
         x, y = x + self.offsets[0], y + self.offsets[1]
-    
         self.grid[y, x] = min(self.grid[y, x] + value, self.value_limit)
     
     def get_point(self, point):
@@ -1677,13 +1642,10 @@ class Grid:
 
     def print_grid(self, max_size=(2000, 1000)):
         grid1 = copy.deepcopy(self.grid)
-       
         grid1 = grid1 // self.value_divider
-
         grid1 = resize_image_to_fixed_size(grid1, max_size)
-
-        cv.imshow("grid", grid1.astype(np.uint8))
-        cv.waitKey(1)
+        #cv.imshow("grid", grid1.astype(np.uint8))
+        #cv.waitKey(1)
 
 if __name__ == "__main__":
     my_grid = Grid((5, 5))
@@ -1697,8 +1659,6 @@ if __name__ == "__main__":
    # print(my_grid.offsets)
 
   #  my_grid.print_grid()
-
-
 class LidarGrid(Grid):
     def __init__(self, input_resolution, resolution, threshold=0):
         self.input_res = input_resolution
@@ -1725,18 +1685,14 @@ class LidarGrid(Grid):
     
     def print_bool(self, max_size=(600, 600)):
         grid1 = resize_image_to_fixed_size(self.get_bool_array(), max_size)
-        cv.imshow("bool_grid", grid1 * 255)
-        cv.waitKey(1)
+       # cv.imshow("bool_grid", grid1 * 255)
+       # cv.waitKey(1)
     
     def update(self, point_cloud):
         self.clean_up()
         for point in point_cloud:
             self.sum_detection(point)
         self.frame += 1
-
-        
-    
-
 
 # from data_structures import expandable_node_grid
 ##############################################################################################
@@ -1897,9 +1853,7 @@ class Node:
                 return "\033[1;37;47m██"+ "\033[0m"
 
             return "\033[1;30;47m??"+ "\033[0m"
-            
-        
-        
+   
     def __str__(self) -> str:
         return self.get_string()
 
@@ -2029,13 +1983,12 @@ class Grid:
         self.get_node((wall[0], wall[1])).status = "occupied"
         self.fill_verticies_around_wall((wall[0], wall[1]))
 
-
-    def print_grid(self):
+    """def print_grid(self):
         for row in self.grid:
             for node in row:
                 print(node, end="")
             print()
-        print()
+        print()"""
     
 if __name__ == "__main__":
     grid = Grid((10, 10))
@@ -2057,11 +2010,6 @@ if __name__ == "__main__":
     grid.add_begining_column(2)
     grid.print_grid()
     """
-
-     
-    
-
-
 
 # from algorithms.expandable_node_grid.bfs import bfs
 ##############################################################################################
@@ -2146,9 +2094,6 @@ def bfs(grid, start, limit="undefined"):
 
     return found
 
-
-
-
 class Mapper:
     def __init__(self, tile_size):
         self.tile_size = tile_size
@@ -2193,51 +2138,21 @@ class Mapper:
 
     @do_every_n_frames(5, 32)
     def process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
-        tiempo_inicio_procces_floor = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de inicio_process_floor {tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
         
         floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
-        tiempo_camera_point_cloud1 = int(time.time() * 1000)
-        print("--------------------------------------------------")
-        print(f"Tiempo de camera_point_cloud1 {tiempo_camera_point_cloud1 - tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
 
         self.point_cloud_processor.center_point = (floor_image.shape[1] // 2, floor_image.shape[0] // 2)
-        tiempo_camera_point_cloud2 = int(time.time() * 1000)
-        print("--------------------------------------------------")
-        print(f"Tiempo de camera_point_cloud2 {tiempo_camera_point_cloud2 - tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
 
         camera_point_cloud = self.point_cloud_processor.processPointCloudForCamera(total_point_cloud)
-        tiempo_camera_point_cloud3 = int(time.time() * 1000)
-        print("--------------------------------------------------")
-        print(f"Tiempo de camera_point_cloud3 {tiempo_camera_point_cloud3 - tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
-        tiempo_camera_point_cloud = int(time.time() * 1000)
-        print("--------------------------------------------------")
-        print(f"Tiempo de camera_point_cloud {tiempo_camera_point_cloud - tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
 
         # draw_poses(final_image, seen_points, back_image=floor_image, xx_yy_format=True)
-        
-        
-
-        tiempo_robot_tile = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de Robot_tile {tiempo_robot_tile - tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
         #robot_tile = divideLists(robot_position, [self.tile_size, self.tile_size])
         robot_tile = [round((x + 0.03) / self.tile_size - 0.5) for x in robot_position]
         robot_node = [t * 2 for t in robot_tile]
 
         floor_colors = self.floor_color_extractor.get_floor_colors(final_image, robot_position)
-        tiempo_floor_colors1 = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de floor_colors1 {tiempo_floor_colors1 - tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
+ 
         for floor_color in floor_colors:
             tile = floor_color[0]
             color = floor_color[1]
@@ -2248,11 +2163,7 @@ class Mapper:
             # print(self.node_grid.get_node(tile).node_type)
             if self.node_grid.get_node(tile).tile_type != "start":
                 self.node_grid.get_node(tile).tile_type = color
-        
-        tiempo_floor_colors2 = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de floor_colors2 {tiempo_floor_colors2 - tiempo_inicio_procces_floor} milisegundos")
-        print("----------------------------------------------------")
+
         #cv.imshow('final_image', resize_image_to_fixed_size(final_image, (600, 600)))
           
         #self.lidar_grid.print_grid((600, 600))
@@ -2264,23 +2175,19 @@ class Mapper:
             return "up", "right"
         if 180 <= degs < normalizeDegs(180 + 45):
             return "up", "left"
-
         elif normalizeDegs(360 - 45) < degs <= 360:
             return "down", "left"
         elif 0 <= degs < normalizeDegs(0 + 45):
             return "down", "right" 
-        
         elif normalizeDegs(90 - 45) < degs < 90:
             return "right", "down"
         elif 90 <= degs < normalizeDegs(90 + 45):
             return "right", "up"
-        
         elif normalizeDegs(270 - 45) < degs < 270:
             return "left", "up"
         elif 270 <= degs < normalizeDegs(270 + 45):
             return "left", "down"
 
-    
     def load_wall_fixture(self, letter, image_angle):
        # print("images_angle:", image_angle)
         orient = self.degs_to_orientation(normalizeDegs(image_angle))
@@ -2293,13 +2200,10 @@ class Mapper:
         assert self.node_grid.get_node(wall_index).node_type == "wall"
         self.node_grid.get_node(wall_index).fixtures_in_wall.append(letter)
 
-        
-
     def load_fixture(self, letter, camera_angle, robot_rotation):
         fixture = self.node_grid.get_node(self.robot_node).fixture
         fixture.exists = True
         fixture.type = letter
-
         image_angle = normalizeDegs(camera_angle + robot_rotation)
         fixture.detection_angle = image_angle
     
@@ -2314,7 +2218,6 @@ class Mapper:
         for row in self.node_grid.grid:
             for node in row:
                 node.is_robots_position = False
-
         self.node_grid.get_node(self.robot_node).is_robots_position = True
     
     def block_front_vortex(self, robot_rotation):
@@ -2325,21 +2228,14 @@ class Mapper:
 
 
     def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None, current_time=None):
-        tiempo_inicio = int(time.time() * 1000)
-      #  print("     Tiempo inicio funcion mapper.update:", tiempo_inicio)
         if robot_position is None or robot_rotation is None:
             return
-        
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
         robot_node = [int(t * 2) for t in robot_vortex]
         robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
-        
         distance = math.sqrt(sum([(x - y) ** 2 for x, y in zip(robot_vortex_center, robot_position)]))
-
     #    print("robot_vortex:", robot_vortex)
-        
-        tiempo_calculos = int(time.time() * 1000)
-      #  print("     Tiempo calculos funcion mapper.update:", tiempo_calculos - tiempo_inicio)
+
         if self.robot_node is None:
             self.set_robot_node(robot_position)
         
@@ -2347,34 +2243,25 @@ class Mapper:
             for adj in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
                 adj_node = sumLists(robot_node, adj)
                 self.node_grid.get_node(adj_node).explored = True
+
         if distance < 0.02:
             self.node_grid.get_node(robot_node).explored = True
-
-        tiempo_distancia = int(time.time() * 1000)
-      #  print("     Tiempo if_distancia funcion mapper.update:", tiempo_distancia - tiempo_inicio)
         
         if point_cloud is not None:
             in_bounds_point_cloud, out_of_bounds_point_cloud = point_cloud
             self.load_point_cloud(in_bounds_point_cloud, robot_position)
             self.lidar_to_node_grid()
-        
-        
-        tiempo_point_cloud_uno = int(time.time() * 1000)
-    #    print("     Tiempo if_point_cloud_uno funcion mapper.update:", tiempo_point_cloud_uno - tiempo_inicio)
+
             
         if point_cloud is not None and camera_images is not None and current_time is not None:
             total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
             self.process_floor(current_time, camera_images, total_point_cloud, robot_position, robot_rotation)
             self.lidar_grid.print_grid((600, 600))
             self.lidar_grid.print_bool((600, 600))  
-
-            #self.node_grid.print_grid()
-        tiempo_point_cloud_dos = int(time.time() * 1000)
-       # print("     Tiempo if_point_cloud_dos funcion mapper.update:", tiempo_point_cloud_dos - tiempo_inicio)
-            
+            #self.node_grid.print_grid()       
         cv.waitKey(1) 
             
-    
+
     def get_node_grid(self):
         return copy.deepcopy(self.node_grid)
     
@@ -2386,8 +2273,6 @@ class Mapper:
                 final_row.append(node.get_representation())
             final_grid.append(final_row)
         return np.array(final_grid)
-
-
 
 #from algorithms.expandable_node_grid.bfs import bfs
 ##############################################################################################
@@ -2409,7 +2294,6 @@ class Agent:
 
     def get_action(self, state: list) -> str:
         return self.predict(state)
-
 
 class RandomAgent(Agent):
     def __init__(self, possible_actions=[]) -> None:
@@ -2504,7 +2388,6 @@ def a_star(grid, start, end):
             # Add the child to the open list
             openList.append(child)
 
-
 class ClosestPositionAgent(Agent):
     def __init__(self):
         super().__init__(["up", "down", "left", "right"])
@@ -2524,9 +2407,7 @@ class ClosestPositionAgent(Agent):
             for x, node in enumerate(row):
                 if node.is_start:
                     return [x - grid.offsets[0], y - grid.offsets[1]]
-                
-
-
+    
     def get_best_node(self, possible_nodes):
         if len(possible_nodes) > 0:
             best_node = possible_nodes[0]
@@ -2580,7 +2461,7 @@ class ClosestPositionAgent(Agent):
 
         for node in self.a_star_path:
             grid.get_node(node).mark1 = True
-        grid.print_grid()
+        # grid.print_grid()
 
         move = substractLists(self.a_star_path[self.a_star_index], self.current_robot_node)
         move = multiplyLists(move, [0.5, 0.5])
@@ -2595,11 +2476,7 @@ class ClosestPositionAgent(Agent):
 
         return [int(m) for m in move]
         
-
-
-
 window_n = 0
-
 
 # World constants
 TIME_STEP = 32
@@ -2622,14 +2499,11 @@ seq = SequenceManager(resetFunction=resetSequenceFlags)
 
 # Mapper
 mapper = Mapper(TILE_SIZE)
-
 closest_position_agent = ClosestPositionAgent()
-
 
 # Variables
 do_mapping = False
 do_victim_reporting = False
-
 
 # Functions
 # Sequential functions used frequently
@@ -2704,15 +2578,15 @@ def robot_fits(robot_node, show_debug=False):
     square1 = copy.deepcopy(square).astype(np.uint8)
     square1 = square1 * 255
 
-    if show_debug:
+"""    if show_debug:
         try:
-            cv.imshow(f"square{window_n}", square1.astype(np.uint8))
-            print(f"Showing square{window_n}")
+            #cv.imshow(f"square{window_n}", square1.astype(np.uint8))
+            #print(f"Showing square{window_n}")
         except:
-            print(f"Error showing square{window_n}")
+            #print(f"Error showing square{window_n}")
     window_n += 1
 
-    return np.count_nonzero(square)
+    return np.count_nonzero(square)"""
 
 def correct_position(robot_position):
     # print("INITIAL POSITION: ", robot_position)
@@ -2784,10 +2658,7 @@ while robot.do_loop():
         images = robot.get_camera_images()
         #utilities.save_image(images[1], "camera_image_center.png")
         mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
-        tiempo_if_mapping_uno = int(time.time() * 1000)
-        print("----------------------------------------------------")
-        print(f"Tiempo de if_mapping_uno {tiempo_if_mapping_uno - tiempo_loop} milisegundos")
-        print("----------------------------------------------------")
+    
     else:
         mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)        
         
@@ -2911,7 +2782,6 @@ while robot.do_loop():
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
         
-    
     elif stateManager.checkState("end"):
         robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
