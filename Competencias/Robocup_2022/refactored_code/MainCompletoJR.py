@@ -2183,6 +2183,8 @@ class Mapper:
         self.lidar_grid.update(point_cloud)
     
     def lidar_to_node_grid(self):
+        tiempo_inicio_function = int(time.time() * 1000)
+        
         grid, offsets = self.point_cloud_extractor.transform_to_grid(self.lidar_grid)
         for y, row in enumerate(grid):
             for x, value in enumerate(row):
@@ -2190,6 +2192,11 @@ class Mapper:
                 yy = (y - offsets[1]) * 2 + 1
                 for direction in value:
                     self.node_grid.load_straight_wall((xx, yy),  direction)
+        
+        tiempo_lidar_to_node_grid = int(time.time() * 1000)
+        print("----------------------------------------------------")
+        print(f"TIEMPO DE INICIO DE LIDAR_TO_NODE {tiempo_lidar_to_node_grid - tiempo_inicio_function} MILISEGUNDOS")
+        print("----------------------------------------------------")
 
     @do_every_n_frames(5, 32)
     def process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
