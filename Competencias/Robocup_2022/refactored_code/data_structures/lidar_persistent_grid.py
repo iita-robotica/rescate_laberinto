@@ -25,7 +25,7 @@ class LidarGrid(resizable_pixel_grid.Grid):
     def clean_up(self):
         if SHOW_DEBUG:
             print("Cleaning up lidar grid")
-        self.grid = self.grid * (self.grid > self.delete_threshold).astype(np.int)
+        self.grid = self.grid * (self.grid > self.delete_threshold).astype(int)
 
     
     def sum_detection(self, point):

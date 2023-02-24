@@ -62,7 +62,7 @@ class Lidar():
 
 
     # Does a detection pass and returns a point cloud with the results
-    @utilities.do_every_n_frames(7, 32)
+    @utilities.do_every_n_frames(5, 32)
     def getPointCloud(self, layers=range(3)):
         self.pointIsClose = False
         

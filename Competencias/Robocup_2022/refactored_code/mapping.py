@@ -42,22 +42,23 @@ class Mapper:
             self.node_grid.get_node(adj).tile_type = "start"
         self.node_grid.get_node(robot_node).is_start = True
     
-    @utilities.do_every_n_frames(7, 32)
+    @utilities.do_every_n_frames(5, 32)
     def load_point_cloud(self, point_cloud, robot_position):
         point_cloud = self.point_cloud_processor.processPointCloud(point_cloud, robot_position)
         self.lidar_grid.update(point_cloud)
     
-    @utilities.do_every_n_frames(7, 32)
+    @utilities.do_every_n_frames(5, 32)
     def lidar_to_node_grid(self):
         grid, offsets = self.point_cloud_extractor.transform_to_grid(self.lidar_grid)
         for y, row in enumerate(grid):
             for x, value in enumerate(row):
                 xx = (x - offsets[0]) * 2 + 1
                 yy = (y - offsets[1]) * 2 + 1
+                #print(value)
                 for direction in value:
                     self.node_grid.load_straight_wall((xx, yy),  direction)
 
-    @utilities.do_every_n_frames(7, 32)
+    @utilities.do_every_n_frames(5, 32)
     def process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
         floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
@@ -212,7 +213,7 @@ class Mapper:
             
     
     def get_node_grid(self):
-        return copy.deepcopy(self.node_grid)
+        return self.node_grid #copy.deepcopy()
     
     def get_grid_for_bonus(self):
         final_grid = []

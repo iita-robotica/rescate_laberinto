@@ -99,20 +99,14 @@ def find_victims(image):
 
 def crop_white(binaryImg):
     white = 255
-    #print(conts)
-    maxX = 0
-    maxY = 0
-    minX = binaryImg.shape[0]
-    minY = binaryImg.shape[1]
-    for yIndex, row in enumerate(binaryImg):
-        for xIndex, pixel in enumerate(row):
-            if pixel == white:
-                maxX = max(maxX, xIndex)
-                maxY = max(maxY, yIndex)
-                minX = min(minX, xIndex)
-                minY = min(minY, yIndex)
-
-    return binaryImg[minY:maxY, minX:maxX]
+    rows, cols = np.where(binaryImg == white)
+    if len(rows) == 0 or len(cols) == 0:
+        # no white pixels found
+        return binaryImg
+    else:
+        minY, maxY = np.min(rows), np.max(rows)
+        minX, maxX = np.min(cols), np.max(cols)
+        return binaryImg[minY:maxY+1, minX:maxX+1]
 
 def classify_victim(victim):
     white = 255

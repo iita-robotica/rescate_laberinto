@@ -211,11 +211,6 @@ while robot.do_loop():
                     mapper.load_fixture(letter, angle, robot.rotation)
                     
                 break
-
-    
-    if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
-        seq.resetSequence()
-        stateManager.changeState("end")
     
     #fixture_detection.tune_filter(robot.get_camera_images()[1])
 
@@ -283,6 +278,11 @@ while robot.do_loop():
 
         if seqMoveToRelativeTile(move[0], move[1]):
             mapper.set_robot_node(robot.position)
+            if mapper.node_grid.get_node(mapper.robot_node).is_start:
+                if is_complete(mapper.node_grid, mapper.robot_node):
+                    seq.resetSequence()
+                    stateManager.changeState("end")
+
         seq.seqResetSequence()
 
         if SHOW_DEBUG:
