@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 import random
 
-from flags import SHOW_DEBUG
+from flags import SHOW_DEBUG, SHOW_FIXTURE_DEBUG
 
 class Filter:
     def __init__(self, lower_hsv, upper_hsv):
@@ -60,7 +60,7 @@ def sum_images(images):
 def filter_victims(victims):
     final_victims = []
     for vic in victims:
-        if SHOW_DEBUG:
+        if SHOW_FIXTURE_DEBUG:
             print("victim:", vic["position"], vic["image"].shape)
         if vic["image"].shape[0] > 25 and vic["image"].shape[1] > 20:
             final_victims.append(vic)
@@ -78,7 +78,7 @@ def find_victims(image):
 
     binary_image = sum_images(binary_images)
     #print(binary_image)
-    if SHOW_DEBUG:
+    if SHOW_FIXTURE_DEBUG:
         cv.imshow("binaryImage", binary_image)
     
     # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
@@ -115,14 +115,13 @@ def classify_victim(victim):
     #conts, h = cv.findContours(thresh1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     binary = vicitim_letter_filter.filter(img)
 
-    letter1 = crop_white(binary)
-    letter1 = cv.resize(letter1, (100, 100), interpolation=cv.INTER_AREA)
-    letter = letter1[5:,10:90]
-    letter = crop_white(letter)
+    letter = crop_white(binary)
     letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
-    if SHOW_DEBUG:
+    #letter = letter1[5:,10:90]
+    #letter = crop_white(letter)
+    #letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
+    if SHOW_FIXTURE_DEBUG:
         cv.imshow("letra", letter)
-        cv.imshow("letra1", letter1)
         cv.imshow("thresh", binary)
     letter_color = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
     area_width = 20
@@ -137,10 +136,11 @@ def classify_victim(victim):
         "middle": letter[areas["middle"][0][0]:areas["middle"][0][1], areas["middle"][1][0]:areas["middle"][1][1]],
         "bottom": letter[areas["bottom"][0][0]:areas["bottom"][0][1], areas["bottom"][1][0]:areas["bottom"][1][1]]
         }
-    if SHOW_DEBUG:
+    if SHOW_FIXTURE_DEBUG:
         cv.rectangle(letter_color,(areas["top"][1][0], areas["top"][0][0]), (areas["top"][1][1], areas["top"][0][1]), (0, 255, 0), 1)
         cv.rectangle(letter_color, (areas["middle"][1][0], areas["middle"][0][0]), (areas["middle"][1][1], areas["middle"][0][1]), (0, 0, 255), 1)
         cv.rectangle(letter_color,(areas["bottom"][1][0], areas["bottom"][0][0]), (areas["bottom"][1][1], areas["bottom"][0][1]), (225, 0, 255), 1)
+        cv.imshow("letter_color", letter_color)
     counts = {}
     for key in images.keys():
         count = 0
@@ -170,7 +170,7 @@ def is_poison(black_points, white_points):
     return black_points < 600 and white_points > 700 and white_points < 4000
 
 def is_victim(black_points, white_points):
-    return white_points > 5000 and 2000 > black_points > 100
+    return white_points > 5000 and 4000 > black_points > 100
 
 def is_corrosive(black_points, white_points):
     return 700 < white_points < 2500 and 1000 < black_points < 2500
@@ -203,39 +203,38 @@ def classify_fixture(vic):
         count = len(all_points)
         color_point_counts[key] = count
     
-    if SHOW_DEBUG:
+    if SHOW_FIXTURE_DEBUG:
         print(color_point_counts)
 
     if is_poison(color_point_counts["black"], color_point_counts["white"]):
-        if SHOW_DEBUG:
+        if SHOW_FIXTURE_DEBUG:
             print("Poison!")
         letter = "P"
-    
-    if is_victim(color_point_counts["black"], color_point_counts["white"]):
-        if SHOW_DEBUG:
-            cv.imshow("black filter:", color_images["black"])
-        letter = classify_victim(vic)
-        if SHOW_DEBUG:
-            print("Victim:", letter)
-        
-    
+
     if is_corrosive(color_point_counts["black"], color_point_counts["white"]):
-        if SHOW_DEBUG:
+        if SHOW_FIXTURE_DEBUG:
             print("Corrosive!")
         letter = "C"
-    
+
+    if is_victim(color_point_counts["black"], color_point_counts["white"]):
+        if SHOW_FIXTURE_DEBUG:
+            cv.imshow("black filter:", color_images["black"])
+        letter = classify_victim(vic)
+        if SHOW_FIXTURE_DEBUG:
+            print("Victim:", letter)
+
     if is_organic_peroxide(color_point_counts["red"], color_point_counts["yellow"]):
-        if SHOW_DEBUG:
+        if SHOW_FIXTURE_DEBUG:
             print("organic peroxide!")
         letter = "O"
     
     if is_flammable(color_point_counts["red"], color_point_counts["white"]):
-        if SHOW_DEBUG:
+        if SHOW_FIXTURE_DEBUG:
             print("Flammable!")
         letter = "F"
     
     if is_already_detected(color_point_counts):
-        if SHOW_DEBUG:
+        if SHOW_FIXTURE_DEBUG:
             print("Already detected!")
         letter = None
 

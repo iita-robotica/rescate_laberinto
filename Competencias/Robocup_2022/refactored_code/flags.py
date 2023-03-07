@@ -1,1 +1,3 @@
+
+SHOW_FIXTURE_DEBUG = True
 SHOW_DEBUG = False
