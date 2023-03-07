@@ -53,6 +53,7 @@ class RobotLayer:
         self.center_camera = Camera(self.robot.getDevice("camera1"), self.time_step)
         self.right_camera = Camera(self.robot.getDevice("camera2"), self.time_step)
         self.left_camera = Camera(self.robot.getDevice("camera3"), self.time_step)
+        self.left_camera.rotate180 = True
         
 
         self.point_is_close = False
