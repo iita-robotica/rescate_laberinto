@@ -195,7 +195,7 @@ class RobotLayer:
     # Gets a point cloud with all the detections from lidar and distance sensors
     
     def get_detection_point_cloud(self):
-        point_clouds = self.lidar.getPointCloud(self.time, layers=(2, 3))
+        point_clouds = self.lidar.getPointCloud(self.time, layers=(2,))
         self.point_is_close = self.lidar.pointIsClose
         return point_clouds
     
