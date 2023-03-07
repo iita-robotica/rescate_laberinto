@@ -295,7 +295,7 @@ while robot.do_loop():
         seqMoveWheels(0, 0)
         if seq.simpleEvent() and SHOW_DEBUG:
             print("STOPPED")
-        seqDelaySec(1.2)
+        seqDelaySec(3)
         if seq.simpleEvent():
             fixture = mapper.get_fixture()
             robot.comunicator.sendVictim(robot.position, fixture.type)
