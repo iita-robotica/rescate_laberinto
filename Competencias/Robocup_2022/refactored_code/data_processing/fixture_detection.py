@@ -207,29 +207,36 @@ def classify_fixture(vic):
         print(color_point_counts)
 
     if is_poison(color_point_counts["black"], color_point_counts["white"]):
-        print("Poison!")
+        if SHOW_DEBUG:
+            print("Poison!")
         letter = "P"
     
     if is_victim(color_point_counts["black"], color_point_counts["white"]):
-        cv.imshow("black filter:", color_images["black"])
+        if SHOW_DEBUG:
+            cv.imshow("black filter:", color_images["black"])
         letter = classify_victim(vic)
-        print("Victim:", letter)
+        if SHOW_DEBUG:
+            print("Victim:", letter)
         
     
     if is_corrosive(color_point_counts["black"], color_point_counts["white"]):
-        print("Corrosive!")
+        if SHOW_DEBUG:
+            print("Corrosive!")
         letter = "C"
     
     if is_organic_peroxide(color_point_counts["red"], color_point_counts["yellow"]):
-        print("organic peroxide!")
+        if SHOW_DEBUG:
+            print("organic peroxide!")
         letter = "O"
     
     if is_flammable(color_point_counts["red"], color_point_counts["white"]):
-        print("Flammable!")
+        if SHOW_DEBUG:
+            print("Flammable!")
         letter = "F"
     
     if is_already_detected(color_point_counts):
-        print("Already detected!")
+        if SHOW_DEBUG:
+            print("Already detected!")
         letter = None
 
     return letter
