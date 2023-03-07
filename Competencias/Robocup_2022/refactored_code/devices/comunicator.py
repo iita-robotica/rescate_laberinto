@@ -61,7 +61,7 @@ class Comunicator:
         if self.doGetWordInfo:
             self.requestGameData()
             if self.receiver.getQueueLength() > 0: # If receiver queue is not empty
-                receivedData = self.receiver.getData()
+                receivedData = self.receiver.getBytes()
                 if len(receivedData) > 2:
                     tup = struct.unpack('c f i', receivedData) # Parse data into char, float, int
                     if tup[0].decode("utf-8") == 'G':
@@ -71,7 +71,7 @@ class Comunicator:
 
             self.lackOfProgress = False
             if self.receiver.getQueueLength() > 0:  # If receiver queue is not empty
-                receivedData = self.receiver.getData()
+                receivedData = self.receiver.getBytes()
                 print(receivedData)
                 if len(receivedData) < 2:
                     tup = struct.unpack('c', receivedData)  # Parse data into character
