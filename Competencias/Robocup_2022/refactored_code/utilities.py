@@ -238,11 +238,26 @@ def is_color_in_range(color, rng):
     return True
 
 
-def do_every_n_frames(n, time_step):
+def do_every_n_steps(n):
     def inner_function(func):
         @wraps(func)
-        def wrapper(self, current_time, *args, **kwargs):
-            if (current_time // (time_step / 1000)) % n == 0:
+        def wrapper(self, step_count, *args, **kwargs):
+            if step_count % n == 0:
                 return func(self, *args, **kwargs)
         return wrapper
     return inner_function
+
+class StepCounter:
+    def __init__(self, interval):
+        self.__current_step = 0
+        self.interval = interval
+
+    def increase(self):
+        self.__current_step += 1
+        if self.__current_step == self.interval:
+            self.__current_step = 0
+    
+    def check(self):
+        return self.__current_step == 0
+    
+    
