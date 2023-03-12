@@ -11,7 +11,7 @@ from algorithms.expandable_node_grid.bfs import bfs
 from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
 from agents.go_back_agent.go_back_agent import GoBackAgent
 
-from flags import SHOW_DEBUG
+from flags import SHOW_DEBUG, PRINT_MAP_AT_END
 
 window_n = 0
 
@@ -189,28 +189,27 @@ while robot.do_loop():
     
     # Loads data to mapping
     if do_mapping:
-        lidar_point_cloud = robot.get_detection_point_cloud()
-        images = robot.get_camera_images()
         #utilities.save_image(images[1], "camera_image_center.png")
-        mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
+        mapper.update(robot.get_point_cloud(), robot.get_out_of_bounds_point_cloud(), robot.get_camera_images(), robot.position, robot.rotation)
 
     else:
-        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
+        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation)
     
     if do_mapping:
         images = robot.get_camera_images()
-        for index, image in enumerate(images):
-            angle = (index - 1) * 90
+        if images is not None:
+            for index, image in enumerate(images):
+                angle = (index - 1) * 90
 
-            rot_img = np.rot90(image, -1)
+                rot_img = np.rot90(image, -1)
 
-            victims = fixture_detection.find_victims(rot_img)
-            if len(victims) > 0:
-                letter = fixture_detection.classify_fixture(victims[0])
-                if letter is not None:
-                    mapper.load_fixture(letter, angle, robot.rotation)
-                    
-                break
+                victims = fixture_detection.find_victims(rot_img)
+                if len(victims) > 0:
+                    letter = fixture_detection.classify_fixture(victims[0])
+                    if letter is not None:
+                        mapper.load_fixture(letter, angle, robot.rotation)
+                        
+                    break
     
     #fixture_detection.tune_filter(robot.get_camera_images()[1])
 
@@ -314,6 +313,8 @@ while robot.do_loop():
         seq.seqResetSequence()
     
     elif stateManager.checkState("end"):
+        if PRINT_MAP_AT_END:
+            mapper.node_grid.print_grid()
         robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
     

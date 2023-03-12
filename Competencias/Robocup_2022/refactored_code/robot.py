@@ -1,9 +1,8 @@
-# In charge of low level movement
 from controller import Robot
 
 import utilities
 
-# devices
+# Devices
 from devices.wheel import Wheel
 
 from devices.camera import Camera
@@ -19,45 +18,68 @@ from devices.comunicator import Comunicator
 from flags import SHOW_DEBUG
 
 # Abstraction layer for robot
+# In charge of low level movement
 class RobotLayer:
     def __init__(self, time_step):
         # Maximum wheel speed
         self.max_wheel_speed = 6.28
         # The timestep
         self.time_step = time_step
-
+        
+        #Robot diameter in mts.
         self.diameter = 0.074
+
         # Robot object provided by webots
         self.robot = Robot()
+
+        #Location data
         self.prev_rotation = 0
         self.rotation = 0
         self.position = [0, 0]
         self.prev_global_position = [0, 0]
         self.position_offsets = [0, 0]
 
-        self.rotation_sensor = "gyro"
-
         self.time = 0
+
+        # Function specific variables
         self.rotate_to_degs_first_time = True
         self.delay_first_time = True
         self.delay_start = self.robot.getTime()
 
         self.auto_decide_rotation = True
+        self.rotation_sensor = "gyro"
+
+
+        #Sensors
         self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.time_step)
         self.gps = Gps(self.robot.getDevice("gps"), self.time_step)
-        self.lidar = Lidar(self.robot.getDevice("lidar"), self.time_step, 0.03, (0, 360))
+
+
+        lidar_interval = 6
+        self.lidar = Lidar(webots_device = self.robot.getDevice("lidar"), 
+                           time_step = self.time_step * lidar_interval, 
+                           step_counter = utilities.StepCounter(lidar_interval),
+                           layers_used=(2,))
+
+        camera_interval = 3
+        self.center_camera = Camera(webots_device = self.robot.getDevice("camera1"),
+                                    time_step = self.time_step * camera_interval,
+                                    step_counter = utilities.StepCounter(camera_interval))
+        
+        self.right_camera = Camera(webots_device = self.robot.getDevice("camera2"),
+                                   time_step = self.time_step * camera_interval,
+                                   step_counter = utilities.StepCounter(camera_interval))
+        
+        self.left_camera = Camera(webots_device = self.robot.getDevice("camera3"), 
+                                  time_step = self.time_step * camera_interval, 
+                                  step_counter = utilities.StepCounter(camera_interval),
+                                  rotate180=True)
+
+        #Actuators
+        self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.time_step)
         self.left_wheel = Wheel(self.robot.getDevice("wheel1 motor"), self.max_wheel_speed)
         self.right_wheel = Wheel(self.robot.getDevice("wheel2 motor"), self.max_wheel_speed)
-
-        self.comunicator = Comunicator(self.robot.getDevice("emitter"), self.robot.getDevice("receiver"), self.time_step)
-        self.center_camera = Camera(self.robot.getDevice("camera1"), self.time_step)
-        self.right_camera = Camera(self.robot.getDevice("camera2"), self.time_step)
-        self.left_camera = Camera(self.robot.getDevice("camera3"), self.time_step)
-        self.left_camera.rotate180 = True
         
-
-        self.point_is_close = False
-
         self.stuck_counter = 0
 
     def delay_sec(self, delay):
@@ -193,17 +215,26 @@ class RobotLayer:
                 # print("Moving")
         return False
     
-    # Gets a point cloud with all the detections from lidar and distance sensors
     
-    def get_detection_point_cloud(self):
-        point_clouds = self.lidar.getPointCloud(self.time, layers=(2,))
-        self.point_is_close = self.lidar.pointIsClose
-        return point_clouds
+    # Wrappers for lidar
+    @property
+    def point_is_close(self):
+        return self.lidar.is_point_close
+
+    def get_point_cloud(self):
+        return self.lidar.get_point_cloud()
+
+    def get_out_of_bounds_point_cloud(self):
+        return self.lidar.get_out_of_bounds_point_cloud()
     
+    # Wrappers for camera images
     def get_camera_images(self):
-        return [self.right_camera.getImg(), self.center_camera.getImg(), self.left_camera.getImg()]
+        if self.center_camera.step_counter.check():
+            return [self.right_camera.get_image(), 
+                    self.center_camera.get_image(), 
+                    self.left_camera.get_image()]
     
-    # Returns True if the simulation is running
+    # Starts loop ans returns True if the simulation is running
     def do_loop(self):
         return self.robot.step(self.time_step) != -1
     
@@ -220,13 +251,14 @@ class RobotLayer:
 
     # Must run every TimeStep
     def update(self):
-        # Updates the current time
+        # Update current time
         self.time = self.robot.getTime()
-        # Updates the gps, gyroscope
+
+        # Gyro and gps update
         self.gps.update()
         self.gyroscope.update(self.time)
-
-        # Gets global position
+        
+        # Get global position
         self.prev_global_position = self.position
         self.position = self.gps.getPosition()
         self.position[0] += self.position_offsets[0]
@@ -234,7 +266,6 @@ class RobotLayer:
 
         # Decides wich sensor to use for roatation detection
         # if the robot is going srtaight i tuses the gps
-        
         if self.auto_decide_rotation:
             if self.gyroscope.getDiff() < 0.00001 and self.get_wheel_direction() >= 0:
                 self.rotation_sensor = "gps"
@@ -258,11 +289,15 @@ class RobotLayer:
                 self.rotation = val
             self.gyroscope.setDegrees(self.rotation)
 
-        # Sets lidar rotation
+        # Lidar and camera update
         self.lidar.setRotationDegrees(self.rotation + 0)
+        self.lidar.update()
 
-        #print("Delay time:", self.time - self.delayStart)
+        self.right_camera.update()
+        self.left_camera.update()
+        self.center_camera.update()
 
+        # Check if the robot is not moving
         if self.is_stuck_this_step():
             self.stuck_counter += 1
         else:

@@ -237,6 +237,11 @@ def is_color_in_range(color, rng):
             return False
     return True
 
+def divide_into_chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
 
 def do_every_n_steps(n):
     def inner_function(func):
