@@ -52,7 +52,7 @@ do_victim_reporting = False
 seqPrint = seq.makeSimpleEvent(print)
 seqDelaySec = seq.makeComplexEvent(robot.delay_sec)
 seqMoveWheels = seq.makeSimpleEvent(robot.move_wheels)
-seqRotateToDegs = seq.makeComplexEvent(robot.rotate_to_degs)
+seqRotateToDegs = seq.makeComplexEvent(robot.rotate_to_angle)
 seqMoveToCoords = seq.makeComplexEvent(robot.move_to_coords)
 seqResetSequenceFlags = seq.makeSimpleEvent(resetSequenceFlags)
 

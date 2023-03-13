@@ -15,7 +15,7 @@ from devices.gyroscope import Gyroscope
 
 from devices.comunicator import Comunicator
 
-from low_level_movement.drive_base import RotationManager
+from low_level_movement.drive_base import RotationManager, Criteria
 from data_structures.angle import Angle, Unit
 
 from flags import SHOW_DEBUG
@@ -44,16 +44,12 @@ class RobotLayer:
 
         self.time = 0
 
-        
-
         # Function specific variables
-        self.rotate_to_degs_first_time = True
         self.delay_first_time = True
         self.delay_start = self.robot.getTime()
 
         self.auto_decide_rotation = True
         self.rotation_sensor = "gyro"
-
 
         #Sensors
         self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.time_step)
@@ -107,8 +103,8 @@ class RobotLayer:
         self.left_wheel.move(left_ratio)
         self.right_wheel.move(right_ratio)
 
-    def rotate_to_degs(self, degs, orientation="closest", max_speed=0.5):
-        self.rot_manager.rotate_to_angle(Angle(degs, Unit.DEGREES))
+    def rotate_to_angle(self, angle, direction=Criteria.CLOSEST):
+        self.rot_manager.rotate_to_angle(angle, direction)
         return self.rot_manager.finished_rotating
 
     def move_to_coords(self, targetPos):
@@ -132,7 +128,7 @@ class RobotLayer:
             # print("traget ang: " + str(ang))
             ratio = min(utilities.mapVals(dist, 0, descelerationStart, 0.1, 1), 1)
             ratio = max(ratio, 0.8)
-            if self.rotate_to_degs(ang):
+            if self.rotate_to_angle(Angle(ang, Unit.DEGREES)):
                 self.move_wheels(ratio, ratio)
                 # print("Moving")
         return False
