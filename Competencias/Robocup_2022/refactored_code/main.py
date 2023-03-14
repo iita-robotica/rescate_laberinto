@@ -11,6 +11,8 @@ from algorithms.expandable_node_grid.bfs import bfs
 from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
 from agents.go_back_agent.go_back_agent import GoBackAgent
 
+from data_structures.vectors import Position2D
+
 from flags import SHOW_DEBUG, PRINT_MAP_AT_END
 
 window_n = 0
@@ -62,7 +64,7 @@ def calibratePositionOffsets():
     robot.position_offsets = [
         round((actualTile[0] * TILE_SIZE) - robot.position[0]) + TILE_SIZE // 2,
         round((actualTile[1] * TILE_SIZE) - robot.position[1]) + TILE_SIZE // 2]
-    robot.position_offsets = [robot.position_offsets[0] % TILE_SIZE, robot.position_offsets[1] % TILE_SIZE]
+    robot.position_offsets = Position2D(robot.position_offsets[0] % TILE_SIZE, robot.position_offsets[1] % TILE_SIZE)
     print("positionOffsets: ", robot.position_offsets)
 
 def seqCalibrateRobotRotation():
@@ -186,16 +188,17 @@ def correct_position(robot_position):
 while robot.do_loop():
     # Updates robot position and rotation, sensor positions, etc.
     robot.update()
-    
-    # Loads data to mapping
-    if do_mapping:
-        #utilities.save_image(images[1], "camera_image_center.png")
-        mapper.update(robot.get_point_cloud(), robot.get_out_of_bounds_point_cloud(), robot.get_camera_images(), robot.position, robot.rotation)
 
-    else:
-        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation)
     
     if do_mapping:
+        # Floor and lidar mapping
+        mapper.update(robot.get_point_cloud(), 
+                robot.get_out_of_bounds_point_cloud(), 
+                robot.get_camera_images(), 
+                robot.position, 
+                robot.rotation)
+
+        # Victim detection
         images = robot.get_camera_images()
         if images is not None:
             for index, image in enumerate(images):
@@ -210,6 +213,11 @@ while robot.do_loop():
                         mapper.load_fixture(letter, angle, robot.rotation)
                         
                     break
+    
+    else:
+        # Only position and rotation
+        mapper.update(robot_position=robot.position, 
+                      robot_rotation=robot.rotation)
     
     #fixture_detection.tune_filter(robot.get_camera_images()[1])
 

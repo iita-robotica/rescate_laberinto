@@ -38,9 +38,9 @@ class RobotLayer:
         #Location data
         self.prev_rotation = 0
         self.rotation = 0
-        self.position = [0, 0]
-        self.prev_global_position = [0, 0]
-        self.position_offsets = [0, 0]
+        self.position = Position2D(0, 0)
+        self.prev_global_position = Position2D(0, 0)
+        self.position_offsets = Position2D(0, 0)
 
         self.time = 0
 
@@ -141,7 +141,7 @@ class RobotLayer:
     
     
     def is_stuck_this_step(self):
-        return self.drive_base.get_wheel_direction() > 0 and abs(utilities.getDistance(utilities.substractLists(self.position, self.prev_global_position))) < 0.00001
+        return self.drive_base.get_wheel_direction() > 0 and self.position.get_distance_to(self.prev_global_position) < 0.00001
 
     def is_stuck(self):
         return self.stuck_counter > 50
@@ -158,8 +158,7 @@ class RobotLayer:
         # Get global position
         self.prev_global_position = self.position
         self.position = self.gps.getPosition()
-        self.position[0] += self.position_offsets[0]
-        self.position[1] += self.position_offsets[1]
+        self.position += self.position_offsets
 
         # Decides wich sensor to use for roatation detection
         # if the robot is going srtaight i tuses the gps
@@ -190,7 +189,7 @@ class RobotLayer:
         self.drive_base.position = Position2D(self.position[0], self.position[1])
 
         # Lidar and camera update
-        self.lidar.setRotationDegrees(self.rotation + 0)
+        self.lidar.setRotationDegrees(self.rotation)
         self.lidar.update()
 
         self.right_camera.update()
