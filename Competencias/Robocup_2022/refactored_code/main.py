@@ -4,7 +4,7 @@ import time
 import copy
 import math
 
-from data_processing import fixture_detection
+from data_processing.fixture_detection.fixture_detection import FixtureDetector
 import utilities, state_machines, robot, mapping
 from algorithms.expandable_node_grid.bfs import bfs
 
@@ -37,9 +37,14 @@ def resetSequenceFlags():
     robot.delay_first_time = True
 seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
 
+
+# Fixture detection
+fixture_detector = FixtureDetector()
+
 # Mapper
 mapper = mapping.Mapper(TILE_SIZE)
 
+# Agents
 closest_position_agent = ClosestPositionAgent()
 go_back_agent = GoBackAgent()
 
@@ -206,9 +211,9 @@ while robot.do_loop():
 
                 rot_img = np.rot90(image, -1)
 
-                victims = fixture_detection.find_victims(rot_img)
+                victims = fixture_detector.find_fixtures(rot_img)
                 if len(victims) > 0:
-                    letter = fixture_detection.classify_fixture(victims[0])
+                    letter = fixture_detector.classify_fixture(victims[0])
                     if letter is not None:
                         mapper.load_fixture(letter, angle, robot.rotation)
                         
@@ -219,7 +224,7 @@ while robot.do_loop():
         mapper.update(robot_position=robot.position, 
                       robot_rotation=robot.rotation)
     
-    #fixture_detection.tune_filter(robot.get_camera_images()[1])
+    #fixture_detector.tune_filter(robot.get_camera_images()[1])
 
     # Updates state machine
     if not stateManager.checkState("init"):

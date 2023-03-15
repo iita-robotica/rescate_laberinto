@@ -1,0 +1,86 @@
+from flags import SHOW_FIXTURE_DEBUG
+import cv2 as cv
+import numpy as np
+import random
+
+
+from data_processing.fixture_detection.color_filter import ColorFilter
+
+class VictimClassifier:
+    def __init__(self):
+        self.white = 255
+
+        self.victim_letter_filter = ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
+        
+        self.area_width = 10#20
+        self.area_height = 30
+        self.min_count_in_area = self.area_height * self.area_width * 0.3#20
+
+        self.areas = {
+            "top": ((0, self.area_height),(50 - self.area_width // 2, 50 + self.area_width // 2)),
+            "middle": ((50 - self.area_height // 2, 50 + self.area_height // 2), (50 - self.area_width // 2, 50 + self.area_width // 2)),
+            "bottom": ((100 - self.area_height, 100), (50 - self.area_width // 2, 50 + self.area_width // 2 ))
+            }
+        
+        self.letters = {
+            "H":{'top': False, 'middle': True, 'bottom': False},
+            "S":{'top': True, 'middle': True, 'bottom': True},
+            "U":{'top': False, 'middle': False, 'bottom': True}
+            }
+
+    def crop_white(self, binaryImg):
+        white = 255
+        rows, cols = np.where(binaryImg == white)
+        if len(rows) == 0 or len(cols) == 0:
+            # no white pixels found
+            return binaryImg
+        else:
+            minY, maxY = np.min(rows), np.max(rows)
+            minX, maxX = np.min(cols), np.max(cols)
+            return binaryImg[minY:maxY+1, minX:maxX+1]
+
+    def classify_victim(self, victim):
+        img = victim["image"]
+        img =  cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
+       
+        binary = self.victim_letter_filter.filter(img)
+
+        letter = self.crop_white(binary)
+        letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
+      
+        if SHOW_FIXTURE_DEBUG:
+            cv.imshow("letra", letter)
+            cv.imshow("thresh", binary)
+
+        letter_color = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
+        
+        images = {
+            "top": letter[self.areas["top"][0][0]:self.areas["top"][0][1], self.areas["top"][1][0]:self.areas["top"][1][1]],
+            "middle": letter[self.areas["middle"][0][0]:self.areas["middle"][0][1], self.areas["middle"][1][0]:self.areas["middle"][1][1]],
+            "bottom": letter[self.areas["bottom"][0][0]:self.areas["bottom"][0][1], self.areas["bottom"][1][0]:self.areas["bottom"][1][1]]
+            }
+        
+        if SHOW_FIXTURE_DEBUG:
+            cv.rectangle(letter_color,(self.areas["top"][1][0], self.areas["top"][0][0]), (self.areas["top"][1][1], self.areas["top"][0][1]), (0, 255, 0), 1)
+            cv.rectangle(letter_color, (self.areas["middle"][1][0], self.areas["middle"][0][0]), (self.areas["middle"][1][1], self.areas["middle"][0][1]), (0, 0, 255), 1)
+            cv.rectangle(letter_color,(self.areas["bottom"][1][0], self.areas["bottom"][0][0]), (self.areas["bottom"][1][1], self.areas["bottom"][0][1]), (225, 0, 255), 1)
+            cv.imshow("letter_color", letter_color)
+
+        counts = {}
+        for key in images.keys():
+            count = 0
+            for row in images[key]:
+                for pixel in row:
+                    if pixel == self.white:
+                        count += 1
+
+            counts[key] = count > self.min_count_in_area
+
+
+        final_letter = random.choice(list(self.letters.keys()))
+        for letter_key in self.letters.keys():
+            if counts == self.letters[letter_key]:
+                final_letter = letter_key
+                break
+        
+        return final_letter
