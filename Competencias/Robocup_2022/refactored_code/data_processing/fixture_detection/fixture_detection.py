@@ -36,8 +36,8 @@ class FixtureDetector:
         }
 
         # Fixture filtering
-        self.max_fixture_width = 20
-        self.max_fixture_height = 23
+        self.min_fixture_height = 23
+        self.min_fixture_width = 19
     
         # Fixture classification
         self.possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
@@ -107,8 +107,10 @@ class FixtureDetector:
         for vic in victims:
             if SHOW_FIXTURE_DEBUG:
                 print("victim:", vic["position"], vic["image"].shape)
-            if vic["image"].shape[0] > self.max_fixture_height and vic["image"].shape[1] > self.max_fixture_width:
+
+            if vic["image"].shape[0] > self.min_fixture_height and vic["image"].shape[1] > self.min_fixture_width:
                 final_victims.append(vic)
+
         return final_victims
 
     def find_fixtures(self, image) -> list:
