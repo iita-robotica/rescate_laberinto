@@ -11,15 +11,27 @@ class VictimClassifier:
         self.white = 255
 
         self.victim_letter_filter = ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
+
+        self.top_image_reduction = 1
+        self.horizontal_image_reduction = 1
+
         
         self.area_width = 10#20
         self.area_height = 30
-        self.min_count_in_area = self.area_height * self.area_width * 0.3#20
+        self.min_count_in_area = int(self.area_height * self.area_width * 0.3)
 
+        """
         self.areas = {
             "top": ((0, self.area_height),(50 - self.area_width // 2, 50 + self.area_width // 2)),
             "middle": ((50 - self.area_height // 2, 50 + self.area_height // 2), (50 - self.area_width // 2, 50 + self.area_width // 2)),
             "bottom": ((100 - self.area_height, 100), (50 - self.area_width // 2, 50 + self.area_width // 2 ))
+            }
+        """
+
+        self.areas = {
+            "top": ((0, self.area_height),                                       (self.area_width // -2, self.area_width // 2)),
+            "middle": ((50 - self.area_height // 2, 50 + self.area_height // 2), (self.area_width // -2, self.area_width // 2)),
+            "bottom": ((100 - self.area_height, 100),                            (self.area_width // -2, self.area_width // 2 ))
             }
         
         self.letters = {
@@ -38,32 +50,43 @@ class VictimClassifier:
             minY, maxY = np.min(rows), np.max(rows)
             minX, maxX = np.min(cols), np.max(cols)
             return binaryImg[minY:maxY+1, minX:maxX+1]
+    
+    def isolate_victim(self, image):
+        binary = self.victim_letter_filter.filter(image)
+        letter = self.crop_white(binary)
+
+        letter = letter[self.top_image_reduction:, self.horizontal_image_reduction:letter.shape[1] - self.horizontal_image_reduction]
+        letter = self.crop_white(letter)
+        
+        if SHOW_FIXTURE_DEBUG:
+            cv.imshow("thresh", binary)
+
+        return letter
 
     def classify_victim(self, victim):
-        img = victim["image"]
-        img =  cv.resize(img, (100, 100), interpolation=cv.INTER_AREA)
-       
-        binary = self.victim_letter_filter.filter(img)
+        letter = self.isolate_victim(victim["image"])
 
-        letter = self.crop_white(binary)
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
+
+        # Calculat centroid of letter and reverse it
+        moments = cv.moments(letter)
+        center = int(letter.shape[1] - moments["m10"] / moments["m00"])
       
         if SHOW_FIXTURE_DEBUG:
             cv.imshow("letra", letter)
-            cv.imshow("thresh", binary)
 
         letter_color = cv.cvtColor(letter, cv.COLOR_GRAY2BGR)
         
         images = {
-            "top": letter[self.areas["top"][0][0]:self.areas["top"][0][1], self.areas["top"][1][0]:self.areas["top"][1][1]],
-            "middle": letter[self.areas["middle"][0][0]:self.areas["middle"][0][1], self.areas["middle"][1][0]:self.areas["middle"][1][1]],
-            "bottom": letter[self.areas["bottom"][0][0]:self.areas["bottom"][0][1], self.areas["bottom"][1][0]:self.areas["bottom"][1][1]]
+            "top":    letter[self.areas["top"][0][0]   :self.areas["top"][0][1],    self.areas["top"][1][0]    + center:self.areas["top"][1][1]    + center],
+            "middle": letter[self.areas["middle"][0][0]:self.areas["middle"][0][1], self.areas["middle"][1][0] + center:self.areas["middle"][1][1] + center],
+            "bottom": letter[self.areas["bottom"][0][0]:self.areas["bottom"][0][1], self.areas["bottom"][1][0] + center:self.areas["bottom"][1][1] + center]
             }
         
         if SHOW_FIXTURE_DEBUG:
-            cv.rectangle(letter_color,(self.areas["top"][1][0], self.areas["top"][0][0]), (self.areas["top"][1][1], self.areas["top"][0][1]), (0, 255, 0), 1)
-            cv.rectangle(letter_color, (self.areas["middle"][1][0], self.areas["middle"][0][0]), (self.areas["middle"][1][1], self.areas["middle"][0][1]), (0, 0, 255), 1)
-            cv.rectangle(letter_color,(self.areas["bottom"][1][0], self.areas["bottom"][0][0]), (self.areas["bottom"][1][1], self.areas["bottom"][0][1]), (225, 0, 255), 1)
+            cv.rectangle(letter_color,(self.areas["top"][1][0] + center, self.areas["top"][0][0]),        (self.areas["top"][1][1] + center, self.areas["top"][0][1]     ), (0, 255, 0), 1)
+            cv.rectangle(letter_color, (self.areas["middle"][1][0] + center, self.areas["middle"][0][0]), (self.areas["middle"][1][1]+ center, self.areas["middle"][0][1]), (0, 0, 255), 1)
+            cv.rectangle(letter_color,(self.areas["bottom"][1][0] + center , self.areas["bottom"][0][0]),  (self.areas["bottom"][1][1]+ center, self.areas["bottom"][0][1]), (225, 0, 255), 1)
             cv.imshow("letter_color", letter_color)
 
         counts = {}
