@@ -10,7 +10,6 @@ from algorithms.expandable_node_grid.bfs import bfs
 
 from flags import SHOW_DEBUG, SHOW_POINT_CLOUD
 
-from timing_constants import LIDAR_DO_EVERY, TIME_STEP
 
 class Mapper:
     def __init__(self, tile_size):
