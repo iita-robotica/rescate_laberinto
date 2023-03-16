@@ -45,24 +45,24 @@ class FixtureDetector:
         # In order of priority
         self.fixture_types = (
             FixtureType("already_detected", "",  {"white": (1,    math.inf), 
-                                                    "black": (0,    0),
-                                                    "red":   (0,    0), 
-                                                    "yellow":(0,    0),}),
+                                                  "black": (0,    0),
+                                                  "red":   (0,    0), 
+                                                  "yellow":(0,    0),}),
 
-            FixtureType("flammable", "F", {"white": (1,    math.inf), 
-                                             "red":   (1,    math.inf),}),
+            FixtureType("flammable", "F",        {"white": (1,    math.inf), 
+                                                  "red":   (1,    math.inf),}),
 
             FixtureType("organic_peroxide", "O", {"red":   (1,    math.inf), 
-                                                    "yellow":(1,    math.inf),}),
+                                                  "yellow":(1,    math.inf),}),
 
-            FixtureType("victim",    "H", {"white": (4000, math.inf), 
-                                             "black": (100,  4000),}),
+            FixtureType("victim",    "H",        {"white": (4000, math.inf), 
+                                                  "black": (100,  4000),}),
 
-            FixtureType("corrosive", "C", {"white": (700,  2500), 
-                                             "black": (1000, 2500),}),
+            FixtureType("corrosive", "C",        {"white": (700,  2500), 
+                                                  "black": (1000, 2500),}),
 
-            FixtureType("poison",    "P", {"white": (700,  4000), 
-                                             "black": (0,    600),}),
+            FixtureType("poison",    "P",        {"white": (700,  4000), 
+                                                  "black": (0,    600),}),
         )                    
 
 
