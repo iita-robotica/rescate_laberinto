@@ -45,25 +45,25 @@ class CameraProcessor:
 
         `alpha_mask` must have same HxW as `img_overlay` and values in range [0, 1].
         """
-        # Image ranges
-        y1, y2 = max(0, y), min(img.shape[0], y + img_overlay.shape[0])
-        x1, x2 = max(0, x), min(img.shape[1], x + img_overlay.shape[1])
-
-        # Overlay ranges
-        y1o, y2o = max(0, -y), min(img_overlay.shape[0], img.shape[0] - y)
-        x1o, x2o = max(0, -x), min(img_overlay.shape[1], img.shape[1] - x)
-
-        # Exit if nothing to do
-        if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
-            return
-
-        # Blend overlay within the determined ranges
-        img_crop = img[y1:y2, x1:x2]
-        img_overlay_crop = img_overlay[y1o:y2o, x1o:x2o]
-        alpha = alpha_mask[y1o:y2o, x1o:x2o, np.newaxis]
-        alpha_inv = 1.0 - alpha
-
-        img_crop[:] = img_overlay_crop * alpha + img_crop * alpha_inv
+        # Check that the dimensions of the images and the alpha mask match
+        if img_overlay.shape[:2] != alpha_mask.shape[:2]:
+            raise ValueError("The dimensions of the overlay and alpha mask must match")
+        
+        # Compute the region of the overlay image that will be visible in the output
+        y1, y2 = y, y + img_overlay.shape[0]
+        x1, x2 = x, x + img_overlay.shape[1]
+        y1, y2, x1, x2 = max(y1, 0), min(y2, img.shape[0]), max(x1, 0), min(x2, img.shape[1])
+        overlay_region = img_overlay[y1-y:y2-y, x1-x:x2-x]
+        alpha_mask = alpha_mask[y1-y:y2-y, x1-x:x2-x]
+        
+        # Blend the overlay image onto the input image using the alpha mask
+        alpha = alpha_mask[..., np.newaxis]
+        blended = (1.0 - alpha) * img[y1:y2, x1:x2] + alpha * overlay_region
+        
+        # Update the input image with the blended overlay
+        img[y1:y2, x1:x2] = blended
+        
+        return img
 
     def join_camera_images(self, images, translations):
         max_x = 0

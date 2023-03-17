@@ -8,7 +8,8 @@ from data_processing import camera_processor, data_extractor, point_cloud_proces
 from data_structures import lidar_persistent_grid, expandable_node_grid
 from algorithms.expandable_node_grid.bfs import bfs
 
-from flags import SHOW_DEBUG
+from flags import SHOW_DEBUG, SHOW_POINT_CLOUD
+
 
 class Mapper:
     def __init__(self, tile_size):
@@ -41,23 +42,21 @@ class Mapper:
             adj = utilities.sumLists(robot_node, adj)
             self.node_grid.get_node(adj).tile_type = "start"
         self.node_grid.get_node(robot_node).is_start = True
-    
-    @utilities.do_every_n_frames(7, 32)
+
     def load_point_cloud(self, point_cloud, robot_position):
         point_cloud = self.point_cloud_processor.processPointCloud(point_cloud, robot_position)
         self.lidar_grid.update(point_cloud)
     
-    @utilities.do_every_n_frames(7, 32)
     def lidar_to_node_grid(self):
         grid, offsets = self.point_cloud_extractor.transform_to_grid(self.lidar_grid)
         for y, row in enumerate(grid):
             for x, value in enumerate(row):
                 xx = (x - offsets[0]) * 2 + 1
                 yy = (y - offsets[1]) * 2 + 1
+                #print(value)
                 for direction in value:
                     self.node_grid.load_straight_wall((xx, yy),  direction)
 
-    @utilities.do_every_n_frames(7, 32)
     def process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
         floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
@@ -170,7 +169,7 @@ class Mapper:
         self.node_grid.get_node(front_node).status = "occupied"
 
 
-    def update(self, point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None, current_time=None):
+    def update(self, in_bounds_point_cloud=None, out_of_bounds_point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None):
         if robot_position is None or robot_rotation is None:
             return
         
@@ -193,16 +192,15 @@ class Mapper:
         if distance < 0.02:
             self.node_grid.get_node(robot_node).explored = True
 
-        if point_cloud is not None:
-            in_bounds_point_cloud, out_of_bounds_point_cloud = point_cloud
-            self.load_point_cloud(current_time, in_bounds_point_cloud, robot_position)
-            self.lidar_to_node_grid(current_time)
+        if in_bounds_point_cloud is not None:
+            self.load_point_cloud(in_bounds_point_cloud, robot_position)
+            self.lidar_to_node_grid()
 
-        if point_cloud is not None and camera_images is not None and current_time is not None:
+        if in_bounds_point_cloud is not None and camera_images is not None:
             total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
-            self.process_floor(current_time, camera_images, total_point_cloud, robot_position, robot_rotation)
+            self.process_floor(camera_images, total_point_cloud, robot_position, robot_rotation)
             
-            if SHOW_DEBUG:
+            if SHOW_POINT_CLOUD:
                 self.lidar_grid.print_grid((600, 600))
                 self.lidar_grid.print_bool((600, 600))  
 
@@ -212,7 +210,7 @@ class Mapper:
             
     
     def get_node_grid(self):
-        return copy.deepcopy(self.node_grid)
+        return self.node_grid #copy.deepcopy()
     
     def get_grid_for_bonus(self):
         final_grid = []

@@ -4,14 +4,16 @@ import time
 import copy
 import math
 
-from data_processing import fixture_detection
+from data_processing.fixture_detection.fixture_detection import FixtureDetector
 import utilities, state_machines, robot, mapping
 from algorithms.expandable_node_grid.bfs import bfs
 
 from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
 from agents.go_back_agent.go_back_agent import GoBackAgent
 
-from flags import SHOW_DEBUG
+from data_structures.vectors import Position2D
+
+from flags import SHOW_DEBUG, PRINT_MAP_AT_END
 
 window_n = 0
 
@@ -35,9 +37,14 @@ def resetSequenceFlags():
     robot.delay_first_time = True
 seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
 
+
+# Fixture detection
+fixture_detector = FixtureDetector()
+
 # Mapper
 mapper = mapping.Mapper(TILE_SIZE)
 
+# Agents
 closest_position_agent = ClosestPositionAgent()
 go_back_agent = GoBackAgent()
 
@@ -52,7 +59,7 @@ do_victim_reporting = False
 seqPrint = seq.makeSimpleEvent(print)
 seqDelaySec = seq.makeComplexEvent(robot.delay_sec)
 seqMoveWheels = seq.makeSimpleEvent(robot.move_wheels)
-seqRotateToDegs = seq.makeComplexEvent(robot.rotate_to_degs)
+seqRotateToDegs = seq.makeComplexEvent(robot.rotate_to_angle)
 seqMoveToCoords = seq.makeComplexEvent(robot.move_to_coords)
 seqResetSequenceFlags = seq.makeSimpleEvent(resetSequenceFlags)
 
@@ -62,7 +69,7 @@ def calibratePositionOffsets():
     robot.position_offsets = [
         round((actualTile[0] * TILE_SIZE) - robot.position[0]) + TILE_SIZE // 2,
         round((actualTile[1] * TILE_SIZE) - robot.position[1]) + TILE_SIZE // 2]
-    robot.position_offsets = [robot.position_offsets[0] % TILE_SIZE, robot.position_offsets[1] % TILE_SIZE]
+    robot.position_offsets = Position2D(robot.position_offsets[0] % TILE_SIZE, robot.position_offsets[1] % TILE_SIZE)
     print("positionOffsets: ", robot.position_offsets)
 
 def seqCalibrateRobotRotation():
@@ -186,38 +193,38 @@ def correct_position(robot_position):
 while robot.do_loop():
     # Updates robot position and rotation, sensor positions, etc.
     robot.update()
-    
-    # Loads data to mapping
-    if do_mapping:
-        lidar_point_cloud = robot.get_detection_point_cloud()
-        images = robot.get_camera_images()
-        #utilities.save_image(images[1], "camera_image_center.png")
-        mapper.update(lidar_point_cloud, images, robot.position, robot.rotation, current_time=robot.time)
 
+    
+    if do_mapping:
+        # Floor and lidar mapping
+        mapper.update(robot.get_point_cloud(), 
+                robot.get_out_of_bounds_point_cloud(), 
+                robot.get_camera_images(), 
+                robot.position, 
+                robot.rotation)
+
+        # Victim detection
+        images = robot.get_camera_images()
+        if images is not None:
+            for index, image in enumerate(images):
+                angle = (index - 1) * 90
+
+                rot_img = np.rot90(image, -1)
+
+                victims = fixture_detector.find_fixtures(rot_img)
+                if len(victims) > 0:
+                    letter = fixture_detector.classify_fixture(victims[0])
+                    if letter is not None:
+                        mapper.load_fixture(letter, angle, robot.rotation)
+                        
+                    break
+    
     else:
-        mapper.update(robot_position=robot.position, robot_rotation=robot.rotation, current_time=robot.time)
+        # Only position and rotation
+        mapper.update(robot_position=robot.position, 
+                      robot_rotation=robot.rotation)
     
-    if do_mapping:
-        images = robot.get_camera_images()
-        for index, image in enumerate(images):
-            angle = (index - 1) * 90
-
-            rot_img = np.rot90(image, -1)
-
-            victims = fixture_detection.find_victims(rot_img)
-            if len(victims) > 0:
-                letter = fixture_detection.classify_fixture(victims[0])
-                if letter is not None:
-                    mapper.load_fixture(letter, angle, robot.rotation)
-                    
-                break
-
-    
-    if is_complete(mapper.node_grid, mapper.robot_node) and mapper.node_grid.get_node(mapper.robot_node).is_start:
-        seq.resetSequence()
-        stateManager.changeState("end")
-    
-    #fixture_detection.tune_filter(robot.get_camera_images()[1])
+    #fixture_detector.tune_filter(robot.get_camera_images()[1])
 
     # Updates state machine
     if not stateManager.checkState("init"):
@@ -283,6 +290,11 @@ while robot.do_loop():
 
         if seqMoveToRelativeTile(move[0], move[1]):
             mapper.set_robot_node(robot.position)
+            if mapper.node_grid.get_node(mapper.robot_node).is_start:
+                if is_complete(mapper.node_grid, mapper.robot_node):
+                    seq.resetSequence()
+                    stateManager.changeState("end")
+
         seq.seqResetSequence()
 
         if SHOW_DEBUG:
@@ -295,7 +307,7 @@ while robot.do_loop():
         seqMoveWheels(0, 0)
         if seq.simpleEvent() and SHOW_DEBUG:
             print("STOPPED")
-        seqDelaySec(1.2)
+        seqDelaySec(3)
         if seq.simpleEvent():
             fixture = mapper.get_fixture()
             robot.comunicator.sendVictim(robot.position, fixture.type)
@@ -314,6 +326,8 @@ while robot.do_loop():
         seq.seqResetSequence()
     
     elif stateManager.checkState("end"):
+        if PRINT_MAP_AT_END:
+            mapper.node_grid.print_grid()
         robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
     

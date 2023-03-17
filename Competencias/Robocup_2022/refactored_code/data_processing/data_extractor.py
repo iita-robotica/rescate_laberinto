@@ -132,7 +132,7 @@ class PointCloudExtarctor:
     def __init__(self, resolution):
         self.threshold = 8
         self.resolution = resolution
-        self.straight_template = np.zeros((self.resolution + 1, self.resolution + 1), dtype=np.int)
+        self.straight_template = np.zeros((self.resolution + 1, self.resolution + 1), dtype=int)
         self.straight_template[:][0:2] = 1
         #self.straight_template[3:-3][0:2] = 2
         self.straight_template[0][0:2] = 0
@@ -172,29 +172,18 @@ class PointCloudExtarctor:
             self.templates[name] = np.rot90(self.curved_template, i)
 
     def get_tile_status(self, min_x, min_y, max_x, max_y, point_cloud):
-        counts = {}
-        for name in self.templates:
-            counts[name] = 0
+        counts = {name: 0 for name in self.templates}
         square = point_cloud[min_x:max_x+1, min_y:max_y+1]
-        #print(square.shape)
-        
         if square.shape != (self.resolution+1, self.resolution+1):
             return []
+
+        non_zero_indices = np.where(square != 0)
         for name, template in self.templates.items():
-            for i in range(self.resolution + 1):
-                for j in range(self.resolution + 1):
-                    if square[i][j] == 1:
-                        counts[name] += copy.copy(template[i][j])
-        
-        names = []
-        for name, count in counts.items():
-            if count >= self.threshold:
-                names += list(name)
-        """
-        if np.count_nonzero(square):
-            cv.imshow(f"square" + str(names), (square*255).astype(np.uint8))
-        """
-        return names
+            counts[name] = np.sum(template[non_zero_indices])
+
+        names = [name for name, count in counts.items() if count >= self.threshold]
+
+        return [i for sub in names for i in sub]
 
     def transform_to_grid(self, point_cloud):
         offsets = point_cloud.offsets

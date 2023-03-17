@@ -103,37 +103,31 @@ def draw_grid(image, square_size, offset = [0,0], color=255):
                 else:
                     image[y][x] = color
 
-def draw_poses(image, poses, color=255, back_image = None, xx_yy_format = False):
+def draw_poses(image, poses, color=255, back_image=None, xx_yy_format=False):
     if xx_yy_format:
-        cropped_poses = [[], []]
         if back_image is not None:
-            in_bounds_x = (poses[0] < min(image.shape[0], back_image.shape[0]) - 1) * (poses[0] > 0)
-            in_bounds_y = (poses[1] < min(image.shape[1], back_image.shape[1]) - 1) * (poses[1] > 0)
+            in_bounds_x = (poses[0] < min(image.shape[0], back_image.shape[0]) - 1) & (poses[0] > 0)
+            in_bounds_y = (poses[1] < min(image.shape[1], back_image.shape[1]) - 1) & (poses[1] > 0)
         else:
-            in_bounds_x = (poses[0] < image.shape[0] - 1) * (poses[0] > 0)
-            in_bounds_y = (poses[1] < image.shape[1] - 1) * (poses[1] > 0)
+            in_bounds_x = (poses[0] < image.shape[0] - 1) & (poses[0] > 0)
+            in_bounds_y = (poses[1] < image.shape[1] - 1) & (poses[1] > 0)
         
-        cropped_poses[0] = poses[0][in_bounds_x * in_bounds_y]
-        cropped_poses[1] = poses[1][in_bounds_x * in_bounds_y]
+        poses = (poses[0][in_bounds_x & in_bounds_y], poses[1][in_bounds_x & in_bounds_y])
 
-        #print("back_image_shape", back_image.shape)
-        #print("image_shape", image.shape)
+        if back_image is None:
+            image[poses[1], poses[0], :] = color
+        else:
+            image[poses[1], poses[0], :] = back_image[poses[1], poses[0], :]
+        
+    else:
+        in_bounds = (poses[:, 0] >= 0) & (poses[:, 0] < image.shape[1]) & (poses[:, 1] >= 0) & (poses[:, 1] < image.shape[0])
+        poses = poses[in_bounds]
 
-        
         if back_image is None:
-            image[cropped_poses[1], cropped_poses[0], :] = color
+            image[poses[:, 1], poses[:, 0], :] = color
         else:
-            image[cropped_poses[1], cropped_poses[0], :] = back_image[cropped_poses[1], cropped_poses[0], :]
-        
-    for pos in poses:
-        if pos[0] < 0 or pos[1] < 0:
-            continue
-        if pos[0] >= image.shape[1] or pos[1] >= image.shape[0]:
-            continue
-        if back_image is None:
-            image[pos[1]][pos[0]][:] = color
-        else:
-            image[pos[1]][pos[0]][:] = back_image[pos[1]][pos[0]][:]
+            image[poses[:, 1], poses[:, 0], :] = back_image[poses[:, 1], poses[:, 0], :]
+            
 
 def draw_squares_where_not_zero(image, square_size, offsets, color=(255, 255, 255)):
     ref_image = image.copy()
@@ -243,12 +237,32 @@ def is_color_in_range(color, rng):
             return False
     return True
 
+def divide_into_chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
-def do_every_n_frames(n, time_step):
+
+def do_every_n_steps(n):
     def inner_function(func):
         @wraps(func)
-        def wrapper(self, current_time, *args, **kwargs):
-            if (current_time // (time_step / 1000)) % n == 0:
+        def wrapper(self, step_count, *args, **kwargs):
+            if step_count % n == 0:
                 return func(self, *args, **kwargs)
         return wrapper
     return inner_function
+
+class StepCounter:
+    def __init__(self, interval):
+        self.__current_step = 0
+        self.interval = interval
+
+    def increase(self):
+        self.__current_step += 1
+        if self.__current_step == self.interval:
+            self.__current_step = 0
+    
+    def check(self):
+        return self.__current_step == 0
+    
+    

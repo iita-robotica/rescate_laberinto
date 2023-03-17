@@ -8,7 +8,7 @@ class Grid:
         self.offsets = [initial_shape[0] // 2, initial_shape[1] // 2]
         self.resolution = res
         self.shape = initial_shape
-        self.grid = np.zeros(self.shape, dtype=np.int)
+        self.grid = np.zeros(self.shape, dtype=int)
 
         self.value_divider = 1023 / 255
         self.value_limit = 1023
@@ -50,21 +50,21 @@ class Grid:
      
     def add_end_row(self, size):
         self.shape = (self.shape[0]+ size, self.shape[1] )
-        self.grid = np.vstack((self.grid, np.zeros((size, self.shape[1]), dtype=np.int)))
+        self.grid = np.vstack((self.grid, np.zeros((size, self.shape[1]), dtype=int)))
     
     def add_begining_row(self, size):
         self.offsets[1] += size
         self.shape = (self.shape[0]+ size, self.shape[1] )
-        self.grid = np.vstack((np.zeros((size, self.shape[1]), dtype=np.int), self.grid))
+        self.grid = np.vstack((np.zeros((size, self.shape[1]), dtype=int), self.grid))
     
     def add_end_column(self, size):
         self.shape = (self.shape[0], self.shape[1] + size)
-        self.grid = np.hstack((self.grid, np.zeros((self.shape[0], size), dtype=np.int)))
+        self.grid = np.hstack((self.grid, np.zeros((self.shape[0], size), dtype=int)))
 
     def add_begining_column(self, size):
         self.offsets[0] += size
         self.shape = (self.shape[0], self.shape[1] + size)
-        self.grid = np.hstack((np.zeros((self.shape[0], size), dtype=np.int), self.grid))
+        self.grid = np.hstack((np.zeros((self.shape[0], size), dtype=int), self.grid))
 
     def print_grid(self, max_size=(2000, 1000)):
         grid1 = copy.deepcopy(self.grid)

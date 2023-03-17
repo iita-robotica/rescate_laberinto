@@ -1,5 +1,7 @@
 import utilities
 
+from data_structures.vectors import Position2D
+
 # Tracks global position
 class Gps:
     def __init__(self, gps, timeStep, coordsMultiplier=1):
@@ -17,7 +19,7 @@ class Gps:
     # Returns the global position
     def getPosition(self):
         vals = self.gps.getValues()
-        return [vals[0] * self.multiplier, vals[2] * self.multiplier]
+        return Position2D(vals[0] * self.multiplier, vals[2] * self.multiplier)
 
     # Returns the global rotation according to gps
     def getRotation(self):
