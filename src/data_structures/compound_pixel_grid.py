@@ -53,6 +53,7 @@ class PointGrid:
         self.detected_points_grid = self.detected_points_grid * (self.detected_points_grid > self.delete_threshold)
         
         self.traversable_grid = cv.filter2D(self.occupied_grid.astype(np.uint8), -1, self.robot_circle_template.astype(np.uint8))
+        self.traversable_grid = self.traversable_grid.astype(np.bool_)
 
     def get_point(self, point: np.ndarray):
         point += self.offsets
@@ -126,7 +127,7 @@ class PointGrid:
         color = [0, 0, 0]
         data_node = self.data_grid[position[0], position[1]]
         occupied = self.occupied_grid[position[0], position[1]]
-        traversable = self.traversable_grid[position[0], position[1]]
+        not_traversable = self.traversable_grid[position[0], position[1]]
 
         if data_node["seen_by_lidar"] and occupied:
             if data_node["seen_by_camera"]:
@@ -134,7 +135,7 @@ class PointGrid:
             else:
                 color = [255, 255, 255]
         
-        elif traversable:
+        elif not_traversable:
             color = [0, 0, 255]
         
         color.reverse()
@@ -142,9 +143,15 @@ class PointGrid:
     
     def get_colored_grid(self):
         color_grid = np.zeros((self.shape[0], self.shape[1], 3), dtype=np.uint8)
+
+        color_grid[self.traversable_grid] = (255, 0, 0)
+        color_grid[self.occupied_grid] = (255, 255, 255)
+
+        """          
         for x, row in enumerate(self.data_grid):
             for y, node in enumerate(row):
                 color_grid[x, y] = self.get_node_color_representation([x, y])
+        """
         
         return color_grid
     
