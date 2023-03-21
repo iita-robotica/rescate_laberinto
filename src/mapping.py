@@ -5,10 +5,10 @@ import math
 
 import utilities
 from data_processing import camera_processor, data_extractor, point_cloud_processor
-from data_structures import lidar_persistent_grid, expandable_node_grid
+from data_structures import lidar_persistent_grid, expandable_node_grid, compound_pixel_grid
 from algorithms.expandable_node_grid.bfs import bfs
 
-from flags import SHOW_DEBUG, SHOW_POINT_CLOUD
+from flags import SHOW_DEBUG, SHOW_POINT_CLOUD, SHOW_GRANULAR_NAVIGATION_GRID
 
 
 class Mapper:
@@ -18,6 +18,7 @@ class Mapper:
         # Data structures
         self.node_grid = expandable_node_grid.Grid((1, 1))
         self.lidar_grid = lidar_persistent_grid.LidarGrid(tile_size, 6, 100)
+        self.test_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), 6, 0.074 / 2)
 
         res = 50 / tile_size
 
@@ -176,7 +177,7 @@ class Mapper:
         robot_vortex = [int((x + 0.03) // self.tile_size) for x in robot_position]
         robot_node = [int(t * 2) for t in robot_vortex]
         robot_vortex_center = [rt * self.tile_size for rt in robot_vortex]
-        
+    
         distance = math.sqrt(sum([(x - y) ** 2 for x, y in zip(robot_vortex_center, robot_position)]))
 
         if SHOW_DEBUG:
@@ -195,6 +196,10 @@ class Mapper:
         if in_bounds_point_cloud is not None:
             self.load_point_cloud(in_bounds_point_cloud, robot_position)
             self.lidar_to_node_grid()
+            self.test_grid.load_point_cloud(in_bounds_point_cloud, np.array([robot_position.x, robot_position.y]))
+            
+            if SHOW_GRANULAR_NAVIGATION_GRID:
+                self.test_grid.print_grid()
 
         if in_bounds_point_cloud is not None and camera_images is not None:
             total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
