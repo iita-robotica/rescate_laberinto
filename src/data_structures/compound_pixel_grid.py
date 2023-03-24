@@ -21,6 +21,7 @@ class PointGrid:
         self.delete_threshold = 1
 
         self.data_grid = np.zeros(self.shape, self.dtype)
+        
         self.detected_points_grid = np.zeros(self.shape, np.uint8)
         self.occupied_grid = np.zeros(self.shape, np.bool_)
         self.traversable_grid = np.zeros(self.shape, np.bool_)
@@ -33,12 +34,17 @@ class PointGrid:
 
         self.robot_circle_template = self.robot_circle_template.astype(np.bool_)
 
+    def coordinates_to_index(self, coordinates: np.ndarray):
+        return (coordinates * 1000 // self.resolution).astype(int)
+    
+    def index_to_coordinates(self, index: np.ndarray):
+        return (index.astype(float) * self.resolution / 1000)
 
     def load_point_cloud(self, point_cloud, robot_position):
         for p in point_cloud:
             p1 = np.array(p)
             p1 += robot_position
-            p1 = (p1 * 1000 // self.resolution).astype(int)
+            p1 = self.coordinates_to_index(p1)
             
             position = self.get_point(copy.deepcopy(p1))
             data_point = self.data_grid[position[0], position[1]]
