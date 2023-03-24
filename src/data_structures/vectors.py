@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 from data_structures.angle import Angle, Unit
 
@@ -6,6 +7,12 @@ class Position2D:
     def __init__(self, x=None, y=None):
         self.x = x
         self.y = y
+
+    def get_np_array(self):
+        return np.array([self.x, self.y])
+    
+    def get_list(self):
+        return [self.x, self.y]
         
     def __repr__(self):
         return f"Position2D({self.x}, {self.y})"
@@ -55,7 +62,7 @@ class Position2D:
     def __floordiv__(self, other):
         if isinstance(other, Position2D):
             return Position2D(self.x // other.x, self.y // other.y)
-        return Position2D(self.x // other, self.x // other)
+        return Position2D(self.x // other, self.y // other)
     
     def __rfloordiv__(self, other):
         return self.__floordiv__(other)
@@ -109,6 +116,9 @@ class Position2D:
             self.y = value
         else:
             raise IndexError("Vector index out of range")
+        
+    def to_int(self):
+        return Position2D(int(self.x), int(self.y))
     
     def get_distance_to(self, other):
         return abs(self - other)
