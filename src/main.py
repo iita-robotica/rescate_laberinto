@@ -5,8 +5,9 @@ import copy
 import math
 
 from data_processing.fixture_detection.fixture_detection import FixtureDetector
-import utilities, state_machines, robot, mapping
+import state_machines, robot, mapping
 from algorithms.expandable_node_grid.bfs import bfs
+from low_level_movement.obstacle_avoidance import PositionCorrector
 
 from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
 from agents.go_back_agent.go_back_agent import GoBackAgent
@@ -47,6 +48,9 @@ mapper = mapping.Mapper(TILE_SIZE)
 # Agents
 closest_position_agent = ClosestPositionAgent()
 go_back_agent = GoBackAgent()
+
+# Obstacle avoidance
+position_corrector = PositionCorrector(robot.diameter)
 
 
 # Variables
@@ -101,93 +105,16 @@ def seqMoveToRelativeCoords(x, y):
 def seqMoveToRelativeTile(x, y):
     node = mapper.robot_node
     tile = [node[0] // 2 + x, node[1] // 2 + y]
-    return seqMoveToCoords(correct_position([tile[0] * TILE_SIZE, tile[1] * TILE_SIZE]))
+    position = position_corrector.correct_position([tile[0] * TILE_SIZE, tile[1] * TILE_SIZE], 
+                                                   mapper.robot_vortex, 
+                                                   mapper.lidar_grid)
+    return seqMoveToCoords(position)
 
 def is_complete(grid, robot_node):
         possible_nodes = bfs(grid, robot_node, 500)
         if len(possible_nodes) == 0:
             return True
         return False
-
-def robot_fits(robot_node, show_debug=False):
-    global window_n
-    robot_diameter_in_nodes = int(math.ceil(robot.diameter * mapper.lidar_grid.multiplier))
-    robot_radious_in_nodes = robot_diameter_in_nodes // 2
-    min_x = int(robot_node[0] - robot_radious_in_nodes + 1)
-    max_x = int(robot_node[0] + robot_radious_in_nodes+ 0)
-    min_y = int(robot_node[1] - robot_radious_in_nodes + 1)
-    max_y = int(robot_node[1] + robot_radious_in_nodes + 0)
-    min_x = max(min_x, 0)
-    max_x = min(max_x, mapper.lidar_grid.grid.shape[0])
-    min_y = max(min_y, 0)
-    max_y = min(max_y, mapper.lidar_grid.grid.shape[1])
-    #print("square: ", min_x, max_x, min_y, max_y)
-    square = mapper.lidar_grid.get_bool_array()[min_y:max_y, min_x:max_x]
-
-    square1 = copy.deepcopy(square).astype(np.uint8)
-    square1 = square1 * 255
-
-    if show_debug:
-        try:
-            cv.imshow(f"square{window_n}", square1.astype(np.uint8))
-            print(f"Showing square{window_n}")
-        except:
-            print(f"Error showing square{window_n}")
-    window_n += 1
-
-    return np.count_nonzero(square)
-
-def correct_position(robot_position):
-    if SHOW_DEBUG:
-        print("INITIAL POSITION: ", robot_position)
-    max_correction = 2
-    exageration_factor = 1
-    robot_node = [round(p * mapper.lidar_grid.multiplier) for p in robot_position]
-    robot_node = [robot_node[0] + mapper.lidar_grid.offsets[0], robot_node[1] + mapper.lidar_grid.offsets[1]]
-
-    best_node = {"pos":robot_node, "dist":0, "amount":robot_fits(robot_node, show_debug=SHOW_DEBUG)}
-
-    orientation = [abs(r - c) for r, c in zip(mapper.robot_vortex_center, robot_position)]
-
-    if orientation[1] > orientation[0]:
-        y = 0
-        for x in range(-max_correction, max_correction + 1):
-            possible_pos = [robot_node[0] + (x * exageration_factor), robot_node[1] + (y * exageration_factor)]
-            distance = math.sqrt(abs(x) ** (2) + abs(y) ** 2)
-            amount_of_nodes = robot_fits(possible_pos, show_debug=SHOW_DEBUG)
-            
-            if amount_of_nodes < best_node["amount"]:
-                best_node["pos"] = [p - 0.0 for p in possible_pos]
-                best_node["dist"] = distance
-                best_node["amount"] = amount_of_nodes
-            elif amount_of_nodes == best_node["amount"]:
-                if distance < best_node["dist"]:
-                    best_node["pos"] = [p - 0.0 for p in possible_pos]
-                    best_node["dist"] = distance
-                    best_node["amount"] = amount_of_nodes
-
-    elif orientation[0] > orientation[1]:
-        x = 0
-        for y in range(-max_correction, max_correction + 1):
-            possible_pos = [robot_node[0] + (x * exageration_factor), robot_node[1] + (y * exageration_factor)]
-            distance = math.sqrt(abs(x) ** (2) + abs(y) ** 2)
-            amount_of_nodes = robot_fits(possible_pos)
-
-            #print("varying in y")
-
-            if amount_of_nodes < best_node["amount"]:
-                best_node["pos"] = [p - 0.0 for p in possible_pos]
-                best_node["dist"] = distance
-                best_node["amount"] = amount_of_nodes
-            elif amount_of_nodes == best_node["amount"]:
-                if distance < best_node["dist"]:
-                    best_node["pos"] = [p - 0.0 for p in possible_pos]
-                    best_node["dist"] = distance
-                    best_node["amount"] = amount_of_nodes
-
-    final_pos = [(p - o) / mapper.lidar_grid.multiplier for p, o in zip(best_node["pos"], mapper.lidar_grid.offsets)]
-    #print("CORRECTED POSITION: ", final_pos)
-    return final_pos
 
 # Each timeStep
 while robot.do_loop():
@@ -198,10 +125,10 @@ while robot.do_loop():
     if do_mapping:
         # Floor and lidar mapping
         mapper.update(robot.get_point_cloud(), 
-                robot.get_out_of_bounds_point_cloud(), 
-                robot.get_camera_images(), 
-                robot.position, 
-                robot.rotation)
+                      robot.get_out_of_bounds_point_cloud(), 
+                      robot.get_camera_images(), 
+                      robot.position, 
+                      robot.rotation)
 
         # Victim detection
         images = robot.get_camera_images()
@@ -342,6 +269,7 @@ while robot.do_loop():
         seqDelaySec(0.2)
         seqMoveWheels(0, 0)
         if seq.simpleEvent():
+            mapper.block_front_vortex(robot.rotation)
             robot.auto_decide_rotation = True
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
