@@ -215,7 +215,7 @@ while robot.do_loop():
                 if len(victims) > 0:
                     letter = fixture_detector.classify_fixture(victims[0])
                     if letter is not None:
-                        mapper.load_fixture(letter, angle, robot.rotation)
+                        mapper.load_fixture_to_tile(letter, angle, robot.rotation)
                         
                     break
     
@@ -239,7 +239,7 @@ while robot.do_loop():
                 stateManager.changeState("stuck")
     
     
-        if mapper.get_fixture().exists and not mapper.get_fixture().reported and do_victim_reporting:
+        if mapper.get_fixture_from_tile().exists and not mapper.get_fixture_from_tile().reported and do_victim_reporting:
             if not stateManager.checkState("report_victim"):
                 seq.resetSequence()
                 stateManager.changeState("report_victim")
@@ -309,10 +309,10 @@ while robot.do_loop():
             print("STOPPED")
         seqDelaySec(3)
         if seq.simpleEvent():
-            fixture = mapper.get_fixture()
+            fixture = mapper.get_fixture_from_tile()
             robot.comunicator.sendVictim(robot.position, fixture.type)
             fixture.reported = True
-            mapper.load_wall_fixture(letter, fixture.detection_angle)
+            mapper.load_fixture_to_wall(letter, fixture.detection_angle)
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
     
