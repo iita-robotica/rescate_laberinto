@@ -21,7 +21,7 @@ class Mapper:
         self.tile_size = tile_size
 
         self.robot_node = None
-        self.robot_vortex_center = None
+        self.robot_vortex = None
         self.start_node = None
 
         # Data structures
@@ -41,16 +41,15 @@ class Mapper:
         if robot_position is None or robot_rotation is None:
             return
         
-        robot_vortex =  self.get_vortex_from_position(robot_position)
-        robot_node = self.get_node_from_vortex(robot_vortex)
-        robot_vortex_center = self.get_vortex_center_from_vortex(robot_vortex)
+        robot_node = self.position_to_node_grid_index(robot_position) 
+        robot_vortex = self.get_closest_vortex_to_position(robot_position)
 
         # Set robot node
         if self.robot_node is None:
             self.set_robot_node(robot_position)
         
         # Mark current node as explored
-        distance = abs(robot_vortex_center.get_distance_to(robot_position))
+        distance = abs(robot_vortex.get_distance_to(robot_position))
 
         if distance < 0.02:
             self.node_grid.get_node(robot_node).explored = True
@@ -72,7 +71,7 @@ class Mapper:
         
         #DEBUG
         if SHOW_DEBUG:
-            print("robot_vortex:", robot_vortex)
+            print("robot_node:", robot_node)
 
         if SHOW_GRANULAR_NAVIGATION_GRID:
             self.test_grid.print_grid() 
@@ -86,8 +85,8 @@ class Mapper:
             cv.waitKey(1) 
         
     def register_start(self, robot_position):
-        robot_vortex = self.get_vortex_from_position(robot_position)
-        robot_node = self.get_node_from_vortex(robot_vortex)
+        robot_vortex = self.get_closest_vortex_to_position(robot_position)
+        robot_node = self.position_to_node_grid_index(robot_position)
         
         self.start_node = robot_node
         self.node_grid.get_node(robot_node).is_start = True
@@ -97,9 +96,8 @@ class Mapper:
             self.node_grid.get_node(adj).tile_type = "start"
 
     def set_robot_node(self, robot_position):
-        robot_vortex = self.get_vortex_from_position(robot_position)
-        self.robot_vortex_center = self.get_vortex_center_from_vortex(robot_vortex)
-        self.robot_node = self.get_node_from_vortex(robot_vortex)
+        self.robot_vortex = self.get_closest_vortex_to_position(robot_position)
+        self.robot_node = self.position_to_node_grid_index(robot_position)
 
         for row in self.node_grid.grid:
             for node in row:
@@ -201,16 +199,11 @@ class Mapper:
     
     
     # Utilities
-    def get_vortex_from_position(self, position):
-        #return [int((x + 0.03) // self.tile_size) for x in position]
-        return ((position + 0.03) // self.tile_size).to_int()
-    
-    def get_node_from_vortex(self, vortex):
-        #return [int(t * 2) for t in vortex]
-        return vortex * 2
-    
-    def get_vortex_center_from_vortex(self, vortex):
-        return vortex * self.tile_size
+    def get_closest_vortex_to_position(self, position):
+        return ((position + 0.03) // self.tile_size).to_int() * self.tile_size
+
+    def position_to_node_grid_index(self, position):
+        return ((position + 0.03) // self.tile_size).to_int() * 2
     
     def degs_to_orientation(self, degs):
         """divides degrees in up, left, right or down"""
