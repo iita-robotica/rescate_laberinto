@@ -9,8 +9,9 @@ import state_machines, robot, mapping
 from algorithms.expandable_node_grid.bfs import bfs
 from low_level_movement.obstacle_avoidance import PositionCorrector
 
-from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
-from agents.go_back_agent.go_back_agent import GoBackAgent
+#from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
+#from agents.go_back_agent.go_back_agent import GoBackAgent
+from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
 
 from data_structures.vectors import Position2D
 
@@ -46,8 +47,9 @@ fixture_detector = FixtureDetector()
 mapper = mapping.Mapper(TILE_SIZE)
 
 # Agents
-closest_position_agent = ClosestPositionAgent()
-go_back_agent = GoBackAgent()
+#closest_position_agent = ClosestPositionAgent()
+#go_back_agent = GoBackAgent()
+navigation_agent = GranularNavigationAgent()
 
 # Obstacle avoidance
 position_corrector = PositionCorrector(robot.diameter)
@@ -209,18 +211,22 @@ while robot.do_loop():
     elif stateManager.checkState("explore"):
         seq.startSequence()
 
-        grid = mapper.get_node_grid()
-        move = closest_position_agent.get_action(grid)
-        if SHOW_DEBUG:
-            print("move: ", move)
+        #grid = mapper.get_node_grid()
+        navigation_agent.update(mapper)
+        #move = closest_position_agent.get_action(grid)
         node = mapper.robot_node
 
+        if seqMoveToCoords(navigation_agent.get_target_position(mapper)):
+            mapper.set_robot_node(robot.position)
+        
+        """
         if seqMoveToRelativeTile(move[0], move[1]):
             mapper.set_robot_node(robot.position)
             if mapper.node_grid.get_node(mapper.robot_node).is_start:
                 if is_complete(mapper.node_grid, mapper.robot_node):
                     seq.resetSequence()
                     stateManager.changeState("end")
+        """
 
         seq.seqResetSequence()
 
@@ -274,6 +280,7 @@ while robot.do_loop():
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
     
+    """
     elif stateManager.checkState("go_back"):
         if SHOW_DEBUG:
             print("IS IN GO BACK")
@@ -295,7 +302,7 @@ while robot.do_loop():
             if SHOW_DEBUG:
                 print("rotation:", robot.rotation)
                 print("position:", robot.position)
-
+    """
     if SHOW_DEBUG:
         print("robot time:", robot.comunicator.remainingTime)
     robot.comunicator.update()
