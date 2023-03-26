@@ -28,7 +28,7 @@ class Mapper:
         # Data structures
         self.node_grid = expandable_node_grid.Grid((1, 1))
         self.lidar_grid = lidar_persistent_grid.LidarGrid(tile_size, 6, 100)
-        self.granular_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), 6, 0.074 / 2)
+        self.granular_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), 6, (0.074 / 2) + 0.005)
 
         #Data processors
         self.point_cloud_processor = PointCloudProcessor(center_point=350, map_scale=50 / tile_size)
