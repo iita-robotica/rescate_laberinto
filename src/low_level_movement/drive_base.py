@@ -80,7 +80,7 @@ class RotationManager:
 
         self.velocity_reduction_threshold = Angle(10, Unit.DEGREES)
 
-        self.accuracy = Angle(5, Unit.DEGREES)
+        self.accuracy = Angle(1, Unit.DEGREES)
 
     def rotate_to_angle(self, target_angle, criteria=Criteria.CLOSEST):
         if self.first_time:
@@ -144,7 +144,7 @@ class MovementToCoordinatesManager:
         self.right_wheel = right_wheel
         self.rotation_manager = RotationManager(self.left_wheel, self.right_wheel)
 
-        self.error_margin = 0.003
+        self.error_margin = 0.0005
         self.desceleration_start = 0.5 * 0.12
 
         self.max_velocity_cap = 1
