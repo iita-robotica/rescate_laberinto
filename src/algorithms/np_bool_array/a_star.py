@@ -1,6 +1,5 @@
 import numpy as np
 import cv2 as cv
-from data_structures.compound_pixel_grid import PointGrid
 import math
 
 # aStarNode class for A* pathfinding 
@@ -13,14 +12,14 @@ class aStarNode():
         self.f = 0
 
     def __eq__(self, other):
-        return self.position[0] == other.position[0] and self.position[1] == other.position[1]
+        return self.position == other.position
     
     def __repr__(self):
         return str(self.position)
 
 class aStarAlgorithm:
     def __init__(self):
-        self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], [1, 1], [1, -1], [-1, -1], [-1, 1]]
+        self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], ]#[1, 1], [1, -1], [-1, -1], [-1, 1]]
 
     # Returns a list of tuples as a path from the given start to the given end in the given maze
     def a_star(self, grid: np.ndarray, start, end):
@@ -37,6 +36,7 @@ class aStarAlgorithm:
 
         if grid[end[0], end[1]]:
             print("WARNING: End position is not traversable")
+            return []
 
         endNode.g = endNode.h = endNode.f = 0
         # Initialize open and closed list
@@ -75,12 +75,11 @@ class aStarAlgorithm:
                 # Get node position
                 nodePosition = [currentNode.position[0] + adj[0], currentNode.position[1] + adj[1]]
                 # Make sure walkable terrain
-                if nodePosition[0] >= grid.shape[0] or nodePosition[1] >= grid.shape[1] or nodePosition[0] < 0 or nodePosition[1] < 0:
+                if not (nodePosition[0] >= grid.shape[0] or nodePosition[1] >= grid.shape[1] or nodePosition[0] < 0 or nodePosition[1] < 0):
                     #print("OUT OF BOUNDS")
-                    continue
-                if grid[nodePosition[0], nodePosition[1]]:
-                    #print("NOT TRAVERSABLE")
-                    continue
+                    if grid[nodePosition[0], nodePosition[1]]:
+                        #print("NOT TRAVERSABLE")
+                        continue
                 # Create new node
                 newNode = aStarNode(currentNode, nodePosition)
                 # Append
@@ -115,10 +114,12 @@ class aStarAlgorithm:
                 # Add the child to the open list
                 openList.append(child)
             
+            """
             for o in openList:
                 debug_grid[o.position[0], o.position[1]] = [0, 0, 255]
 
-            #cv.imshow("debug", debug_grid)
+            cv.imshow("debug", debug_grid)
 
-            #cv.waitKey(1)
-        #return [[0, 0], [-1, -1]]
+            cv.waitKey(1)
+            """
+        return []
