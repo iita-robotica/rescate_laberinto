@@ -8,7 +8,7 @@ from data_structures.vectors import Position2D
 from mapping import Mapper
 
 from data_structures.compound_pixel_grid import PointGrid
-from algorithms.np_bool_array.a_star import aStarAlgorithm
+from algorithms.np_bool_array.efficient_a_star import aStarAlgorithm
 from algorithms.np_bool_array.bfs import BFSAlgorithm
 from algorithms.expandable_node_grid.traversable import is_traversable
 
@@ -41,10 +41,10 @@ class GranularNavigationAgent(Agent):
         if len(self.a_star_path) <= self.a_star_index:
             print("FINISHED PATH")
 
-        if not self.check_path(mapper.granular_grid.traversable_grid):
+        if not self.check_path(mapper.granular_grid):
             print("FAILED PATH CHECK")
 
-        if len(self.a_star_path) - 1 <= self.a_star_index or not self.check_path(mapper.granular_grid.traversable_grid):
+        if len(self.a_star_path) - 1 <= self.a_star_index or not self.check_path(mapper.granular_grid):
 
             target_grid_index = mapper.granular_grid.coordinates_to_grid_index(self.target_position)
             mapper.granular_grid.expand_grid_to_grid_index(target_grid_index)
@@ -55,10 +55,14 @@ class GranularNavigationAgent(Agent):
 
             best_path = self.a_star.a_star(mapper.granular_grid.traversable_grid, 
                                            start_array_index,
-                                           target_array_index)
-
+                                           target_array_index,
+                                           mapper.granular_grid.navigation_preference_grid)
             if len(best_path) > 1:
-                self.a_star_path = best_path[1:]
+                self.a_star_path = []
+                for array_index in best_path:
+                    self.a_star_path.append(mapper.granular_grid.array_index_to_grid_index(array_index))
+
+                self.a_star_path = self.a_star_path[1:]
                 self.a_star_index = 0
             
             self.a_star_path = self.smooth_path(self.a_star_path)
@@ -66,7 +70,7 @@ class GranularNavigationAgent(Agent):
         if SHOW_GRANULAR_NAVIGATION_GRID:
             debug_grid = mapper.granular_grid.get_colored_grid()
             for node in self.a_star_path:
-                n = np.array(node)
+                n = np.array(mapper.granular_grid.grid_index_to_array_index(node))
                 try:
                     debug_grid[n[0], n[1]] = [0, 0, 255]
                 except IndexError:
@@ -84,8 +88,7 @@ class GranularNavigationAgent(Agent):
             current_pos = mapper.robot_position
             current_pos = np.array([current_pos[0], current_pos[1]])
             current_grid_index = mapper.granular_grid.coordinates_to_grid_index(current_pos)
-            current_node = mapper.granular_grid.grid_index_to_array_index(current_grid_index)
-            current_node = Position2D(current_node[0], current_node[1])
+            current_node = Position2D(current_grid_index[0], current_grid_index[1])
 
 
             #print("current_array_index:", current_node)
@@ -110,8 +113,7 @@ class GranularNavigationAgent(Agent):
     def get_target_position(self, mapper: Mapper) -> Position2D:
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) -1)
         #print(self.a_star_path[self.a_star_index])
-        index = mapper.granular_grid.array_index_to_grid_index(np.array(self.a_star_path[self.a_star_index]))
-        pos = mapper.granular_grid.grid_index_to_coordinates(np.array(index))
+        pos = mapper.granular_grid.grid_index_to_coordinates(np.array(self.a_star_path[self.a_star_index]))
         pos = Position2D(pos[0], pos[1])
         #print("target_position:", pos)
         #print("robot_position:", mapper.robot_position)
@@ -124,15 +126,23 @@ class GranularNavigationAgent(Agent):
         return False
     
     
-    def check_path(self, granular_grid: np.ndarray):
-        for position in self.a_star_path:
-            if position[0] >= granular_grid.shape[0] or position[1] >= granular_grid.shape[1]:
+    def check_path(self, granular_grid: PointGrid):
+        array_index_path = []
+        for n in self.a_star_path:
+            array_index_path.append(granular_grid.grid_index_to_array_index(n))
+
+        if len(array_index_path):
+            if granular_grid.traversable_grid[array_index_path[0][0], array_index_path[0][1]]:
+                return True
+            
+        for position in array_index_path:
+            if position[0] >= granular_grid.traversable_grid.shape[0] or position[1] >= granular_grid.traversable_grid.shape[1]:
                 continue
 
             if position[0] < 0 or position[1] < 0:
                 continue
 
-            if granular_grid[position[0], position[1]]:
+            if granular_grid.traversable_grid[position[0], position[1]]:
                 return False
         return True
         
