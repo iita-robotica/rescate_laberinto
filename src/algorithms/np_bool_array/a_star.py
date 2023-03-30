@@ -9,6 +9,7 @@ class aStarNode():
         self.position = position
         self.g = 0
         self.h = 0
+        self.p = 0
         self.f = 0
 
     def __eq__(self, other):
@@ -20,9 +21,18 @@ class aStarNode():
 class aStarAlgorithm:
     def __init__(self):
         self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], ]#[1, 1], [1, -1], [-1, -1], [-1, 1]]
+        self.preference_weight = 50
 
+    def get_preference(self, preference_grid, position):
+        if preference_grid is None:
+            return 0
+        elif not (position[0] >= preference_grid.shape[0] or position[1] >= preference_grid.shape[1] or position[0] < 0 or position[1] < 0):
+            return preference_grid[position[0], position[1]]
+        else:
+            return 0
+        
     # Returns a list of tuples as a path from the given start to the given end in the given maze
-    def a_star(self, grid: np.ndarray, start, end):
+    def a_star(self, grid: np.ndarray, start, end, preference_grid=None):
         debug_grid = np.zeros((grid.shape[0], grid.shape[1], 3), dtype=np.uint8)
 
         # Create start and end node
@@ -98,28 +108,29 @@ class aStarAlgorithm:
                 child.h =  ((child.position[0] - endNode.position[0]) ** 2) + (
                            (child.position[1] - endNode.position[1]) ** 2)
                 
-                child.f = child.g + child.h
+                child.p = self.get_preference(preference_grid, child.position) * self.preference_weight
+                
+                child.f = child.g + child.h + child.p
                 # Child is already in the open list
                 for index, openNode in enumerate(openList):
                     if child == openNode:
-                        if child.g > openNode.g:
+                        if child.p + child.g > openNode.p + openNode.g:
                             continueLoop = True
                             break
 
-                        else:
-                            openList.pop(index)
+
 
                 if continueLoop:
                     continue
                 # Add the child to the open list
                 openList.append(child)
             
-            """
+            
             for o in openList:
                 debug_grid[o.position[0], o.position[1]] = [0, 0, 255]
 
             cv.imshow("debug", debug_grid)
 
             cv.waitKey(1)
-            """
+            
         return []
