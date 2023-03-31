@@ -92,7 +92,7 @@ class aStarAlgorithm:
             closed.add(node.location)
             # If found the goal
             if node.location == end_node.location:
-                print(f"Finished Astar. Took {loop_n} loops.")
+                #print(f"Finished Astar. Took {loop_n} loops.")
                 return self.reconstructpath(node)
             
             # Generate children
@@ -124,7 +124,6 @@ class aStarAlgorithm:
 
             loop_n += 1
             if loop_n > search_limit:
-                print(f"Reached search limit with of {loop_n} nodes")
                 break
             
             """
