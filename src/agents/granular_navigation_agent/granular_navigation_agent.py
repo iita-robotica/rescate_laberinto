@@ -133,10 +133,6 @@ class GranularNavigationAgent(Agent):
         array_index_path = []
         for n in self.a_star_path:
             array_index_path.append(granular_grid.grid_index_to_array_index(n))
-
-        if len(array_index_path):
-            if granular_grid.traversable_grid[array_index_path[0][0], array_index_path[0][1]]:
-                return True
             
         for position in array_index_path:
             if position[0] >= granular_grid.traversable_grid.shape[0] or position[1] >= granular_grid.traversable_grid.shape[1]:
