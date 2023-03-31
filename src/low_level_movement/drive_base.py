@@ -17,8 +17,8 @@ class DriveBase:
         self.left_wheel = left_wheel
         self.right_wheel = right_wheel
         self.rotation_manager = RotationManager(self.left_wheel, self.right_wheel)
-        self.movement_manager = MovementToCoordinatesManager(self.left_wheel, self.right_wheel)
-        #self.movement_manager = SmoothMovementToCoordinatesManager(self.left_wheel, self.right_wheel)
+        #self.movement_manager = MovementToCoordinatesManager(self.left_wheel, self.right_wheel)
+        self.movement_manager = SmoothMovementToCoordinatesManager(self.left_wheel, self.right_wheel)
 
     # Moves the wheels at the specified Velocity
     def move_wheels(self, left_ratio, right_ratio):
@@ -206,7 +206,10 @@ class SmoothMovementToCoordinatesManager:
 
         self.error_margin = 0.003
 
-        self.velocity = 1
+        self.velocity = 0.8
+
+        self.distance_weight = 5
+        self.angle_weight = 5
 
         self.finished_moving = False
 
@@ -226,18 +229,27 @@ class SmoothMovementToCoordinatesManager:
         else:
             self.finished_moving = False
 
-            ang = self.current_position.get_angle_to(target_position)
-            if self.current_angle.get_absolute_distance_to(ang).degrees < 2:
+            angle_to_target = self.current_position.get_angle_to(target_position)
+            angle_diff = self.current_angle - angle_to_target
+            absolute_angle_diff = self.current_angle.get_absolute_distance_to(angle_to_target)
+
+            print("diff:", absolute_angle_diff)
+            if absolute_angle_diff.degrees < 2:
                 self.right_wheel.move(self.velocity)
                 self.left_wheel.move(self.velocity)
             else:
-                diff = self.current_position - target_position
+                distance_speed = dist * -self.distance_weight
+                angle_speed = absolute_angle_diff.radians * self.angle_weight
 
-                x = math.sin(diff.x)
-                y = math.cos(diff.y)
+                speed = angle_speed
 
-
-                self.right_wheel.move(y)
-                self.left_wheel.move(x)
+                if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
+                    self.right_wheel.move(speed)
+                    self.left_wheel.move(speed * distance_speed)
+                else:
+                    self.right_wheel.move(speed * distance_speed)
+                    self.left_wheel.move(speed)
+                
+                
     
 
