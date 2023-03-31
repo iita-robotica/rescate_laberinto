@@ -22,7 +22,7 @@ class aStarNode:
 class aStarAlgorithm:
     def __init__(self):
         self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], ]#[1, 1], [1, -1], [-1, -1], [-1, 1]]
-        self.preference_weight = 50
+        self.preference_weight = 5
     
     @staticmethod
     def reconstructpath(node):
@@ -59,9 +59,7 @@ class aStarAlgorithm:
 
         
     # Returns a list of tuples as a path from the given start to the given end in the given maze
-    def a_star(self, grid: np.ndarray, start, end, preference_grid=None):
-        
-
+    def a_star(self, grid: np.ndarray, start, end, preference_grid=None, search_limit=float('inf')):
         debug_grid = np.zeros((grid.shape[0], grid.shape[1], 3), dtype=np.uint8)
 
         # Create start and end node
@@ -80,9 +78,10 @@ class aStarAlgorithm:
         end_node.g = end_node.h = end_node.f = 0
         # Initialize open and closed list
         openList = [start_node]
-        best_cost_for_node_lookup = {tuple(start_node.location):start_node.g}
+        best_cost_for_node_lookup = {tuple(start_node.location): start_node.g}
         closed = set()
 
+        loop_n = 0
         # Loop until end
         while openList:            
             # Get the current node
@@ -93,6 +92,7 @@ class aStarAlgorithm:
             closed.add(node.location)
             # If found the goal
             if node.location == end_node.location:
+                print(f"Finished Astar. Took {loop_n} loops.")
                 return self.reconstructpath(node)
             
             # Generate children
@@ -121,6 +121,11 @@ class aStarAlgorithm:
                 else:
                     best_cost_for_node_lookup[child_location] = new_child.g + new_child.p
                     heappush(openList, new_child)
+
+            loop_n += 1
+            if loop_n > search_limit:
+                print(f"Reached search limit with of {loop_n} nodes")
+                break
             
             """
             for o in openList:
