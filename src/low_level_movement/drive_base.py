@@ -206,18 +206,20 @@ class SmoothMovementToCoordinatesManager:
 
         self.error_margin = 0.003
 
-        self.velocity = 0.8
+        self.velocity = 1
 
         self.distance_weight = 5
         self.angle_weight = 5
 
+        self.turning_speed_multiplier = 1.5
+
         self.finished_moving = False
 
+        self.angle_error_margin = Angle(2, Unit.DEGREES)
+
+        self.strong_rotation_start = Angle(45, Unit.DEGREES)
+
     def move_to_position(self, target_position:Position2D):
-
-        # print("Target Pos: ", targetPos)
-        # print("Used global Pos: ", self.position)
-
         dist = abs(self.current_position.get_distance_to(target_position))
 
         if SHOW_DEBUG: print("Dist: "+ str(dist))
@@ -226,6 +228,8 @@ class SmoothMovementToCoordinatesManager:
             # self.robot.move(0,0)
             if SHOW_DEBUG: print("FinisehedMove")
             self.finished_moving = True
+
+
         else:
             self.finished_moving = False
 
@@ -233,15 +237,27 @@ class SmoothMovementToCoordinatesManager:
             angle_diff = self.current_angle - angle_to_target
             absolute_angle_diff = self.current_angle.get_absolute_distance_to(angle_to_target)
 
-            print("diff:", absolute_angle_diff)
-            if absolute_angle_diff.degrees < 2:
+            #print("diff:", absolute_angle_diff)
+            if absolute_angle_diff < self.angle_error_margin:
                 self.right_wheel.move(self.velocity)
                 self.left_wheel.move(self.velocity)
+
+
+            elif absolute_angle_diff > self.strong_rotation_start:
+                if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
+                    self.right_wheel.move(self.velocity)
+                    self.left_wheel.move(self.velocity * -1)
+                else:
+                    self.right_wheel.move(self.velocity * -1)
+                    self.left_wheel.move(self.velocity)
+
             else:
                 distance_speed = dist * -self.distance_weight
                 angle_speed = absolute_angle_diff.radians * self.angle_weight
 
-                speed = angle_speed
+                speed = angle_speed * self.turning_speed_multiplier
+
+                print("speed:", speed)
 
                 if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
                     self.right_wheel.move(speed)
