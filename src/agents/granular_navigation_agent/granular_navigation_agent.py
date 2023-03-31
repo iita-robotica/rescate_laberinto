@@ -26,8 +26,8 @@ class GranularNavigationAgent(Agent):
         self.a_star_index = 0
     
     def update(self, mapper: Mapper) -> None:
+        # Get start index
         self.current_grid_index = mapper.granular_grid.coordinates_to_grid_index(mapper.robot_position.get_np_array())
-
         mapper.granular_grid.expand_grid_to_grid_index(self.current_grid_index)
         start_array_index = mapper.granular_grid.grid_index_to_array_index(self.current_grid_index)
         
@@ -44,6 +44,7 @@ class GranularNavigationAgent(Agent):
         if not self.check_path(mapper.granular_grid):
             print("FAILED PATH CHECK")
 
+        # If path finished or current path obstructed
         if len(self.a_star_path) - 1 <= self.a_star_index or not self.check_path(mapper.granular_grid):
 
             target_grid_index = mapper.granular_grid.coordinates_to_grid_index(self.target_position)
@@ -53,10 +54,12 @@ class GranularNavigationAgent(Agent):
             if mapper.granular_grid.traversable_grid[target_array_index[0], target_array_index[1]]:
                 target_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.traversable_grid, target_array_index)
 
+            # Calculate path
             best_path = self.a_star.a_star(mapper.granular_grid.traversable_grid, 
                                            start_array_index,
                                            target_array_index,
                                            mapper.granular_grid.navigation_preference_grid)
+
             if len(best_path) > 1:
                 self.a_star_path = []
                 for array_index in best_path:
@@ -80,8 +83,8 @@ class GranularNavigationAgent(Agent):
 
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) - 1)   
         if len(self.a_star_path) > 0:
-            print("a_star_index:", self.a_star_index)
-            print("path len:", len(self.a_star_path))
+            #print("a_star_index:", self.a_star_index)
+            #print("path len:", len(self.a_star_path))
             next_node = self.a_star_path[self.a_star_index]
             next_node = Position2D(next_node[0], next_node[1])
 
@@ -125,7 +128,7 @@ class GranularNavigationAgent(Agent):
     def do_report_victim(self) -> bool:
         return False
     
-    
+    # Is current Astar path obstructed?
     def check_path(self, granular_grid: PointGrid):
         array_index_path = []
         for n in self.a_star_path:
