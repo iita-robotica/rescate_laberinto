@@ -10,7 +10,8 @@ from mapping import Mapper
 from data_structures.compound_pixel_grid import PointGrid
 from algorithms.np_bool_array.efficient_a_star import aStarAlgorithm
 from algorithms.np_bool_array.bfs import BFSAlgorithm
-from algorithms.expandable_node_grid.traversable import is_traversable
+
+from agents.granular_navigation_agent.path_smoothing import PathSmoother
 
 from flags import SHOW_DEBUG,SHOW_GRANULAR_NAVIGATION_GRID
 
@@ -19,10 +20,13 @@ class GranularNavigationAgent(Agent):
         self.a_star = aStarAlgorithm()
         self.closest_free_point_finder = BFSAlgorithm(lambda x : x == 0)
 
+        self.a_star_path_smoother = PathSmoother(1)
+
         self.current_grid_index = np.array([0, 0])
         self.target_position = np.array([-0.0981416353934171, -0.018619773492883556]) # np.array([-0.5919078827365277, -0.14052309679063227])
 
         self.a_star_path = []
+        self.smooth_astar_path = []
         self.a_star_index = 0
     
     def update(self, mapper: Mapper) -> None:
@@ -69,6 +73,7 @@ class GranularNavigationAgent(Agent):
                 self.a_star_index = 0
             
             self.a_star_path = self.smooth_path(self.a_star_path)
+            self.smooth_astar_path = self.a_star_path_smoother.smooth(self.a_star_path)
 
         if SHOW_GRANULAR_NAVIGATION_GRID:
             debug_grid = mapper.granular_grid.get_colored_grid()
@@ -116,7 +121,7 @@ class GranularNavigationAgent(Agent):
     def get_target_position(self, mapper: Mapper) -> Position2D:
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) -1)
         #print(self.a_star_path[self.a_star_index])
-        pos = mapper.granular_grid.grid_index_to_coordinates(np.array(self.a_star_path[self.a_star_index]))
+        pos = mapper.granular_grid.grid_index_to_coordinates(np.array(self.smooth_astar_path[self.a_star_index]))
         pos = Position2D(pos[0], pos[1])
         #print("target_position:", pos)
         #print("robot_position:", mapper.robot_position)
