@@ -43,7 +43,7 @@ class PointGrid:
         self.robot_diameter_template = cv.circle(self.robot_diameter_template, (self.robot_radius, self.robot_radius), self.robot_radius, 255, -1)
         self.robot_diameter_template = self.robot_diameter_template.astype(np.bool_)
 
-        self.preference_template = self.__generate_circle_gradient(self.robot_radius, self.robot_radius * 2)
+        self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 2)
 
     def coordinates_to_grid_index(self, coordinates):
         if isinstance(coordinates, np.ndarray):
@@ -162,7 +162,7 @@ class PointGrid:
         grid = np.hstack((np.zeros((self.array_shape[0], size), dtype=grid.dtype), grid))
         return grid
     
-    def __generate_circle_gradient(self, min_radius, max_radius):
+    def __generate_quadratic_circle_gradient(self, min_radius, max_radius):
         min_radius = round(min_radius)
         max_radius = round(max_radius)
         template = np.zeros((max_radius * 2 + 1, max_radius * 2 + 1), dtype=np.float32)
@@ -171,6 +171,16 @@ class PointGrid:
             template = cv.circle(template, (max_radius, max_radius), i, max_radius ** 2 - i ** 2, -1)
         
         return template * 0.1
+    
+    def __generate_linear_circle_gradient(self, min_radius, max_radius):
+        min_radius = round(min_radius)
+        max_radius = round(max_radius)
+        template = np.zeros((max_radius * 2 + 1, max_radius * 2 + 1), dtype=np.float32)
+        for i in range(max_radius, min_radius, -1):
+            print("i:", i)
+            template = cv.circle(template, (max_radius, max_radius), i, max_radius - i, -1)
+        
+        return template * 0.5
 
     def get_node_color_representation(self, position):
         color = [0, 0, 0]
