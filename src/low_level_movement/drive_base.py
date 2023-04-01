@@ -257,8 +257,6 @@ class SmoothMovementToCoordinatesManager:
 
                 speed = angle_speed * self.turning_speed_multiplier
 
-                print("speed:", speed)
-
                 if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
                     self.right_wheel.move(speed)
                     self.left_wheel.move(speed * distance_speed)
