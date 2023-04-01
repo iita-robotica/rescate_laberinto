@@ -50,6 +50,8 @@ class Mapper:
         # Set robot node
         if self.robot_node is None:
             self.set_robot_node(robot_position)
+
+        self.granular_grid.load_robot_position(self.robot_position.get_np_array())
         
         # Mark current node as explored
         distance = abs(robot_vortex.get_distance_to(robot_position))

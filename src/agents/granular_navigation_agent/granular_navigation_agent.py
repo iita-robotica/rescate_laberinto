@@ -36,10 +36,10 @@ class GranularNavigationAgent(Agent):
         start_array_index = mapper.granular_grid.grid_index_to_array_index(self.current_grid_index)
         
         # If current position not traversable, find closest traversable position
-        if mapper.granular_grid.traversable_grid[start_array_index[0], start_array_index[1]]:
+        if mapper.granular_grid.arrays["traversable"][start_array_index[0], start_array_index[1]]:
             if SHOW_PATHFINDING_DEBUG: print("INITIAL POSITION NOT TRAVERSABLE, CALCULATING BFS")
-            start_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.traversable_grid, start_array_index)
-            n_trav = mapper.granular_grid.traversable_grid[start_array_index[0], start_array_index[1]]
+            start_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.arrays["traversable"], start_array_index)
+            n_trav = mapper.granular_grid.arrays["traversable"][start_array_index[0], start_array_index[1]]
             if SHOW_PATHFINDING_DEBUG: print("FINISHED CLACULATING BFS: ", n_trav)
 
         if len(self.a_star_path) <= self.a_star_index:
@@ -55,14 +55,14 @@ class GranularNavigationAgent(Agent):
             mapper.granular_grid.expand_grid_to_grid_index(target_grid_index)
             target_array_index = mapper.granular_grid.grid_index_to_array_index(target_grid_index)
 
-            if mapper.granular_grid.traversable_grid[target_array_index[0], target_array_index[1]]:
-                target_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.traversable_grid, target_array_index)
+            if mapper.granular_grid.arrays["traversable"][target_array_index[0], target_array_index[1]]:
+                target_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.arrays["traversable"], target_array_index)
 
             # Calculate path
-            best_path = self.a_star.a_star(mapper.granular_grid.traversable_grid, 
+            best_path = self.a_star.a_star(mapper.granular_grid.arrays["traversable"], 
                                            start_array_index,
                                            target_array_index,
-                                           mapper.granular_grid.navigation_preference_grid)
+                                           mapper.granular_grid.arrays["navigation_preference"])
 
             if len(best_path) > 1:
                 self.a_star_path = []
@@ -140,13 +140,13 @@ class GranularNavigationAgent(Agent):
             array_index_path.append(granular_grid.grid_index_to_array_index(n))
             
         for position in array_index_path:
-            if position[0] >= granular_grid.traversable_grid.shape[0] or position[1] >= granular_grid.traversable_grid.shape[1]:
+            if position[0] >= granular_grid.arrays["traversable"].shape[0] or position[1] >= granular_grid.arrays["traversable"].shape[1]:
                 continue
 
             if position[0] < 0 or position[1] < 0:
                 continue
 
-            if granular_grid.traversable_grid[position[0], position[1]]:
+            if granular_grid.arrays["traversable"][position[0], position[1]]:
                 return False
         return True
         
