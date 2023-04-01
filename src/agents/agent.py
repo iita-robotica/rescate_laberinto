@@ -1,19 +1,23 @@
 import random
+from data_structures.vectors import Position2D
+from abc import ABC, abstractmethod
 
-class Agent:
-    def __init__(self, possible_actions=[]) -> None:
-        self.possible_actions = possible_actions
+class Agent(ABC):
+    def __init__(self) -> None:
+        pass
 
-    def predict(self, state: list) -> list:
-        raise NotImplementedError
+    @abstractmethod
+    def update(self, mapper) -> None:
+        pass
+    
+    @abstractmethod
+    def get_target_position(self) -> Position2D:
+        pass
 
-    def get_action(self, state: list) -> str:
-        return self.predict(state)
+    @abstractmethod
+    def do_end(self) -> bool:
+        pass
 
-
-class RandomAgent(Agent):
-    def __init__(self, possible_actions=[]) -> None:
-        super().__init__(possible_actions)
-
-    def predict(self, state: list) -> str:
-        return random.choice(self.possible_actions)
+    @abstractmethod
+    def do_report_victim(self) -> bool:
+        pass

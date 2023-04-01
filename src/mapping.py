@@ -11,7 +11,7 @@ from data_structures import lidar_persistent_grid, expandable_node_grid, compoun
 from data_structures.vectors import Position2D
 from algorithms.expandable_node_grid.bfs import bfs
 
-from flags import SHOW_DEBUG, SHOW_POINT_CLOUD, SHOW_GRANULAR_NAVIGATION_GRID
+from flags import SHOW_DEBUG, SHOW_POINT_CLOUD, SHOW_GRANULAR_NAVIGATION_GRID, PRINT_NODE_GRID
 
 
 class Mapper:
@@ -20,6 +20,7 @@ class Mapper:
 
         self.tile_size = tile_size
 
+        self.robot_position = None
         self.robot_node = None
         self.robot_vortex = None
         self.start_node = None
@@ -27,7 +28,8 @@ class Mapper:
         # Data structures
         self.node_grid = expandable_node_grid.Grid((1, 1))
         self.lidar_grid = lidar_persistent_grid.LidarGrid(tile_size, 6, 100)
-        self.test_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), 6, 0.074 / 2)
+        pixels_per_tile = 10
+        self.granular_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), pixels_per_tile / 6, (0.074 / 2) - 0.001)#+ 0.008)
 
         #Data processors
         self.point_cloud_processor = PointCloudProcessor(center_point=350, map_scale=50 / tile_size)
@@ -37,10 +39,11 @@ class Mapper:
         self.point_cloud_extractor = PointCloudExtarctor(resolution=6)
         self.floor_color_extractor = FloorColorExtractor(tile_resolution=50)
 
-    def update(self, in_bounds_point_cloud=None, out_of_bounds_point_cloud=None, camera_images=None, robot_position=None, robot_rotation=None):
+    def update(self, in_bounds_point_cloud=None, out_of_bounds_point_cloud=None, camera_images=None, robot_position: Position2D=None, robot_rotation=None):
         if robot_position is None or robot_rotation is None:
             return
         
+        self.robot_position = robot_position
         robot_node = self.position_to_node_grid_index(robot_position) 
         robot_vortex = self.get_closest_vortex_to_position(robot_position)
 
@@ -62,7 +65,7 @@ class Mapper:
         if in_bounds_point_cloud is not None:
             self.__load_point_cloud_to_lidar_grid(in_bounds_point_cloud, robot_position)
             self.__lidar_to_node_grid()
-            self.test_grid.load_point_cloud(in_bounds_point_cloud, robot_position.get_np_array())
+            self.granular_grid.load_point_cloud(in_bounds_point_cloud, robot_position.get_np_array())
             
         # Load floor colors
         if in_bounds_point_cloud is not None and camera_images is not None:
@@ -73,13 +76,18 @@ class Mapper:
         if SHOW_DEBUG:
             print("robot_node:", robot_node)
 
+        """
         if SHOW_GRANULAR_NAVIGATION_GRID:
-            self.test_grid.print_grid() 
-            
+            self.granular_grid.print_grid() 
+        """
+        
+
         if SHOW_POINT_CLOUD:
             self.lidar_grid.print_grid((600, 600))
             self.lidar_grid.print_bool((600, 600))
-            #self.node_grid.print_grid()
+        
+        if PRINT_NODE_GRID:
+            self.node_grid.print_grid()
         
         if SHOW_POINT_CLOUD or SHOW_GRANULAR_NAVIGATION_GRID or SHOW_DEBUG:
             cv.waitKey(1) 
@@ -204,6 +212,9 @@ class Mapper:
 
     def position_to_node_grid_index(self, position):
         return ((position + 0.03) // self.tile_size).to_int() * 2
+    
+    def node_grid_index_to_position(self, index):
+        return index // 2 * self.tile_size + 0.03
     
     def degs_to_orientation(self, degs):
         """divides degrees in up, left, right or down"""
