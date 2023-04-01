@@ -13,7 +13,7 @@ from algorithms.np_bool_array.bfs import BFSAlgorithm
 
 from agents.granular_navigation_agent.path_smoothing import PathSmoother
 
-from flags import SHOW_DEBUG,SHOW_GRANULAR_NAVIGATION_GRID
+from flags import SHOW_PATHFINDING_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID
 
 class GranularNavigationAgent(Agent):
     def __init__(self):
@@ -37,16 +37,16 @@ class GranularNavigationAgent(Agent):
         
         # If current position not traversable, find closest traversable position
         if mapper.granular_grid.traversable_grid[start_array_index[0], start_array_index[1]]:
-            print("INITIAL POSITION NOT TRAVERSABLE, CALCULATING BFS")
+            if SHOW_PATHFINDING_DEBUG: print("INITIAL POSITION NOT TRAVERSABLE, CALCULATING BFS")
             start_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.traversable_grid, start_array_index)
             n_trav = mapper.granular_grid.traversable_grid[start_array_index[0], start_array_index[1]]
-            print("FINISHED CLACULATING BFS: ", n_trav)
+            if SHOW_PATHFINDING_DEBUG: print("FINISHED CLACULATING BFS: ", n_trav)
 
         if len(self.a_star_path) <= self.a_star_index:
-            print("FINISHED PATH")
+            if SHOW_PATHFINDING_DEBUG: print("FINISHED PATH")
 
         if not self.check_path(mapper.granular_grid):
-            print("FAILED PATH CHECK")
+            if SHOW_PATHFINDING_DEBUG: print("FAILED PATH CHECK")
 
         # If path finished or current path obstructed
         if len(self.a_star_path) - 1 <= self.a_star_index or not self.check_path(mapper.granular_grid):
