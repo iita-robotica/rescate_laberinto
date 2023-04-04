@@ -86,7 +86,7 @@ class CameraProcessor:
 
     def rotate_image(self, image, robot_rotation):
         rot = utilities.normalizeDegs(robot_rotation)
-        return imutils.rotate(image, rot)
+        return imutils.rotate(image, float(rot))
 
     def get_floor_image(self, images, robot_rotation):
         flattened_images = []

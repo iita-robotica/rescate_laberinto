@@ -4,6 +4,7 @@ import utilities
 from utilities import divide_into_chunks
 
 from devices.sensor import TimedSensor
+from data_structures.angle import Angle
 
 # Returns a point cloud of the detctions it makes
 class Lidar(TimedSensor):
@@ -12,7 +13,7 @@ class Lidar(TimedSensor):
         self.x = 0
         self.y = 0
         self.z = 0
-        self.rotation = 0
+        self.rotation = Angle(0)
         
         self.horizontal_fov = self.device.getFov()
         self.vertical_fov = self.device.getVerticalFov()
@@ -50,14 +51,8 @@ class Lidar(TimedSensor):
         if self.step_counter.check():
             return self.__out_of_bounds_point_cloud
 
-
-    # Sets the rotation of the sensors in radians
-    def setRotationRadians(self, rads):
-        self.rotation = rads
-    
-    # Sets the rotation of the sensors in degrees
-    def setRotationDegrees(self, degs):
-        self.rotation = utilities.degsToRads(degs)
+    def set_rotation(self, angle):
+        self.rotation = angle
 
 
     def update(self):
@@ -88,7 +83,7 @@ class Lidar(TimedSensor):
                 continue
 
             vertical_angle = layer_number * self.radian_per_layer_vertically + self.vertical_fov / 2
-            horizontal_angle = self.rotation_offset + ((2 * math.pi) - self.rotation)
+            horizontal_angle = self.rotation_offset + ((2 * math.pi) - self.rotation.radians)
 
             for item in layer_depth_array:
                 # Item is out of bounds

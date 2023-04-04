@@ -1,4 +1,5 @@
 import utilities
+from data_structures.angle import Angle
 
 # Tracks global rotation
 class Gyroscope:
@@ -7,16 +8,16 @@ class Gyroscope:
         self.sensor.enable(timeStep)
         self.oldTime = 0.0
         self.index = index
-        self.rotation = 0
-        self.lastRads = 0
+        self.rotation = Angle(0)
+        self.lastRads = Angle(0)
 
     # Do on every timestep
     def update(self, time):
         timeElapsed = time - self.oldTime  # Time passed in time step
-        radsInTimestep = (self.sensor.getValues())[self.index] * timeElapsed
+        radsInTimestep = Angle((self.sensor.getValues())[self.index] * timeElapsed)
         self.lastRads = radsInTimestep
-        finalRot = self.rotation + radsInTimestep
-        self.rotation = utilities.normalizeRads(finalRot)
+        self.rotation += radsInTimestep
+        self.rotation.normalize()
         self.oldTime = time
 
     # Gets the actual angular Velocity
@@ -26,18 +27,8 @@ class Gyroscope:
         
         return self.lastRads
 
-    # Returns the rotation on degrees
-    def getDegrees(self):
-        return utilities.radsToDegs(self.rotation)
-
-    # Returns the rotation on radians
-    def getRadians(self):
+    def get_angle(self):
         return self.rotation
-
-    # Sets the rotation in radians
-    def setRadians(self, rads):
-        self.rotation = rads
-
-    # Sets the rotation in degrees
-    def setDegrees(self, degs):
-        self.rotation = utilities.degsToRads(degs)
+    
+    def set_angle(self, angle):
+        self.rotation = angle

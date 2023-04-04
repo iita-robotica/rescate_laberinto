@@ -144,7 +144,7 @@ while robot.do_loop():
                 if len(victims) > 0:
                     letter = fixture_detector.classify_fixture(victims[0])
                     if letter is not None:
-                        mapper.load_fixture_to_tile(letter, angle, robot.rotation)
+                        mapper.load_fixture_to_tile(letter, angle, robot.rotation.degrees)
                         
                     break
     
@@ -162,7 +162,7 @@ while robot.do_loop():
         if robot.is_stuck():
             if SHOW_DEBUG:
                 print("FRONT BLOCKED")
-            mapper.block_front_vortex(robot.rotation)
+            mapper.block_front_vortex(robot.rotation.degrees)
             if not stateManager.checkState("stuck"):
                 seq.resetSequence()
                 stateManager.changeState("stuck")
@@ -231,7 +231,7 @@ while robot.do_loop():
         seq.seqResetSequence()
 
         if SHOW_DEBUG:
-            print("rotation:", robot.rotation)
+            print("rotation:", robot.rotation.degrees)
             print("position:", robot.position)
 
     # Reports a victim
@@ -275,7 +275,7 @@ while robot.do_loop():
         seqDelaySec(0.2)
         seqMoveWheels(0, 0)
         if seq.simpleEvent():
-            mapper.block_front_vortex(robot.rotation)
+            mapper.block_front_vortex(robot.rotation.degrees)
             robot.auto_decide_rotation = True
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()

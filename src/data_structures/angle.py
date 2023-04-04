@@ -9,7 +9,7 @@ class Unit(Enum):
 class Angle:
     def __init__(self, value, unit=Unit.RADIANS):
         if unit == Unit.RADIANS:
-            self.__radians = value
+            self.__radians = float(value)
         else:
             self.degrees = value
 
@@ -19,11 +19,11 @@ class Angle:
 
     @radians.getter
     def radians(self):
-        return self.__radians
+        return float(self.__radians)
     
     @property
     def degrees(self):
-        return self.__radians * 180 / math.pi
+        return float(self.__radians * 180 / math.pi)
     
     @degrees.setter
     def degrees(self, value):

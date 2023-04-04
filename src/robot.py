@@ -36,8 +36,8 @@ class RobotLayer:
         self.robot = Robot()
 
         #Location data
-        self.prev_rotation = 0
-        self.rotation = 0
+        self.prev_rotation = Angle(0, Unit.DEGREES)
+        self.rotation = Angle(0, Unit.DEGREES)
         self.position = Position2D(0, 0)
         self.prev_global_position = Position2D(0, 0)
         self.position_offsets = Position2D(0, 0)
@@ -170,11 +170,11 @@ class RobotLayer:
                 self.rotation_sensor = "gyro"
 
         # Remembers the corrent rotation for the next timestep
-        self.prev_rotation = self.rotation
+        self.prev_rotation = self.rotation.degrees
 
         # Gets global rotation
         if self.rotation_sensor == "gyro":
-            self.rotation = self.gyroscope.getDegrees()
+            self.rotation = self.gyroscope.get_angle()
             if SHOW_DEBUG:
                 print("USING GYRO")
         else:
@@ -183,13 +183,13 @@ class RobotLayer:
             val = self.gps.getRotation()
             if val is not None:
                 self.rotation = val
-            self.gyroscope.setDegrees(self.rotation)
+            self.gyroscope.set_angle(self.rotation)
 
-        self.drive_base.orientation = Angle(self.rotation, Unit.DEGREES)
+        self.drive_base.orientation = self.rotation
         self.drive_base.position = Position2D(self.position[0], self.position[1])
 
         # Lidar and camera update
-        self.lidar.setRotationDegrees(self.rotation)
+        self.lidar.set_rotation(self.rotation)
         self.lidar.update()
 
         self.right_camera.update()
