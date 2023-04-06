@@ -70,7 +70,7 @@ class Mapper:
         if in_bounds_point_cloud is not None:
             self.__load_point_cloud_to_lidar_grid(in_bounds_point_cloud, robot_position)
             self.__lidar_to_node_grid()
-            self.granular_grid.load_point_cloud(in_bounds_point_cloud, robot_position.get_np_array())
+            self.granular_grid.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position.get_np_array())
             
         # Load floor colors
         if in_bounds_point_cloud is not None and camera_images is not None:
