@@ -3,7 +3,6 @@ import cv2 as cv
 import copy
 from data_structures.vectors import Position2D, Vector2D
 from data_structures.angle import Angle, Unit
-from utilities import StepCounter
 import math
 import skimage
 
@@ -70,7 +69,7 @@ class PointGrid:
 
         # Occupied points
         for p in in_bounds_point_cloud:
-            p1 = np.array(p)
+            p1 = np.array(p, dtype=float)
             p1 += robot_position
             p1 = self.coordinates_to_grid_index(p1)
 
@@ -93,12 +92,11 @@ class PointGrid:
         self.arrays["navigation_preference"] = cv.filter2D(occupied_as_int, -1, self.preference_template)
 
 
-       
-
     def __load_seen_by_lidar(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):
+        robot_position = robot_position.astype(float)
         self.arrays["seen_by_lidar"] = np.zeros_like(self.arrays["seen_by_lidar"])
-        for p in in_bounds_point_cloud:
-            p1 = np.array(p)
+        for p in in_bounds_point_cloud + out_of_bounds_point_cloud:
+            p1 = np.array(p, dtype=float)
             p1 += robot_position
             p1 = self.coordinates_to_grid_index(p1)
             self.expand_grid_to_grid_index(p1)
@@ -108,8 +106,6 @@ class PointGrid:
 
             self.arrays["seen_by_lidar"] = cv.line(self.arrays["seen_by_lidar"].astype(np.uint8), (position[1], position[0]), (robot_array_index[1], robot_array_index[0]), 255, thickness=1, lineType=cv.LINE_8)
             self.arrays["seen_by_lidar"] = self.arrays["seen_by_lidar"].astype(np.bool_)
-
-
 
 
     def load_robot(self, robot_position, robot_rotation: Angle):
@@ -296,7 +292,7 @@ class PointGrid:
             else:
                 final_template += cone_template
         
-        cv.imshow("final_template", final_template * 100)
+        #cv.imshow("final_template", final_template * 100)
 
         povs_indexes = self._get_indexes_from_template(final_template, (-self.camera_pov_lenght + robot_index[0], -self.camera_pov_lenght + robot_index[1]))
 
