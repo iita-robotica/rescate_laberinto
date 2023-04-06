@@ -90,7 +90,7 @@ class Lidar(TimedSensor):
                 if item >= self.max_detection_distance or item == float("inf") or item == float("inf") *-1:
                     
                     # Corrects for vertical rotation and adds offset
-                    distance = self.__normalize_distance(10, vertical_angle)
+                    distance = self.__normalize_distance(self.max_detection_distance, vertical_angle)
                     # Calculates 2d point from distance and horizontal angle
                     point = utilities.getCoordsFromRads(horizontal_angle, distance)
                     self.__out_of_bounds_point_cloud.append(self.__normalize_point(point))
