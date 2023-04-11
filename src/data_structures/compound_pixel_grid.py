@@ -5,6 +5,7 @@ from data_structures.vectors import Position2D, Vector2D
 from data_structures.angle import Angle, Unit
 import math
 import skimage
+from utilities import StepCounter
 
 class PointGrid:
     def __init__(self, initial_shape, pixel_per_cm, robot_radius_m):
@@ -15,8 +16,9 @@ class PointGrid:
 
         self.grid_index_min = self.offsets * -1
         
-        self.to_boolean_threshold = 10
-        self.delete_threshold = 1
+        self.to_boolean_threshold = 2
+        self.delete_step_counter = StepCounter(2)
+        self.delete_threshold = 0
 
         self.arrays = {
             "detected_points": np.zeros(self.array_shape, np.uint8),
@@ -25,7 +27,9 @@ class PointGrid:
             "navigation_preference": np.zeros(self.array_shape, np.float32),
             "traversed": np.zeros(self.array_shape, np.bool_),
             "seen_by_camera": np.zeros(self.array_shape, np.bool_),
-            "seen_by_lidar":np.zeros(self.array_shape, np.bool_)
+            "seen_by_lidar": np.zeros(self.array_shape, np.bool_),
+            "walls_seen_by_camera": np.zeros(self.array_shape, np.bool_),
+            "walls_not_seen_by_camera": np.zeros(self.array_shape, np.bool_),
         }
 
         self.resolution = pixel_per_cm * 100
@@ -36,8 +40,9 @@ class PointGrid:
 
 
         self.camera_pov_amplitude = Angle(30, Unit.DEGREES)
-        self.camera_pov_lenght = int(self.robot_radius * 3)
-        self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(90, Unit.DEGREES), Angle(270, Unit.DEGREES))
+        self.camera_pov_lenght = int(0.12 * 2 * self.resolution)
+        #self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(330, Unit.DEGREES), Angle(30, Unit.DEGREES))
+        self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES))
 
 
         self.robot_diameter_template = np.zeros((self.robot_diameter, self.robot_diameter), dtype=np.uint8)
@@ -52,16 +57,18 @@ class PointGrid:
         if isinstance(coordinates, np.ndarray):
             coords = (coordinates * self.resolution).astype(int)
 
-        return np.array([coords[1], coords[0]])
+            return np.array([coords[1], coords[0]])
 
     def grid_index_to_coordinates(self, grid_index):
         if isinstance(grid_index, np.ndarray):
             index = (grid_index.astype(float) / self.resolution)
         
-        return np.array([index[1], index[0]])
+            return np.array([index[1], index[0]])
         
     def clean_up(self):
-        self.arrays["detected_points"] = self.arrays["detected_points"] * (self.arrays["detected_points"] > self.delete_threshold)
+        if self.delete_step_counter.check():
+            self.arrays["detected_points"] = self.arrays["detected_points"] * (self.arrays["detected_points"] > self.delete_threshold)
+        self.delete_step_counter.increase()
 
     def load_point_cloud(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position): 
         # Seen by lidar
@@ -106,6 +113,9 @@ class PointGrid:
 
             self.arrays["seen_by_lidar"] = cv.line(self.arrays["seen_by_lidar"].astype(np.uint8), (position[1], position[0]), (robot_array_index[1], robot_array_index[0]), 255, thickness=1, lineType=cv.LINE_8)
             self.arrays["seen_by_lidar"] = self.arrays["seen_by_lidar"].astype(np.bool_)
+        
+        self.arrays["walls_seen_by_camera"] = self.arrays["seen_by_camera"] * self.arrays["occupied"]
+        self.arrays["walls_not_seen_by_camera"] =  np.logical_xor(self.arrays["occupied"], self.arrays["walls_seen_by_camera"]) 
 
 
     def load_robot(self, robot_position, robot_rotation: Angle):
@@ -306,9 +316,9 @@ class PointGrid:
         color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 100
         color_grid[self.arrays["traversable"]] = (1, 0, 0)
         
-        color_grid[self.arrays["seen_by_camera"]] = (0, 0, 1)
+        
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
-
+        color_grid[self.arrays["walls_not_seen_by_camera"]] = (0, 0, 1)
         
         return color_grid
     
