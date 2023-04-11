@@ -26,14 +26,14 @@ class Lidar(TimedSensor):
 
         self.rotation_offset = 0
 
-        self.max_detection_distance = 0.06 * 8
+        self.max_detection_distance = 0.06 * 16 #8
         self.min_detection_distance = 0.06 * 0.6
 
         self.is_point_close = False
         self.is_point_close_threshold = 0.03
         self.is_point_close_range = (0, 360)
 
-        self.distance_bias = 0.06 * 0.12
+        self.distance_bias = 0#0.06 * 0.12
 
         self.layers_used = layers_used
 
