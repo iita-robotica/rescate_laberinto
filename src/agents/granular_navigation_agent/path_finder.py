@@ -125,11 +125,16 @@ class PathFinder():
     def get_next_position(self) -> Position2D:
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) -1)
         #print(self.a_star_path[self.a_star_index])
-        pos = self.mapper.granular_grid.grid_index_to_coordinates(np.array(self.smooth_astar_path[self.a_star_index]))
-        pos = Position2D(pos[0], pos[1])
-        #print("target_position:", pos)
-        #print("robot_position:", mapper.robot_position)
-        return pos
+
+        if len(self.smooth_astar_path):
+            pos = self.mapper.granular_grid.grid_index_to_coordinates(np.array(self.smooth_astar_path[self.a_star_index]))
+            pos = Position2D(pos[0], pos[1])
+            #print("target_position:", pos)
+            #print("robot_position:", mapper.robot_position)
+            return pos
+        
+        else:
+            return self.mapper.robot_position
     
     # Is current Astar path obstructed?
     def check_path(self, granular_grid: PointGrid):
