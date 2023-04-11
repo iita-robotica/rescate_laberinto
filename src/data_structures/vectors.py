@@ -172,5 +172,5 @@ class Vector2D:
     def to_position(self):
         y = float(self.magnitude * math.cos(self.direction.radians))
         x = float(self.magnitude * math.sin(self.direction.radians))
-        return Vector2D(x, y)
+        return Position2D(x, y)
     

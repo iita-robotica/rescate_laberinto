@@ -1,6 +1,7 @@
 import utilities
 
 from data_structures.vectors import Position2D
+from data_structures.angle import Angle
 
 # Tracks global position
 class Gps:
@@ -8,7 +9,7 @@ class Gps:
         self.gps = gps
         self.gps.enable(timeStep)
         self.multiplier = coordsMultiplier
-        self.__prevPosition = []
+        self.__prevPosition = Position2D()
         self.position = self.getPosition()
 
     # updates gps, must run every timestep
@@ -24,9 +25,9 @@ class Gps:
     # Returns the global rotation according to gps
     def getRotation(self):
         if self.__prevPosition != self.position:
-            posDiff = ((self.position[0] - self.__prevPosition[0]), (self.position[1] - self.__prevPosition[1]))
-            accuracy = utilities.getDistance(posDiff)
+            accuracy = abs(self.position.get_distance_to(self.__prevPosition))
             if accuracy > 0.001:
-                degs = utilities.getDegsFromCoords(posDiff)
-                return utilities.normalizeDegs(degs)
+                angle = self.__prevPosition.get_angle_to(self.position)
+                angle.normalize()
+                return angle
         return None

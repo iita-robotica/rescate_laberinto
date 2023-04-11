@@ -21,6 +21,8 @@ class Mapper:
         self.tile_size = tile_size
 
         self.robot_position = None
+        self.robot_rotation = None
+
         self.robot_node = None
         self.robot_vortex = None
         self.start_node = None
@@ -44,6 +46,7 @@ class Mapper:
             return
         
         self.robot_position = robot_position
+        self.robot_rotation = robot_rotation
         robot_node = self.position_to_node_grid_index(robot_position) 
         robot_vortex = self.get_closest_vortex_to_position(robot_position)
 
@@ -51,7 +54,7 @@ class Mapper:
         if self.robot_node is None:
             self.set_robot_node(robot_position)
 
-        self.granular_grid.load_robot_position(self.robot_position.get_np_array())
+        self.granular_grid.load_robot(self.robot_position.get_np_array(), self.robot_rotation)
         
         # Mark current node as explored
         distance = abs(robot_vortex.get_distance_to(robot_position))
@@ -65,14 +68,11 @@ class Mapper:
 
         # Load walls and obstacles (Lidar detections)
         if in_bounds_point_cloud is not None:
-            self.__load_point_cloud_to_lidar_grid(in_bounds_point_cloud, robot_position)
-            self.__lidar_to_node_grid()
-            self.granular_grid.load_point_cloud(in_bounds_point_cloud, robot_position.get_np_array())
+            self.granular_grid.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position.get_np_array())
             
         # Load floor colors
         if in_bounds_point_cloud is not None and camera_images is not None:
-            total_point_cloud = np.vstack((in_bounds_point_cloud, out_of_bounds_point_cloud))
-            self.__process_floor(camera_images, total_point_cloud, robot_position, robot_rotation)
+            pass
         
         #DEBUG
         if SHOW_DEBUG:
@@ -116,7 +116,7 @@ class Mapper:
         self.node_grid.get_node(self.robot_node).is_robots_position = True
 
     def block_front_vortex(self, robot_rotation):
-        orientation = utilities.dir2list(self.degs_to_orientation(robot_rotation)[0])
+        orientation = utilities.dir2list(self.degs_to_orientation(robot_rotation.degrees)[0])
         front_node = [r + (f * 2) for r, f in zip(self.robot_node, orientation)]
         self.node_grid.get_node(front_node).status = "occupied"
 
@@ -175,7 +175,7 @@ class Mapper:
                     self.node_grid.load_straight_wall((xx, yy),  direction)
 
     def __process_floor(self, camera_images, total_point_cloud, robot_position, robot_rotation):
-        floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation)
+        floor_image = self.camera_processor.get_floor_image(camera_images, robot_rotation.degrees)
         final_image = np.zeros(floor_image.shape, dtype=np.uint8)
 
         #cv.imshow("floor_image", floor_image)

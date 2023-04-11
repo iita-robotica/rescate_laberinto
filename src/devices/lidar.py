@@ -4,6 +4,7 @@ import utilities
 from utilities import divide_into_chunks
 
 from devices.sensor import TimedSensor
+from data_structures.angle import Angle
 
 # Returns a point cloud of the detctions it makes
 class Lidar(TimedSensor):
@@ -12,7 +13,7 @@ class Lidar(TimedSensor):
         self.x = 0
         self.y = 0
         self.z = 0
-        self.rotation = 0
+        self.rotation = Angle(0)
         
         self.horizontal_fov = self.device.getFov()
         self.vertical_fov = self.device.getVerticalFov()
@@ -32,7 +33,7 @@ class Lidar(TimedSensor):
         self.is_point_close_threshold = 0.03
         self.is_point_close_range = (0, 360)
 
-        self.distance_bias = 0.06 * 0.2
+        self.distance_bias = 0.06 * 0.12
 
         self.layers_used = layers_used
 
@@ -50,14 +51,8 @@ class Lidar(TimedSensor):
         if self.step_counter.check():
             return self.__out_of_bounds_point_cloud
 
-
-    # Sets the rotation of the sensors in radians
-    def setRotationRadians(self, rads):
-        self.rotation = rads
-    
-    # Sets the rotation of the sensors in degrees
-    def setRotationDegrees(self, degs):
-        self.rotation = utilities.degsToRads(degs)
+    def set_rotation(self, angle):
+        self.rotation = angle
 
 
     def update(self):
@@ -88,14 +83,14 @@ class Lidar(TimedSensor):
                 continue
 
             vertical_angle = layer_number * self.radian_per_layer_vertically + self.vertical_fov / 2
-            horizontal_angle = self.rotation_offset + ((2 * math.pi) - self.rotation)
+            horizontal_angle = self.rotation_offset + ((2 * math.pi) - self.rotation.radians)
 
             for item in layer_depth_array:
                 # Item is out of bounds
                 if item >= self.max_detection_distance or item == float("inf") or item == float("inf") *-1:
                     
                     # Corrects for vertical rotation and adds offset
-                    distance = self.__normalize_distance(10, vertical_angle)
+                    distance = self.__normalize_distance(self.max_detection_distance, vertical_angle)
                     # Calculates 2d point from distance and horizontal angle
                     point = utilities.getCoordsFromRads(horizontal_angle, distance)
                     self.__out_of_bounds_point_cloud.append(self.__normalize_point(point))

@@ -15,17 +15,17 @@ class CameraProcessor:
         return cv.resize(image, (0,0), fx=scale, fy=scale, interpolation=cv.INTER_CUBIC)
 
     def flatten_image(self, image):
-        tiles_up = 2
-        tiles_down = 0
+        tiles_up = 1
+        tiles_down = 1
         tiles_side = 1
 
         minimum_x = self.tile_resolution * tiles_side
         maximum_x = self.tile_resolution * (tiles_side + 1)
         minimum_y = self.tile_resolution * (tiles_up)
-        maximum_y = self.tile_resolution * (tiles_up  + 1)  - 40
+        maximum_y = self.tile_resolution * (tiles_up  + 1)  #- 40
 
         #robot1_points = np.array(([4, 17], [35, 17],  [31, 12],  [8, 12],), dtype=np.float32)
-        img_points = np.array(([5, 6],  [35, 6], [31, 3], [8, 3], ), dtype=np.float32)
+        img_points = np.array(([0, 24],  [39, 24], [32, 16], [7, 16], ), dtype=np.float32)
         final_points = np.array(([minimum_x, minimum_y],  [maximum_x, minimum_y], [maximum_x, maximum_y], [minimum_x, maximum_y],), dtype=np.float32)
 
         ipm_matrix = cv.getPerspectiveTransform(img_points, final_points, solveMethod=cv.DECOMP_SVD)
@@ -80,13 +80,14 @@ class CameraProcessor:
             rot_imgs.append(np.rot90(img, index + 2, (0,1)))
 
         for rot_img, translation in zip(rot_imgs, translations):
+            #backround[translation[0]: translation[0] + rot_img.shape[0], translation[1]:translation[1] + rot_img.shape[1]][rot_img[:, :, 3]] = rot_img[:, :, :3]
             self.overlay_image_alpha(backround, rot_img[:,:,:3], translation[0], translation[1], rot_img[:,:,3] / 255)
         
-        return backround.copy()
+        return backround
 
     def rotate_image(self, image, robot_rotation):
         rot = utilities.normalizeDegs(robot_rotation)
-        return imutils.rotate(image, rot)
+        return imutils.rotate(image, float(rot))
 
     def get_floor_image(self, images, robot_rotation):
         flattened_images = []
