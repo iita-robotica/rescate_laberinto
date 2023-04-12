@@ -1,4 +1,4 @@
-
+import numpy as np
 
 class BFSAlgorithm:
     def __init__(self, found_function) -> None:
@@ -27,29 +27,42 @@ class BFSAlgorithm:
 
 
 class NavigatingBFSAlgorithm:
-    def __init__(self, found_function, traversable_function) -> None:
+    def __init__(self, found_function, traversable_function, max_result_number=1) -> None:
         self.found_function = found_function
         self.traversable_function = traversable_function
-        self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], ]
+        self.adjacents = ((0, 1), (0, -1), (-1, 0), (1, 0))
+        self.max_result_number = max_result_number
 
     def get_neighbours(self, node):
         for a in self.adjacents:
-            yield [node[0] + a[0], node[1] + a[1]]
+            yield (node[0] + a[0], node[1] + a[1])
     
     def bfs(self, found_array, traversable_array, start_node):
         open_list = []
-        open_list.append(start_node)
+        open_list.append(tuple(start_node))
+
+        closed_set = set()
+        closed_set.add(tuple(start_node))
+
+        results = []
 
         while len(open_list) > 0:
             node = open_list.pop(0)
 
-            for n in self.get_neighbours(node):
-                value = found_array[n[0], n[1]]
+            if traversable_array[node[0], node[1]]:
+                continue
 
-                if self.found_function(value):
-                    return n
-                
-                if self.traversable_function(traversable_array[node[0], node[1]]):
-                    if not n in open_list:
-                        open_list.append(n)
+            value = found_array[node[0], node[1]]
+
+            if not value:
+                results.append(node)
+                if len(results) >= self.max_result_number:
+                    return results
+
+            for n in self.get_neighbours(node):
+                if n not in closed_set:
+                    open_list.append(n)
+                    closed_set.add(n)    
+        
+        return results
 

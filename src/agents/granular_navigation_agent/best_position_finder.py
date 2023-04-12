@@ -16,7 +16,8 @@ class BestPositionFinder:
     def __init__(self, mapper: Mapper) -> None:
         self.mapper = mapper
         self.closest_unseen_finder = NavigatingBFSAlgorithm(found_function=lambda x: x == False, 
-                                                            traversable_function=lambda x: x == False)
+                                                            traversable_function=lambda x: x == False,
+                                                            max_result_number=1)
         
         self.closest_unseen_grid_index = None
         
@@ -45,11 +46,13 @@ class BestPositionFinder:
     def get_closest_unseen_grid_index(self):
         robot_array_index = self.mapper.granular_grid.coordinates_to_array_index(self.mapper.robot_position)
 
-        closest_unseen_array_index = self.closest_unseen_finder.bfs(found_array=self.mapper.granular_grid.arrays["seen_by_camera"],
-                                                                    traversable_array=self.mapper.granular_grid.arrays["traversable"],
-                                                                    start_node=robot_array_index)
-        
-        return self.mapper.granular_grid.array_index_to_grid_index(closest_unseen_array_index)
+        closest_unseen_array_indexes = self.closest_unseen_finder.bfs(found_array=self.mapper.granular_grid.arrays["discovered"],
+                                                                      traversable_array=self.mapper.granular_grid.arrays["traversable"],
+                                                                      start_node=robot_array_index)
+        if len(closest_unseen_array_indexes):
+            return self.mapper.granular_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
+        else:
+            return self.closest_unseen_grid_index
 
     def get_best_position(self):
         if self.closest_unseen_grid_index is not None:
