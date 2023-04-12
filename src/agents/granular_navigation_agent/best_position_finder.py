@@ -9,14 +9,11 @@ from copy import copy, deepcopy
 from algorithms.np_bool_array.bfs import BFSAlgorithm, NavigatingBFSAlgorithm
 
 class BestPositionFinder:
-    def __init__(self) -> None:
-        self.mapper = None
+    def __init__(self, mapper: Mapper) -> None:
+        self.mapper = mapper
         self.closest_not_seen_grid_index = None
         self.closest_not_seen_finder = NavigatingBFSAlgorithm(found_function=lambda x: x == False, 
                                                               traversable_function=lambda x: x == False)
-
-    def update(self, mapper: Mapper):
-        self.mapper = mapper
 
     def calculate_best_position(self, finished_path):
         if self.closest_not_seen_grid_index is None:
@@ -38,7 +35,7 @@ class BestPositionFinder:
 
     def get_best_grid_index(self):
         print("Calculando punto")
-        robot_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(self.mapper.robot_position.get_np_array())
+        robot_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(np.array(self.mapper.robot_position))
         robot_array_index = self.mapper.granular_grid.grid_index_to_array_index(robot_grid_index)
 
         closest_not_seen_array_index = self.closest_not_seen_finder.bfs(found_array=self.mapper.granular_grid.arrays["seen_by_camera"],
@@ -49,10 +46,10 @@ class BestPositionFinder:
 
     def get_best_position(self):
         if self.closest_not_seen_grid_index is not None:
-            return self.mapper.granular_grid.grid_index_to_coordinates(np.array(self.closest_not_seen_grid_index))
-        
+            coords = self.mapper.granular_grid.grid_index_to_coordinates(self.closest_not_seen_grid_index)
+            return Position2D(coords)
         else:
-            return self.mapper.robot_position.get_np_array()
+            return self.mapper.robot_position
     
 
     def __get_line(self, point1, point2):

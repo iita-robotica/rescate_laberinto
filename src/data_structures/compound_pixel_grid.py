@@ -4,73 +4,61 @@ import copy
 from data_structures.vectors import Position2D, Vector2D
 from data_structures.angle import Angle, Unit
 import math
-import skimage
 from utilities import StepCounter
 
 class PointGrid:
-    def __init__(self, initial_shape, pixel_per_cm, robot_radius_m):
+    def __init__(self, initial_shape, pixel_per_m, robot_radius_m):
         self.array_shape = np.array(initial_shape, dtype=int)
         self.offsets = self.array_shape // 2
 
-        self.grid_index_max = self.array_shape - self.offsets
-
-        self.grid_index_min = self.offsets * -1
+        self.grid_index_max = self.array_shape - self.offsets # Maximum grid index
+        self.grid_index_min = self.offsets * -1 # Minimum grid index
         
-        self.to_boolean_threshold = 2
-        self.delete_step_counter = StepCounter(2)
-        self.delete_threshold = 0
+        self.to_boolean_threshold = 2 # How many points need to be detected by the lidar to qualify as a sure point
+        self.delete_step_counter = StepCounter(2) # Every how many steps should the lidar detections be filtered
+        self.delete_threshold = 0 # Points detected less times than this number will be deleted in __cleanup()
 
         self.arrays = {
-            "detected_points": np.zeros(self.array_shape, np.uint8),
-            "occupied": np.zeros(self.array_shape, np.bool_),
-            "traversable": np.zeros(self.array_shape, np.bool_),
-            "navigation_preference": np.zeros(self.array_shape, np.float32),
-            "traversed": np.zeros(self.array_shape, np.bool_),
-            "seen_by_camera": np.zeros(self.array_shape, np.bool_),
-            "seen_by_lidar": np.zeros(self.array_shape, np.bool_),
+            "detected_points": np.zeros(self.array_shape, np.uint8), # Number of points detected in position
+            "occupied": np.zeros(self.array_shape, np.bool_), # Confermed occupied point
+            "traversable": np.zeros(self.array_shape, np.bool_), # Is or not traversable by the robot, assuming that the robot center is there. True means not traversable.
+            "navigation_preference": np.zeros(self.array_shape, np.float32), # The preference for navigation for each pixel. More means less preferred to navigate through.
+            "traversed": np.zeros(self.array_shape, np.bool_), # Robot has already gone through there
+            "seen_by_camera": np.zeros(self.array_shape, np.bool_), # Has been seen by any of the cameras
+            "seen_by_lidar": np.zeros(self.array_shape, np.bool_), # Has been seen by the lidar (Though not necessarily detected as occupied)
             "walls_seen_by_camera": np.zeros(self.array_shape, np.bool_),
             "walls_not_seen_by_camera": np.zeros(self.array_shape, np.bool_),
         }
 
-        self.resolution = pixel_per_cm * 100
+        self.resolution = pixel_per_m # resolution of the grid with regards to the coordinate system of the gps / the world
         
         self.robot_radius = int(robot_radius_m * self.resolution)
         print("ROBOT RADIUS:", self.robot_radius)
         self.robot_diameter = int(self.robot_radius * 2 + 1)
 
 
-        self.camera_pov_amplitude = Angle(170, Unit.DEGREES)
-        self.camera_pov_lenght = int(0.12 * 2 * self.resolution)
-        #self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(330, Unit.DEGREES), Angle(30, Unit.DEGREES))
-        self.camera_orientations = (Angle(0, Unit.DEGREES), )#Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES))
+        self.camera_pov_amplitude = Angle(170, Unit.DEGREES) # Horizontal amplitued of the fostrum of each camera
+        self.camera_pov_lenght = int(0.12 * 2 * self.resolution) # Range of each camera
+        #Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES))
+        self.camera_orientations = (Angle(0, Unit.DEGREES), ) # Orientation of the cameras
 
-
+        # Circle with the radius of the robot
         self.robot_diameter_template = np.zeros((self.robot_diameter, self.robot_diameter), dtype=np.uint8)
         self.robot_diameter_template = cv.circle(self.robot_diameter_template, (self.robot_radius, self.robot_radius), self.robot_radius, 255, -1)
         self.robot_diameter_template = self.robot_diameter_template.astype(np.bool_)
         
+        # True indexes inside the circle
         self.robot_diameter_indexes = self.__get_circle_template_indexes(self.robot_radius)
 
+        # A template to calculated the preference of each pixel for navigation taking into account the distance from the wall
         self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 2)
 
-    def coordinates_to_grid_index(self, coordinates):
-        if isinstance(coordinates, np.ndarray):
-            coords = (coordinates * self.resolution).astype(int)
-
-            return np.array([coords[1], coords[0]])
-
-    def grid_index_to_coordinates(self, grid_index):
-        if isinstance(grid_index, np.ndarray):
-            index = (grid_index.astype(float) / self.resolution)
-        
-            return np.array([index[1], index[0]])
-        
-    def clean_up(self):
-        if self.delete_step_counter.check():
-            self.arrays["detected_points"] = self.arrays["detected_points"] * (self.arrays["detected_points"] > self.delete_threshold)
-        self.delete_step_counter.increase()
-
-    def load_point_cloud(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position): 
+    def load_point_cloud(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):
+        """
+        Loads into the corresponding arrays what has been seen by the lidar, what the lidar has detected, and
+        what walls the lidar has detected but the camera hasn't seen.
+        Calculates the travesable areas and the preference of each point for navigation.
+        """
         # Seen by lidar
         self.__load_seen_by_lidar(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position)
 
@@ -89,17 +77,25 @@ class PointGrid:
                 elif self.arrays["detected_points"][position[0], position[1]] >= self.to_boolean_threshold:
                     if not self.arrays["traversed"][position[0], position[1]]:
                         self.arrays["occupied"][position[0], position[1]] = True
-       
-        self.clean_up()
+
+        # Filters out noise
+        self.__clean_up()
         
         occupied_as_int = self.arrays["occupied"].astype(np.uint8)
 
+        # Areas traversable by the robot
         self.arrays["traversable"] = cv.filter2D(occupied_as_int, -1, self.robot_diameter_template.astype(np.uint8))
         self.arrays["traversable"] = self.arrays["traversable"].astype(np.bool_)
+
+        # Areas that the robot prefers to navigate through
         self.arrays["navigation_preference"] = cv.filter2D(occupied_as_int, -1, self.preference_template)
 
-
     def __load_seen_by_lidar(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):
+        """
+        Loads into the corresponding arrays what has been seen by the lidar and
+        what walls the lidar has detected but the camera hasn't seen.
+        """
+
         robot_position = robot_position.astype(float)
         self.arrays["seen_by_lidar"] = np.zeros_like(self.arrays["seen_by_lidar"])
         for p in in_bounds_point_cloud + out_of_bounds_point_cloud:
@@ -115,10 +111,20 @@ class PointGrid:
             self.arrays["seen_by_lidar"] = self.arrays["seen_by_lidar"].astype(np.bool_)
         
         self.arrays["walls_seen_by_camera"] = self.arrays["seen_by_camera"] * self.arrays["occupied"]
-        self.arrays["walls_not_seen_by_camera"] =  np.logical_xor(self.arrays["occupied"], self.arrays["walls_seen_by_camera"]) 
+        self.arrays["walls_not_seen_by_camera"] =  np.logical_xor(self.arrays["occupied"], self.arrays["walls_seen_by_camera"])
 
+    def __clean_up(self):
+        """
+        Filters out noise from the 'detected_points' array.
+        """
+        if self.delete_step_counter.check(): # Do every n steps
+            self.arrays["detected_points"] = self.arrays["detected_points"] * (self.arrays["detected_points"] > self.delete_threshold)
+        self.delete_step_counter.increase()
 
     def load_robot(self, robot_position, robot_rotation: Angle):
+        """
+        Loads into the corresponding arrays where has the robot gone trough and what the cameras have seen.
+        """
         robot_grid_index = self.coordinates_to_grid_index(robot_position)
         # Load points traversed by robot
         self.__load_traversed_by_robot(robot_grid_index)
@@ -148,22 +154,41 @@ class PointGrid:
             robot_array_index = self.grid_index_to_array_index(robot_grid_index)
             if self.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
                 self.arrays["seen_by_camera"][array_index[0], array_index[1]] = True
-
-    def __has_line_of_sight(self, point1, point2, matrix):
-        xx, yy = skimage.draw.line(point1[0], point1[1], point2[0], point2[1])
-        for x, y in zip(xx[1:-1], yy[1:-1]):
-            if matrix[x, y]:
-                return False
-        return True
-
-
-    def array_index_to_grid_index(self, array_index: np.ndarray):
-        return array_index[0] - self.offsets[0], array_index[1] - self.offsets[1]
     
-    def grid_index_to_array_index(self, grid_index: np.ndarray):
-        return  grid_index[0] + self.offsets[0], grid_index[1] + self.offsets[1]
+    # Index conversion
+    def coordinates_to_grid_index(self, coordinates) -> np.ndarray:
+        coords = np.array(coordinates)
+        coords = (coords * self.resolution).astype(int)
+        return np.array([coords[1], coords[0]])
 
+    def grid_index_to_coordinates(self, grid_index) -> np.ndarray:
+        index = np.array(grid_index)
+        index = (index.astype(float) / self.resolution)
+    
+        return np.array([index[1], index[0]])
+
+    def array_index_to_grid_index(self, array_index) -> np.ndarray:
+        return np.array(array_index) - self.offsets
+    
+    def grid_index_to_array_index(self, grid_index) -> np.ndarray:
+        return np.array(grid_index) + self.offsets
+    
+    def array_index_to_coordinates(self, array_index) -> np.ndarray:
+        grid_index = self.array_index_to_grid_index(array_index)
+        return self.grid_index_to_coordinates(grid_index)
+    
+    def coordinates_to_array_index(self, coordinates) -> np.ndarray:
+        grid_index = self.coordinates_to_grid_index(coordinates)
+        return self.grid_index_to_array_index(grid_index)
+
+    # Grid expansion
     def expand_grid_to_grid_index(self, grid_index: np.ndarray):
+        """
+        Expands all arrays to the specified index. 
+        Note that all array_idexes should be recalculated after this operation.
+        """
+
+
         array_index = self.grid_index_to_array_index(grid_index)
         if array_index[0] + 1 > self.array_shape[0]:
             self.add_end_row(array_index[0] - self.array_shape[0] + 1)
@@ -202,7 +227,6 @@ class PointGrid:
         for key in self.arrays:
             self.arrays[key] = self.__add_begining_column_to_grid(self.arrays[key], size)
 
-
     def __add_end_row_to_grid(self, grid, size):
         grid = np.vstack((grid, np.zeros((size, self.array_shape[1]), dtype=grid.dtype)))
         return grid
@@ -219,6 +243,7 @@ class PointGrid:
         grid = np.hstack((np.zeros((self.array_shape[0], size), dtype=grid.dtype), grid))
         return grid
     
+    # Initialization methods
     def __generate_quadratic_circle_gradient(self, min_radius, max_radius):
         min_radius = round(min_radius)
         max_radius = round(max_radius)
@@ -238,6 +263,7 @@ class PointGrid:
         
         return template * 0.5
     
+    # Camera fostrum template generation
     def __get_circle_template_indexes(self, radius):
         diameter = int(radius * 2 + 1)
 
@@ -282,14 +308,10 @@ class PointGrid:
         end_position = (math.ceil(end_position.x), math.ceil(end_position.y))
 
         triangle_matrix = cv.fillPoly(np.zeros_like(matrix), 
-                                      [np.array([start_position, end_position, center_position.get_np_array()])],
+                                      [np.array([start_position, end_position, np.array(center_position)])],
                                       1)
         
         final_matrix = triangle_matrix * circle_matrix
-
-        #cv.imshow("triangle", triangle_matrix * 255)
-        #cv.imshow("circle", circle_matrix * 255)
-        #cv.imshow("final_matrix", final_matrix * 255)
 
         return final_matrix
     
@@ -301,15 +323,16 @@ class PointGrid:
                 final_template = cone_template
             else:
                 final_template += cone_template
-        
-        #cv.imshow("final_template", final_template * 100)
 
         povs_indexes = self._get_indexes_from_template(final_template, (-self.camera_pov_lenght + robot_index[0], -self.camera_pov_lenght + robot_index[1]))
 
         return povs_indexes
 
-    
+    # Debug
     def get_colored_grid(self):
+        """
+        Get graphical representation of the grid for debug.
+        """
         color_grid = np.zeros((self.array_shape[0], self.array_shape[1], 3), dtype=np.float32)
 
         color_grid[self.arrays["traversed"]] = (.5, 0., .5)

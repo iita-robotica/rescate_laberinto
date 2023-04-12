@@ -31,7 +31,7 @@ class Mapper:
         self.node_grid = expandable_node_grid.Grid((1, 1))
         self.lidar_grid = lidar_persistent_grid.LidarGrid(tile_size, 6, 100)
         pixels_per_tile = 10
-        self.granular_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), pixels_per_tile / 6, (0.074 / 2) - 0.005)#+ 0.008)
+        self.granular_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), pixels_per_tile / 0.06, (0.074 / 2) - 0.005)#+ 0.008)
 
         #Data processors
         self.point_cloud_processor = PointCloudProcessor(center_point=350, map_scale=50 / tile_size)
@@ -54,7 +54,7 @@ class Mapper:
         if self.robot_node is None:
             self.set_robot_node(robot_position)
 
-        self.granular_grid.load_robot(self.robot_position.get_np_array(), self.robot_rotation)
+        self.granular_grid.load_robot(np.array(self.robot_position), self.robot_rotation)
         
         # Mark current node as explored
         distance = abs(robot_vortex.get_distance_to(robot_position))
@@ -68,7 +68,7 @@ class Mapper:
 
         # Load walls and obstacles (Lidar detections)
         if in_bounds_point_cloud is not None:
-            self.granular_grid.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position.get_np_array())
+            self.granular_grid.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, np.array(robot_position))
             
         # Load floor colors
         if in_bounds_point_cloud is not None and camera_images is not None:
@@ -209,13 +209,13 @@ class Mapper:
     
     
     # Utilities
-    def get_closest_vortex_to_position(self, position):
-        return ((position + 0.03) // self.tile_size).to_int() * self.tile_size
+    def get_closest_vortex_to_position(self, position: Position2D):
+        return ((position + 0.03) // self.tile_size).astype(int) * self.tile_size
 
-    def position_to_node_grid_index(self, position):
-        return ((position + 0.03) // self.tile_size).to_int() * 2
+    def position_to_node_grid_index(self, position: Position2D):
+        return ((position + 0.03) // self.tile_size).astype(int) * 2
     
-    def node_grid_index_to_position(self, index):
+    def node_grid_index_to_position(self, index: Position2D):
         return index // 2 * self.tile_size + 0.03
     
     def degs_to_orientation(self, degs):

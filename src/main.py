@@ -7,10 +7,7 @@ import math
 from data_processing.fixture_detection.fixture_detection import FixtureDetector
 import state_machines, robot, mapping
 from algorithms.expandable_node_grid.bfs import bfs
-from low_level_movement.obstacle_avoidance import PositionCorrector
 
-#from agents.closest_position_agent.closest_position_agent import ClosestPositionAgent
-#from agents.go_back_agent.go_back_agent import GoBackAgent
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
 
 from data_structures.vectors import Position2D
@@ -47,13 +44,7 @@ fixture_detector = FixtureDetector()
 mapper = mapping.Mapper(TILE_SIZE)
 
 # Agents
-#closest_position_agent = ClosestPositionAgent()
-#go_back_agent = GoBackAgent()
-navigation_agent = GranularNavigationAgent()
-
-# Obstacle avoidance
-position_corrector = PositionCorrector(robot.diameter)
-
+navigation_agent = GranularNavigationAgent(mapper)
 
 # Variables
 do_mapping = False
@@ -103,14 +94,6 @@ def seqMoveToRelativeCoords(x, y):
     if seq.simpleEvent():
         initial_position = [round(p / TILE_SIZE) * TILE_SIZE for p in robot.position]
     return seqMoveToCoords((initial_position[0] + x, initial_position[1] + y))
-
-def seqMoveToRelativeTile(x, y):
-    node = mapper.robot_node
-    tile = [node[0] // 2 + x, node[1] // 2 + y]
-    position = position_corrector.correct_position([tile[0] * TILE_SIZE, tile[1] * TILE_SIZE], 
-                                                   mapper.robot_vortex, 
-                                                   mapper.lidar_grid)
-    return seqMoveToCoords(position)
 
 def is_complete(grid, robot_node):
         possible_nodes = bfs(grid, robot_node, 500)
@@ -212,11 +195,11 @@ while robot.do_loop():
         seq.startSequence()
 
         #grid = mapper.get_node_grid()
-        navigation_agent.update(mapper)
+        navigation_agent.update()
         #move = closest_position_agent.get_action(grid)
         node = mapper.robot_node
 
-        if seqMoveToCoords(navigation_agent.get_target_position(mapper)):
+        if seqMoveToCoords(navigation_agent.get_target_position()):
             mapper.set_robot_node(robot.position)
         
         """

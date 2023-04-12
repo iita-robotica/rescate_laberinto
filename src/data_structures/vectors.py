@@ -4,15 +4,29 @@ import numpy as np
 from data_structures.angle import Angle, Unit
 
 class Position2D:
-    def __init__(self, x=None, y=None):
-        self.x = x
-        self.y = y
+    def __init__(self, *args, **kwargs):
+        """
+        Takes either two values or an iterable with at least two indices.
+        """
+        if len(args) == 0:
+            self.x = None
+            self.y = None
+        elif len(args) == 1:
+            self.x = args[0][0]
+            self.y = args[0][1]
+        elif len(args) == 2:
+            self.x = args[0]
+            self.y = args[1]
+        else:
+            raise TypeError()
 
-    def get_np_array(self):
-        return np.array([self.x, self.y])
     
-    def get_list(self):
-        return [self.x, self.y]
+    def __iter__(self):
+        yield self.x
+        yield self.y
+    
+    def __array__(self):
+        return np.array([self.x, self.y])
         
     def __repr__(self):
         return f"Position2D({self.x}, {self.y})"
@@ -117,8 +131,8 @@ class Position2D:
         else:
             raise IndexError("Vector index out of range")
         
-    def to_int(self):
-        return Position2D(int(self.x), int(self.y))
+    def astype(self, dtype: type):
+        return Position2D(dtype(self.x), dtype(self.y))
     
     def get_distance_to(self, other):
         return abs(self - other)

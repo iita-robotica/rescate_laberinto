@@ -13,112 +13,95 @@ from agents.granular_navigation_agent.path_smoothing import PathSmoother
 from flags import SHOW_PATHFINDING_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID
 
 class PathFinder():
-    def __init__(self):
+    def __init__(self, mapper: Mapper):
         self.a_star = aStarAlgorithm()
         self.closest_free_point_finder = BFSAlgorithm(lambda x : x == 0)
 
         self.a_star_path_smoother = PathSmoother(1)
 
-        self.current_grid_index = np.array([0, 0])
-        self.target_position = np.array([0, 0]) # np.array([-0.5919078827365277, -0.14052309679063227])
+        self.robot_grid_index = np.array([0, 0])
+        self.target_position = np.array([0, 0])
 
         self.a_star_path = []
         self.smooth_astar_path = []
         self.a_star_index = 0
 
-        self.mapper = None
-
-        self.finished_path = False
+        self.mapper = mapper
     
-    def update(self, mapper: Mapper, target_position: np.ndarray = None) -> None:
+    def update(self, target_position: np.ndarray = None) -> None:
         if target_position is not None:
             self.target_position = target_position
-        
-        self.mapper = mapper
 
-        # Get start index
-        self.current_grid_index = mapper.granular_grid.coordinates_to_grid_index(mapper.robot_position.get_np_array())
-        mapper.granular_grid.expand_grid_to_grid_index(self.current_grid_index)
-        start_array_index = mapper.granular_grid.grid_index_to_array_index(self.current_grid_index)
-        
-        # If current position not traversable, find closest traversable position
-        if mapper.granular_grid.arrays["traversable"][start_array_index[0], start_array_index[1]]:
-            if SHOW_PATHFINDING_DEBUG: print("INITIAL POSITION NOT TRAVERSABLE, CALCULATING BFS")
-            start_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.arrays["traversable"], start_array_index)
-            n_trav = mapper.granular_grid.arrays["traversable"][start_array_index[0], start_array_index[1]]
-            if SHOW_PATHFINDING_DEBUG: print("FINISHED CLACULATING BFS: ", n_trav)
+        self.robot_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(self.mapper.robot_position) # Get robot position grid index
+        self.mapper.granular_grid.expand_grid_to_grid_index(self.robot_grid_index) # Expand grid to robot position
 
-        if len(self.a_star_path) <= self.a_star_index:
-            if SHOW_PATHFINDING_DEBUG: print("FINISHED PATH")
+        if SHOW_PATHFINDING_DEBUG: 
+            if self.is_path_finished(): print("FINISHED PATH")
+            if self.is_path_obstructed(): print("PATH OBSTRUCTED")
 
-        if not self.check_path(mapper.granular_grid):
-            if SHOW_PATHFINDING_DEBUG: print("FAILED PATH CHECK")
-
-        # If path finished or current path obstructed
-        if len(self.a_star_path) - 1 <= self.a_star_index or not self.check_path(mapper.granular_grid):
-
-            target_grid_index = mapper.granular_grid.coordinates_to_grid_index(self.target_position)
-            mapper.granular_grid.expand_grid_to_grid_index(target_grid_index)
-            target_array_index = mapper.granular_grid.grid_index_to_array_index(target_grid_index)
-
-            if mapper.granular_grid.arrays["traversable"][target_array_index[0], target_array_index[1]]:
-                target_array_index = self.closest_free_point_finder.bfs(mapper.granular_grid.arrays["traversable"], target_array_index)
-
-            # Calculate path
-            best_path = self.a_star.a_star(mapper.granular_grid.arrays["traversable"], 
-                                           start_array_index,
-                                           target_array_index,
-                                           mapper.granular_grid.arrays["navigation_preference"])
-
-            if len(best_path) > 1:
-                self.a_star_path = []
-                for array_index in best_path:
-                    self.a_star_path.append(mapper.granular_grid.array_index_to_grid_index(array_index))
-
-                self.a_star_path = self.a_star_path[1:]
-                self.a_star_index = 0
+        if self.is_path_finished() or self.is_path_obstructed():
+            self.calculate_path()
             
-            self.a_star_path = self.smooth_path(self.a_star_path)
-            self.smooth_astar_path = self.a_star_path_smoother.smooth(self.a_star_path)
+        self.calculate_path_index()
 
+        #DEBUG
         if SHOW_GRANULAR_NAVIGATION_GRID:
-            debug_grid = mapper.granular_grid.get_colored_grid()
+            debug_grid = self.mapper.granular_grid.get_colored_grid()
             for node in self.a_star_path:
-                n = np.array(mapper.granular_grid.grid_index_to_array_index(node))
+                n = np.array(self.mapper.granular_grid.grid_index_to_array_index(node))
                 try:
                     debug_grid[n[0], n[1]] = [0, 0, 255]
                 except IndexError:
                     pass
 
             cv.imshow("granular_grid", debug_grid)
+        
 
+
+    def calculate_path(self):
+        # Get start array index (if robot index occupied, get closest unoccupied point)
+        start_array_index = self.mapper.granular_grid.coordinates_to_array_index(self.mapper.robot_position)
+        start_array_index = self.get_closest_traversable_array_index(start_array_index)
+
+        # Expand grid to target index
+        target_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(self.target_position)
+        self.mapper.granular_grid.expand_grid_to_grid_index(target_grid_index)
+
+        # Get target array index (if target index occupied, get closest unoccupied point)
+        target_array_index = self.mapper.granular_grid.coordinates_to_array_index(self.target_position)
+        target_array_index = self.get_closest_traversable_array_index(target_array_index)
+
+        # Calculate path
+        best_path = self.a_star.a_star(self.mapper.granular_grid.arrays["traversable"], 
+                                        start_array_index,
+                                        target_array_index,
+                                        self.mapper.granular_grid.arrays["navigation_preference"])
+
+        # If path was successfully calculated, transform all indexes to grid indexes
+        if len(best_path) > 1:
+            self.a_star_path = []
+            for array_index in best_path:
+                self.a_star_path.append(self.mapper.granular_grid.array_index_to_grid_index(array_index))
+
+            self.a_star_path = self.a_star_path[1:]
+            self.a_star_index = 0
+        
+        self.a_star_path = self.dither_path(self.a_star_path) # Remove every second positon of the path
+        self.smooth_astar_path = self.a_star_path_smoother.smooth(self.a_star_path) # Smooth the path
+
+    def calculate_path_index(self):
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) - 1)   
         if len(self.a_star_path) > 0:
-            #print("a_star_index:", self.a_star_index)
-            #print("path len:", len(self.a_star_path))
             next_node = self.a_star_path[self.a_star_index]
-            next_node = Position2D(next_node[0], next_node[1])
+            next_node = Position2D(next_node)
 
-            current_pos = mapper.robot_position
-            current_pos = np.array([current_pos[0], current_pos[1]])
-            current_grid_index = mapper.granular_grid.coordinates_to_grid_index(current_pos)
+            current_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(self.mapper.robot_position)
             current_node = Position2D(current_grid_index[0], current_grid_index[1])
 
-
-            #print("current_array_index:", current_node)
-            #print("next_array_indx:", next_node)
-
-            #print("dist:", abs(current_node.get_distance_to(next_node)))
-
             if abs(current_node.get_distance_to(next_node)) < 3:
-                self.finished_path = True
                 self.a_star_index += 1
-            else:
-                self.finished_path = False
-        else:
-            self.finished_path = True
 
-    def smooth_path(self, path):
+    def dither_path(self, path):
         final_path = []
         dither_interval = 2
         for index, value in enumerate(path):
@@ -131,31 +114,42 @@ class PathFinder():
     
     def get_next_position(self) -> Position2D:
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) -1)
-        #print(self.a_star_path[self.a_star_index])
-
         if len(self.smooth_astar_path):
-            pos = self.mapper.granular_grid.grid_index_to_coordinates(np.array(self.smooth_astar_path[self.a_star_index]))
+            pos = self.mapper.granular_grid.grid_index_to_coordinates(self.smooth_astar_path[self.a_star_index])
             pos = Position2D(pos[0], pos[1])
-            #print("target_position:", pos)
-            #print("robot_position:", mapper.robot_position)
             return pos
         
         else:
             return self.mapper.robot_position
     
-    # Is current Astar path obstructed?
-    def check_path(self, granular_grid: PointGrid):
+    def is_path_obstructed(self):
+        """
+        Is current Astar path obstructed?
+        """
         array_index_path = []
         for n in self.a_star_path:
-            array_index_path.append(granular_grid.grid_index_to_array_index(n))
+            array_index_path.append(self.mapper.granular_grid.grid_index_to_array_index(n))
             
         for position in array_index_path:
-            if position[0] >= granular_grid.arrays["traversable"].shape[0] or position[1] >= granular_grid.arrays["traversable"].shape[1]:
+            if position[0] >= self.mapper.granular_grid.arrays["traversable"].shape[0] or \
+               position[1] >=  self.mapper.granular_grid.arrays["traversable"].shape[1]:
                 continue
 
             if position[0] < 0 or position[1] < 0:
                 continue
 
-            if granular_grid.arrays["traversable"][position[0], position[1]]:
-                return False
-        return True
+            if self.mapper.granular_grid.arrays["traversable"][position[0], position[1]]:
+                return True
+            
+        return False
+    
+    def is_path_finished(self):
+        return len(self.a_star_path) - 1 <= self.a_star_index
+    
+
+    def get_closest_traversable_array_index(self, array_index):
+        if self.mapper.granular_grid.arrays["traversable"][array_index[0], array_index[1]]:
+            return  self.closest_free_point_finder.bfs(array=self.mapper.granular_grid.arrays["traversable"],
+                                                       start_node=array_index)
+        else:
+            return array_index

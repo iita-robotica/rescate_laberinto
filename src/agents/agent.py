@@ -3,11 +3,11 @@ from data_structures.vectors import Position2D
 from abc import ABC, abstractmethod
 
 class Agent(ABC):
-    def __init__(self) -> None:
-        pass
+    def __init__(self, mapper) -> None:
+        self.mapper = mapper
 
     @abstractmethod
-    def update(self, mapper) -> None:
+    def update(self) -> None:
         pass
     
     @abstractmethod
