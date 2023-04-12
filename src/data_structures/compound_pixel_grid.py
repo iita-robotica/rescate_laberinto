@@ -300,6 +300,13 @@ class PointGrid:
         start_position += center_position
         start_position = (math.ceil(start_position.x), math.ceil(start_position.y))
 
+        center_angle = orientation
+        center_angle.normalize()
+        center_vector = Vector2D(center_angle, lenght * 2)
+        center_up_position = center_vector.to_position()
+        center_up_position += center_position
+        center_up_position = center_up_position.astype(int)
+
         end_angle = orientation + (amplitude / 2)
         end_angle.normalize()
         end_vector = Vector2D(end_angle, lenght * 2)
@@ -308,10 +315,12 @@ class PointGrid:
         end_position = (math.ceil(end_position.x), math.ceil(end_position.y))
 
         triangle_matrix = cv.fillPoly(np.zeros_like(matrix), 
-                                      [np.array([start_position, end_position, np.array(center_position)])],
+                                      [np.array([start_position, center_up_position, end_position, np.array(center_position)])],
                                       1)
         
         final_matrix = triangle_matrix * circle_matrix
+
+        cv.imshow("cone template", final_matrix * 100)
 
         return final_matrix
     
