@@ -16,7 +16,7 @@ class PointGrid:
         
         self.to_boolean_threshold = 2 # How many points need to be detected by the lidar to qualify as a sure point
         self.delete_step_counter = StepCounter(2) # Every how many steps should the lidar detections be filtered
-        self.delete_threshold = 0 # Points detected less times than this number will be deleted in __cleanup()
+        self.delete_threshold = 1 # Points detected less times than this number will be deleted in __cleanup()
 
         self.arrays = {
             "detected_points": np.zeros(self.array_shape, np.uint8), # Number of points detected in position
@@ -28,6 +28,7 @@ class PointGrid:
             "seen_by_lidar": np.zeros(self.array_shape, np.bool_), # Has been seen by the lidar (Though not necessarily detected as occupied)
             "walls_seen_by_camera": np.zeros(self.array_shape, np.bool_),
             "walls_not_seen_by_camera": np.zeros(self.array_shape, np.bool_),
+            "discovered": np.zeros(self.array_shape, np.bool_)
         }
 
         self.resolution = pixel_per_m # resolution of the grid with regards to the coordinate system of the gps / the world
@@ -36,11 +37,13 @@ class PointGrid:
         print("ROBOT RADIUS:", self.robot_radius)
         self.robot_diameter = int(self.robot_radius * 2 + 1)
 
-
-        self.camera_pov_amplitude = Angle(170, Unit.DEGREES) # Horizontal amplitued of the fostrum of each camera
+        self.camera_pov_amplitude = Angle(30, Unit.DEGREES) # Horizontal amplitued of the fostrum of each camera
         self.camera_pov_lenght = int(0.12 * 2 * self.resolution) # Range of each camera
-        #Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES))
-        self.camera_orientations = (Angle(0, Unit.DEGREES), ) # Orientation of the cameras
+        self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES)) # Orientation of the cameras
+        
+        self.discovery_pov_amplitude =  Angle(170, Unit.DEGREES)
+        self.discovery_pov_lenght = self.camera_pov_lenght
+        self.discovery_pov_orientation = Angle(0, Unit.DEGREES)
 
         # Circle with the radius of the robot
         self.robot_diameter_template = np.zeros((self.robot_diameter, self.robot_diameter), dtype=np.uint8)
@@ -117,9 +120,7 @@ class PointGrid:
         """
         Filters out noise from the 'detected_points' array.
         """
-        if self.delete_step_counter.check(): # Do every n steps
-            self.arrays["detected_points"] = self.arrays["detected_points"] * (self.arrays["detected_points"] > self.delete_threshold)
-        self.delete_step_counter.increase()
+        self.arrays["detected_points"] = self.arrays["detected_points"] * (self.arrays["detected_points"] > self.delete_threshold)
 
     def load_robot(self, robot_position, robot_rotation: Angle):
         """
@@ -130,6 +131,8 @@ class PointGrid:
         self.__load_traversed_by_robot(robot_grid_index)
         # Load points seen by camera
         self.__load_seen_by_camera(robot_grid_index, robot_rotation)
+
+        self.__load_discovered(robot_grid_index, robot_rotation)
     
     def __load_traversed_by_robot(self, robot_grid_index):
         circle = self.robot_diameter_indexes + np.array(robot_grid_index)
@@ -154,6 +157,28 @@ class PointGrid:
             robot_array_index = self.grid_index_to_array_index(robot_grid_index)
             if self.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
                 self.arrays["seen_by_camera"][array_index[0], array_index[1]] = True
+
+    def __load_discovered(self, robot_grid_index, robot_rotation: Angle):
+        global_discovered_orientation = self.discovery_pov_orientation + robot_rotation
+        global_discovered_orientation.normalize()
+        
+        discovered_template = self.__get_cone_template(self.discovery_pov_lenght, 
+                                                       global_discovered_orientation, 
+                                                       self.discovery_pov_amplitude)
+        
+        disc_povs = self._get_indexes_from_template(discovered_template, robot_grid_index - np.array((self.discovery_pov_lenght, self.discovery_pov_lenght)))
+
+        for item in disc_povs:
+
+            item
+
+            self.expand_grid_to_grid_index(item)
+            array_index = self.grid_index_to_array_index(item)
+
+            if self.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
+                self.arrays["discovered"][array_index[0], array_index[1]] = True
+
+    
     
     # Index conversion
     def coordinates_to_grid_index(self, coordinates) -> np.ndarray:
@@ -348,9 +373,9 @@ class PointGrid:
         color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 100
         color_grid[self.arrays["traversable"]] = (1, 0, 0)
         
-        
+        color_grid[self.arrays["discovered"]] = (0, 0, 1)
+        color_grid[self.arrays["seen_by_camera"]] = (1, 0, 0)
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
-        color_grid[self.arrays["seen_by_camera"]] = (0, 0, 1)
         
         return color_grid
     
