@@ -17,8 +17,11 @@ class GranularNavigationAgent(Agent):
     
     def update(self, mapper: Mapper) -> None:
         self.best_position_finder.update(mapper)
-        if not self.path_finder.check_path(mapper.granular_grid) or self.best_position is None:
-            self.best_position_finder.calculate_best_position()
+        #if not self.path_finder.check_path(mapper.granular_grid) or self.best_position is None:
+
+       
+        self.best_position_finder.calculate_best_position(finished_path=self.path_finder.finished_path)
+
         self.best_position = self.best_position_finder.get_best_position()
         self.path_finder.update(mapper=mapper, target_position=self.best_position)#Position2D(-0.08884384679907074, -0.01975882018000104).get_np_array())
     

@@ -39,10 +39,10 @@ class PointGrid:
         self.robot_diameter = int(self.robot_radius * 2 + 1)
 
 
-        self.camera_pov_amplitude = Angle(30, Unit.DEGREES)
+        self.camera_pov_amplitude = Angle(170, Unit.DEGREES)
         self.camera_pov_lenght = int(0.12 * 2 * self.resolution)
         #self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(330, Unit.DEGREES), Angle(30, Unit.DEGREES))
-        self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES))
+        self.camera_orientations = (Angle(0, Unit.DEGREES), )#Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES))
 
 
         self.robot_diameter_template = np.zeros((self.robot_diameter, self.robot_diameter), dtype=np.uint8)
@@ -318,7 +318,7 @@ class PointGrid:
         
         
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
-        color_grid[self.arrays["walls_not_seen_by_camera"]] = (0, 0, 1)
+        color_grid[self.arrays["seen_by_camera"]] = (0, 0, 1)
         
         return color_grid
     

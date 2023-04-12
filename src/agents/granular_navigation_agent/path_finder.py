@@ -27,6 +27,8 @@ class PathFinder():
         self.a_star_index = 0
 
         self.mapper = None
+
+        self.finished_path = False
     
     def update(self, mapper: Mapper, target_position: np.ndarray = None) -> None:
         if target_position is not None:
@@ -109,7 +111,12 @@ class PathFinder():
             #print("dist:", abs(current_node.get_distance_to(next_node)))
 
             if abs(current_node.get_distance_to(next_node)) < 3:
+                self.finished_path = True
                 self.a_star_index += 1
+            else:
+                self.finished_path = False
+        else:
+            self.finished_path = True
 
     def smooth_path(self, path):
         final_path = []
