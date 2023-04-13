@@ -28,7 +28,8 @@ class PointGrid:
             "seen_by_lidar": np.zeros(self.array_shape, np.bool_), # Has been seen by the lidar (Though not necessarily detected as occupied)
             "walls_seen_by_camera": np.zeros(self.array_shape, np.bool_),
             "walls_not_seen_by_camera": np.zeros(self.array_shape, np.bool_),
-            "discovered": np.zeros(self.array_shape, np.bool_)
+            "discovered": np.zeros(self.array_shape, np.bool_),
+            "floor_color": np.zeros(self.array_shape, np.uint8)
         }
 
         self.resolution = pixel_per_m # resolution of the grid with regards to the coordinate system of the gps / the world
@@ -169,16 +170,11 @@ class PointGrid:
         disc_povs = self._get_indexes_from_template(discovered_template, robot_grid_index - np.array((self.discovery_pov_lenght, self.discovery_pov_lenght)))
 
         for item in disc_povs:
-
-            item
-
             self.expand_grid_to_grid_index(item)
             array_index = self.grid_index_to_array_index(item)
 
             if self.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
                 self.arrays["discovered"][array_index[0], array_index[1]] = True
-
-    
     
     # Index conversion
     def coordinates_to_grid_index(self, coordinates) -> np.ndarray:
@@ -212,7 +208,6 @@ class PointGrid:
         Expands all arrays to the specified index. 
         Note that all array_idexes should be recalculated after this operation.
         """
-
 
         array_index = self.grid_index_to_array_index(grid_index)
         if array_index[0] + 1 > self.array_shape[0]:
@@ -376,7 +371,7 @@ class PointGrid:
         color_grid[self.arrays["discovered"]] = (0, 0, 1)
         color_grid[self.arrays["seen_by_camera"]] = (1, 0, 0)
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
-        
+
         return color_grid
     
     def print_grid(self):
