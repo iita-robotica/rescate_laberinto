@@ -2,6 +2,8 @@ from controller import Robot
 
 import utilities
 
+from flow_control.step_counter import StepCounter
+
 # Devices
 from devices.wheel import Wheel
 
@@ -58,22 +60,22 @@ class RobotLayer:
         lidar_interval = 6
         self.lidar = Lidar(webots_device = self.robot.getDevice("lidar"), 
                            time_step = self.time_step * lidar_interval, 
-                           step_counter = utilities.StepCounter(lidar_interval),
+                           step_counter = StepCounter(lidar_interval),
                            layers_used=(2,))
 
         # Cameras
         camera_interval = 3
         self.center_camera = Camera(webots_device = self.robot.getDevice("camera1"),
                                     time_step = self.time_step * camera_interval,
-                                    step_counter = utilities.StepCounter(camera_interval))
+                                    step_counter = StepCounter(camera_interval))
         
         self.right_camera = Camera(webots_device = self.robot.getDevice("camera2"),
                                    time_step = self.time_step * camera_interval,
-                                   step_counter = utilities.StepCounter(camera_interval))
+                                   step_counter = StepCounter(camera_interval))
         
         self.left_camera = Camera(webots_device = self.robot.getDevice("camera3"), 
                                   time_step = self.time_step * camera_interval, 
-                                  step_counter = utilities.StepCounter(camera_interval),
+                                  step_counter = StepCounter(camera_interval),
                                   rotate180=True)
 
         

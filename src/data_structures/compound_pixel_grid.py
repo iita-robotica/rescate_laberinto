@@ -4,7 +4,7 @@ import copy
 from data_structures.vectors import Position2D, Vector2D
 from data_structures.angle import Angle, Unit
 import math
-from utilities import StepCounter
+from flow_control.step_counter import StepCounter
 
 class Grid:
     def __init__(self, initial_shape, pixel_per_m, robot_radius_m):

@@ -158,18 +158,3 @@ def divide_into_chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
-
-class StepCounter:
-    def __init__(self, interval):
-        self.__current_step = 0
-        self.interval = interval
-
-    def increase(self):
-        self.__current_step += 1
-        if self.__current_step == self.interval:
-            self.__current_step = 0
-    
-    def check(self):
-        return self.__current_step == 0
-    
-    

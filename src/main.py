@@ -2,7 +2,8 @@ import numpy as np
 import cv2 as cv
 
 from fixture_detection.fixture_detection import FixtureDetector
-import state_machines, robot
+from flow_control import state_machines
+import robot
 from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
