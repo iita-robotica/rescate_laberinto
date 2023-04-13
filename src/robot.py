@@ -6,7 +6,6 @@ import utilities
 from devices.wheel import Wheel
 
 from devices.camera import Camera
-from devices.colour_sensor import ColourSensor
 
 from devices.lidar import Lidar
 

@@ -10,21 +10,6 @@ image_dir = os.path.join(script_dir, "images")
 def save_image(image, filename):
     cv.imwrite(os.path.join(image_dir, filename), image)
 
-# Corrects the given angle in degrees to be in a range from 0 to 360
-def normalizeDegs(ang):
-    ang = ang % 360
-    if ang < 0:
-        ang += 360
-    if ang == 360:
-        ang = 0
-    return ang
-
-# Corrects the given angle in radians to be in a range from 0 to a full rotaion
-def normalizeRads(rad):
-    ang = radsToDegs(rad)
-    normAng = normalizeDegs(ang)
-    return degsToRads(normAng)
-
 # Converts from degrees to radians
 def degsToRads(deg):
     return deg * math.pi / 180
@@ -50,24 +35,6 @@ def getCoordsFromDegs(deg, distance):
     x = float(distance * math.sin(rad))
     return (x, y)
 
-def getRadsFromCoords(coords):
-    return math.atan2(coords[0], coords[1])
-
-
-def getDegsFromCoords(coords):
-    rads = math.atan2(coords[0], coords[1])
-    return radsToDegs(rads)
-
-# Gets the distance to given coordinates
-def getDistance(position):
-    return math.sqrt((position[0] ** 2) + (position[1] ** 2))
-
-# Checks if a value is between two values
-def isInRange(val, minVal, maxVal):
-    return minVal < val < maxVal
-
-def roundDecimal(number, decimal):
-    return (round(number * decimal) / decimal)
 
 def multiplyLists(list1, list2):
     finalList = []
@@ -186,71 +153,11 @@ def resize_image_to_fixed_size(image, size):
     
     return final_image
 
-def dir2list(direction):
-    directions = {
-        "up": [0, -1],
-        "down": [0, 1],
-        "left": [-1, 0],
-        "right": [1, 0],
-        "up_left": [-1, -1],
-        "up_right": [1, -1],
-        "down_left": [-1, 1],
-        "down_right": [1, 1],
-        "u": [0, -1],
-        "d": [0, 1],
-        "l": [-1, 0],
-        "r": [1, 0],
-        "ul": [-1, -1],
-        "ur": [1, -1],
-        "dl": [-1, 1],
-        "dr": [1, 1]
-    }
-    return directions[direction]
-
-def list2dir(direction):
-    direction = tuple(direction)
-    directions = {
-        (0, -1): "up",
-        (0, 1): "down",
-        (-1, 0): "left",
-        (1, 0): "right",
-        (-1, -1): "up_left",
-        (1, -1): "up_right",
-        (-1, 1): "down_left",
-        (1, 1): "down_right",
-        (0, -1): "u",
-        (0, 1): "d",
-        (-1, 0): "l",
-        (1, 0): "r",
-        (-1, -1): "ul",
-        (1, -1): "ur",
-        (-1, 1): "dl",
-        (1, 1): "dr"
-    }
-    return directions[direction]
-
-def is_color_in_range(color, rng):
-    minimums = rng[0]
-    maximums = rng[1]
-    for i, c in enumerate(color):
-        if c < minimums[i] or c > maximums[i]:
-            return False
-    return True
 
 def divide_into_chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
-
-
-def do_every_n_steps(n):
-    def inner_function(func):
-        @wraps(func)
-        def wrapper(self, step_count, *args, **kwargs):
-            if step_count % n == 0:
-                return func(self, *args, **kwargs)
-        return wrapper
-    return inner_function
 
 class StepCounter:
     def __init__(self, interval):

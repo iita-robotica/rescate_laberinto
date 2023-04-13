@@ -4,7 +4,7 @@ import numpy as np
 import random
 
 
-from data_processing.fixture_detection.color_filter import ColorFilter
+from fixture_detection.color_filter import ColorFilter
 
 class VictimClassifier:
     def __init__(self):
