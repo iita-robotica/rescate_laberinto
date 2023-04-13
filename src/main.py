@@ -1,21 +1,17 @@
 import cv2 as cv
 import numpy as np
-import time
-import copy
-import math
+
 
 from data_processing.fixture_detection.fixture_detection import FixtureDetector
-import state_machines, robot, mapping.mapper as mapper
+import state_machines, robot
+from mapping.mapper import Mapper
 from algorithms.expandable_node_grid.bfs import bfs
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
 
 from data_structures.vectors import Position2D
 
-from flags import SHOW_DEBUG, PRINT_MAP_AT_END
-
-window_n = 0
-
+from flags import SHOW_DEBUG
 
 # World constants
 TIME_STEP = 32
@@ -41,7 +37,7 @@ seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
 fixture_detector = FixtureDetector()
 
 # Mapper
-mapper = mapper.Mapper(TILE_SIZE)
+mapper = Mapper(TILE_SIZE)
 
 # Agents
 navigation_agent = GranularNavigationAgent(mapper)
@@ -86,20 +82,6 @@ def seqCalibrateRobotRotation():
     seqMoveWheels(0, 0)
     if seq.simpleEvent():
         robot.auto_decide_rotation = True
-
-initial_position = robot.position
-
-def seqMoveToRelativeCoords(x, y):
-    global initial_position
-    if seq.simpleEvent():
-        initial_position = [round(p / TILE_SIZE) * TILE_SIZE for p in robot.position]
-    return seqMoveToCoords((initial_position[0] + x, initial_position[1] + y))
-
-def is_complete(grid, robot_node):
-        possible_nodes = bfs(grid, robot_node, 500)
-        if len(possible_nodes) == 0:
-            return True
-        return False
 
 # Each timeStep
 while robot.do_loop():
@@ -150,13 +132,14 @@ while robot.do_loop():
                 seq.resetSequence()
                 stateManager.changeState("stuck")
     
-    
+        """
         if mapper.get_fixture_from_tile().exists and not mapper.get_fixture_from_tile().reported and do_victim_reporting:
             if not stateManager.checkState("report_victim"):
                 seq.resetSequence()
                 stateManager.changeState("report_victim")
+        """
 
-        elif robot.comunicator.remainingTime < 30:
+        if robot.comunicator.remainingTime < 30:
             if not stateManager.checkState("go_back") and not stateManager.checkState("end"):
                 seq.resetSequence()
                 stateManager.changeState("go_back")
@@ -194,22 +177,10 @@ while robot.do_loop():
     elif stateManager.checkState("explore"):
         seq.startSequence()
 
-        #grid = mapper.get_node_grid()
         navigation_agent.update()
-        #move = closest_position_agent.get_action(grid)
-        node = mapper.robot_node
 
         if seqMoveToCoords(navigation_agent.get_target_position()):
             mapper.set_robot_node(robot.position)
-        
-        """
-        if seqMoveToRelativeTile(move[0], move[1]):
-            mapper.set_robot_node(robot.position)
-            if mapper.node_grid.get_node(mapper.robot_node).is_start:
-                if is_complete(mapper.node_grid, mapper.robot_node):
-                    seq.resetSequence()
-                    stateManager.changeState("end")
-        """
 
         seq.seqResetSequence()
 
@@ -225,10 +196,9 @@ while robot.do_loop():
             print("STOPPED")
         seqDelaySec(3)
         if seq.simpleEvent():
-            fixture = mapper.get_fixture_from_tile()
-            robot.comunicator.sendVictim(robot.position, fixture.type)
-            fixture.reported = True
-            mapper.load_fixture_to_wall(letter, fixture.detection_angle)
+            #robot.comunicator.sendVictim(robot.position, fixture.type)
+            #fixture.reported = True
+            pass
         seq.simpleEvent(stateManager.changeState, "explore")
         seq.seqResetSequence()
     
@@ -242,8 +212,6 @@ while robot.do_loop():
         seq.seqResetSequence()
     
     elif stateManager.checkState("end"):
-        if PRINT_MAP_AT_END:
-            mapper.node_grid.print_grid()
         robot.comunicator.sendMap(mapper.get_grid_for_bonus())
         robot.comunicator.sendEndOfPlay()
     
@@ -289,7 +257,6 @@ while robot.do_loop():
     if SHOW_DEBUG:
         print("robot time:", robot.comunicator.remainingTime)
     robot.comunicator.update()
-    window_n = 0
         
 
 
