@@ -1,11 +1,9 @@
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 
-
-from data_processing.fixture_detection.fixture_detection import FixtureDetector
+from fixture_detection.fixture_detection import FixtureDetector
 import state_machines, robot
 from mapping.mapper import Mapper
-from algorithms.expandable_node_grid.bfs import bfs
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
 

@@ -32,8 +32,8 @@ class PathFinder():
         if target_position is not None:
             self.target_position = target_position
 
-        self.robot_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(self.mapper.robot_position) # Get robot position grid index
-        self.mapper.granular_grid.expand_grid_to_grid_index(self.robot_grid_index) # Expand grid to robot position
+        self.robot_grid_index = self.mapper.pixel_grid.coordinates_to_grid_index(self.mapper.robot_position) # Get robot position grid index
+        self.mapper.pixel_grid.expand_grid_to_grid_index(self.robot_grid_index) # Expand grid to robot position
 
         if SHOW_PATHFINDING_DEBUG: 
             if self.is_path_finished(): print("FINISHED PATH")
@@ -46,9 +46,9 @@ class PathFinder():
 
         #DEBUG
         if SHOW_GRANULAR_NAVIGATION_GRID:
-            debug_grid = self.mapper.granular_grid.get_colored_grid()
+            debug_grid = self.mapper.pixel_grid.get_colored_grid()
             for node in self.a_star_path:
-                n = np.array(self.mapper.granular_grid.grid_index_to_array_index(node))
+                n = np.array(self.mapper.pixel_grid.grid_index_to_array_index(node))
                 try:
                     debug_grid[n[0], n[1]] = [0, 0, 255]
                 except IndexError:
@@ -60,28 +60,28 @@ class PathFinder():
 
     def calculate_path(self):
         # Get start array index (if robot index occupied, get closest unoccupied point)
-        start_array_index = self.mapper.granular_grid.coordinates_to_array_index(self.mapper.robot_position)
+        start_array_index = self.mapper.pixel_grid.coordinates_to_array_index(self.mapper.robot_position)
         start_array_index = self.get_closest_traversable_array_index(start_array_index)
 
         # Expand grid to target index
-        target_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(self.target_position)
-        self.mapper.granular_grid.expand_grid_to_grid_index(target_grid_index)
+        target_grid_index = self.mapper.pixel_grid.coordinates_to_grid_index(self.target_position)
+        self.mapper.pixel_grid.expand_grid_to_grid_index(target_grid_index)
 
         # Get target array index (if target index occupied, get closest unoccupied point)
-        target_array_index = self.mapper.granular_grid.coordinates_to_array_index(self.target_position)
+        target_array_index = self.mapper.pixel_grid.coordinates_to_array_index(self.target_position)
         target_array_index = self.get_closest_traversable_array_index(target_array_index)
 
         # Calculate path
-        best_path = self.a_star.a_star(self.mapper.granular_grid.arrays["traversable"], 
+        best_path = self.a_star.a_star(self.mapper.pixel_grid.arrays["traversable"], 
                                         start_array_index,
                                         target_array_index,
-                                        self.mapper.granular_grid.arrays["navigation_preference"])
+                                        self.mapper.pixel_grid.arrays["navigation_preference"])
 
         # If path was successfully calculated, transform all indexes to grid indexes
         if len(best_path) > 1:
             self.a_star_path = []
             for array_index in best_path:
-                self.a_star_path.append(self.mapper.granular_grid.array_index_to_grid_index(array_index))
+                self.a_star_path.append(self.mapper.pixel_grid.array_index_to_grid_index(array_index))
 
             self.a_star_path = self.a_star_path[1:]
             self.a_star_index = 0
@@ -95,7 +95,7 @@ class PathFinder():
             next_node = self.a_star_path[self.a_star_index]
             next_node = Position2D(next_node)
 
-            current_grid_index = self.mapper.granular_grid.coordinates_to_grid_index(self.mapper.robot_position)
+            current_grid_index = self.mapper.pixel_grid.coordinates_to_grid_index(self.mapper.robot_position)
             current_node = Position2D(current_grid_index[0], current_grid_index[1])
 
             if abs(current_node.get_distance_to(next_node)) < 3:
@@ -115,7 +115,7 @@ class PathFinder():
     def get_next_position(self) -> Position2D:
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) -1)
         if len(self.smooth_astar_path):
-            pos = self.mapper.granular_grid.grid_index_to_coordinates(self.smooth_astar_path[self.a_star_index])
+            pos = self.mapper.pixel_grid.grid_index_to_coordinates(self.smooth_astar_path[self.a_star_index])
             pos = Position2D(pos[0], pos[1])
             return pos
         
@@ -128,17 +128,17 @@ class PathFinder():
         """
         array_index_path = []
         for n in self.a_star_path:
-            array_index_path.append(self.mapper.granular_grid.grid_index_to_array_index(n))
+            array_index_path.append(self.mapper.pixel_grid.grid_index_to_array_index(n))
             
         for position in array_index_path:
-            if position[0] >= self.mapper.granular_grid.arrays["traversable"].shape[0] or \
-               position[1] >=  self.mapper.granular_grid.arrays["traversable"].shape[1]:
+            if position[0] >= self.mapper.pixel_grid.arrays["traversable"].shape[0] or \
+               position[1] >=  self.mapper.pixel_grid.arrays["traversable"].shape[1]:
                 continue
 
             if position[0] < 0 or position[1] < 0:
                 continue
 
-            if self.mapper.granular_grid.arrays["traversable"][position[0], position[1]]:
+            if self.mapper.pixel_grid.arrays["traversable"][position[0], position[1]]:
                 return True
             
         return False
@@ -148,8 +148,8 @@ class PathFinder():
     
 
     def get_closest_traversable_array_index(self, array_index):
-        if self.mapper.granular_grid.arrays["traversable"][array_index[0], array_index[1]]:
-            return  self.closest_free_point_finder.bfs(array=self.mapper.granular_grid.arrays["traversable"],
+        if self.mapper.pixel_grid.arrays["traversable"][array_index[0], array_index[1]]:
+            return  self.closest_free_point_finder.bfs(array=self.mapper.pixel_grid.arrays["traversable"],
                                                        start_node=array_index)
         else:
             return array_index

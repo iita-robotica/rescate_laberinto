@@ -1,18 +1,17 @@
 import numpy as np
-import copy
 import cv2 as cv
-import math
 
-import utilities
-from mapping.camera_processor import CameraProcessor
-from mapping.point_cloud_processor import PointCloudProcessor
-from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
+from data_structures.vectors import Position2D
+from data_structures.angle import Angle, Unit
 
 from data_structures import compound_pixel_grid
-from data_structures.vectors import Position2D
-from algorithms.expandable_node_grid.bfs import bfs
 
-from flags import SHOW_DEBUG, SHOW_POINT_CLOUD, SHOW_GRANULAR_NAVIGATION_GRID, PRINT_NODE_GRID
+from mapping.camera_processor import CameraProcessor
+from mapping.point_cloud_processor import PointCloudProcessor
+
+from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
+
+from flags import SHOW_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID
 
 
 class Mapper:
@@ -26,7 +25,7 @@ class Mapper:
 
         # Data structures
         pixels_per_tile = 10
-        self.granular_grid = compound_pixel_grid.Grid(np.array([1, 1]), pixels_per_tile / 0.06, (0.074 / 2) - 0.005)#+ 0.008)
+        self.pixel_grid = compound_pixel_grid.Grid(np.array([1, 1]), pixels_per_tile / 0.06, (0.074 / 2) - 0.005)#+ 0.008)
 
         #Data processors
         self.point_cloud_processor = PointCloudProcessor(center_point=350, map_scale=50 / tile_size)
@@ -36,18 +35,23 @@ class Mapper:
         self.point_cloud_extractor = PointCloudExtarctor(resolution=6)
         self.floor_color_extractor = FloorColorExtractor(tile_resolution=50)
 
-    def update(self, in_bounds_point_cloud=None, out_of_bounds_point_cloud=None, camera_images=None, robot_position: Position2D=None, robot_rotation=None):
+    def update(self, in_bounds_point_cloud: list = None, 
+               out_of_bounds_point_cloud: list = None, 
+               camera_images: list = None, 
+               robot_position: Position2D = None, 
+               robot_rotation: Angle = None):
+        
         if robot_position is None or robot_rotation is None:
             return
         
         self.robot_position = robot_position
         self.robot_rotation = robot_rotation
 
-        self.granular_grid.load_robot(np.array(self.robot_position), self.robot_rotation)
+        self.pixel_grid.load_robot(np.array(self.robot_position), self.robot_rotation)
         
         # Load walls and obstacles (Lidar detections)
         if in_bounds_point_cloud is not None:
-            self.granular_grid.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, np.array(robot_position))
+            self.pixel_grid.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, np.array(robot_position))
             
         # Load floor colors
         if in_bounds_point_cloud is not None and camera_images is not None:
@@ -55,7 +59,7 @@ class Mapper:
         
         #DEBUG
         
-        if SHOW_POINT_CLOUD or SHOW_GRANULAR_NAVIGATION_GRID or SHOW_DEBUG:
+        if SHOW_GRANULAR_NAVIGATION_GRID or SHOW_DEBUG:
             cv.waitKey(1) 
         
     def register_start(self, robot_position):
@@ -138,27 +142,3 @@ class Mapper:
         #cv.imshow('final_image', utilities.resize_image_to_fixed_size(final_image, (600, 600)))    
 
         """
-    
-    
-    # Utilities
-    def degs_to_orientation(self, degs):
-        """divides degrees in up, left, right or down"""
-        if utilities.normalizeDegs(180 - 45) < degs < 180:
-            return "up", "right"
-        if 180 <= degs < utilities.normalizeDegs(180 + 45):
-            return "up", "left"
-
-        elif utilities.normalizeDegs(360 - 45) < degs <= 360:
-            return "down", "left"
-        elif 0 <= degs < utilities.normalizeDegs(0 + 45):
-            return "down", "right" 
-        
-        elif utilities.normalizeDegs(90 - 45) < degs < 90:
-            return "right", "down"
-        elif 90 <= degs < utilities.normalizeDegs(90 + 45):
-            return "right", "up"
-        
-        elif utilities.normalizeDegs(270 - 45) < degs < 270:
-            return "left", "up"
-        elif 270 <= degs < utilities.normalizeDegs(270 + 45):
-            return "left", "down"

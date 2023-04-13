@@ -32,31 +32,31 @@ class BestPositionFinder:
 
         # DEBUG
         if SHOW_BEST_POSITION_FINDER_DEBUG:
-            closest_unseen_array_index = self.mapper.granular_grid.grid_index_to_array_index(self.closest_unseen_grid_index)
-            debug_grid = self.mapper.granular_grid.get_colored_grid()    
+            closest_unseen_array_index = self.mapper.pixel_grid.grid_index_to_array_index(self.closest_unseen_grid_index)
+            debug_grid = self.mapper.pixel_grid.get_colored_grid()    
             cv.circle(debug_grid, (closest_unseen_array_index[1], closest_unseen_array_index[0]), 4, (0, 255, 100), -1)
             cv.imshow("closest_position_finder_debug", debug_grid)
 
     def is_objective_untraversable(self):
         if self.closest_unseen_grid_index is None: return False
 
-        closest_unseen_array_index = self.mapper.granular_grid.grid_index_to_array_index(self.closest_unseen_grid_index)
-        return self.mapper.granular_grid.arrays["traversable"][closest_unseen_array_index[0], closest_unseen_array_index[1]]
+        closest_unseen_array_index = self.mapper.pixel_grid.grid_index_to_array_index(self.closest_unseen_grid_index)
+        return self.mapper.pixel_grid.arrays["traversable"][closest_unseen_array_index[0], closest_unseen_array_index[1]]
     
     def get_closest_unseen_grid_index(self):
-        robot_array_index = self.mapper.granular_grid.coordinates_to_array_index(self.mapper.robot_position)
+        robot_array_index = self.mapper.pixel_grid.coordinates_to_array_index(self.mapper.robot_position)
 
-        closest_unseen_array_indexes = self.closest_unseen_finder.bfs(found_array=self.mapper.granular_grid.arrays["discovered"],
-                                                                      traversable_array=self.mapper.granular_grid.arrays["traversable"],
+        closest_unseen_array_indexes = self.closest_unseen_finder.bfs(found_array=self.mapper.pixel_grid.arrays["discovered"],
+                                                                      traversable_array=self.mapper.pixel_grid.arrays["traversable"],
                                                                       start_node=robot_array_index)
         if len(closest_unseen_array_indexes):
-            return self.mapper.granular_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
+            return self.mapper.pixel_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
         else:
             return self.closest_unseen_grid_index
 
     def get_best_position(self):
         if self.closest_unseen_grid_index is not None:
-            coords = self.mapper.granular_grid.grid_index_to_coordinates(self.closest_unseen_grid_index)
+            coords = self.mapper.pixel_grid.grid_index_to_coordinates(self.closest_unseen_grid_index)
             return Position2D(coords)
         else:
             return self.mapper.robot_position
