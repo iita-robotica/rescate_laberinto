@@ -2,7 +2,7 @@ import numpy as np
 import cv2 as cv
 
 from data_structures.vectors import Position2D
-from mapping import Mapper
+from mapping.mapping import Mapper
 
 from data_structures.compound_pixel_grid import PointGrid
 from algorithms.np_bool_array.efficient_a_star import aStarAlgorithm

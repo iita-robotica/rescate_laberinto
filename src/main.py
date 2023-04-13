@@ -5,7 +5,7 @@ import copy
 import math
 
 from data_processing.fixture_detection.fixture_detection import FixtureDetector
-import state_machines, robot, mapping
+import state_machines, robot, mapping.mapping as mapping
 from algorithms.expandable_node_grid.bfs import bfs
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
