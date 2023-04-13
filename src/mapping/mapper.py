@@ -4,9 +4,10 @@ import cv2 as cv
 import math
 
 import utilities
-from data_processing.camera_processor import CameraProcessor
-from data_processing.point_cloud_processor import PointCloudProcessor
-from data_processing.data_extractor import PointCloudExtarctor, FloorColorExtractor
+from mapping.camera_processor import CameraProcessor
+from mapping.point_cloud_processor import PointCloudProcessor
+from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
+
 from data_structures import lidar_persistent_grid, expandable_node_grid, compound_pixel_grid
 from data_structures.vectors import Position2D
 from algorithms.expandable_node_grid.bfs import bfs

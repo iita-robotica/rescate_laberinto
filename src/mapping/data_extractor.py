@@ -3,8 +3,6 @@ import cv2 as cv
 import copy
 
 import utilities
-from data_processing import camera_processor
-from data_processing import point_cloud_processor
 
 from flags import SHOW_DEBUG
 
