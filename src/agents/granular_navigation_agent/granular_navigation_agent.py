@@ -4,7 +4,7 @@ import cv2 as cv
 from agents.agent import Agent
 
 from data_structures.vectors import Position2D
-from mapping.mapping import Mapper
+from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.path_finder import PathFinder
 from agents.granular_navigation_agent.best_position_finder import BestPositionFinder

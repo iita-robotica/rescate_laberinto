@@ -1,5 +1,5 @@
 
-from mapping.mapping import Mapper
+from mapping.mapper import Mapper
 from data_structures.vectors import Position2D
 import numpy as np
 import cv2 as cv

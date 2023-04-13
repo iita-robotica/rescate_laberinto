@@ -5,7 +5,7 @@ import copy
 import math
 
 from data_processing.fixture_detection.fixture_detection import FixtureDetector
-import state_machines, robot, mapping.mapping as mapping
+import state_machines, robot, mapping.mapper as mapper
 from algorithms.expandable_node_grid.bfs import bfs
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
@@ -41,7 +41,7 @@ seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
 fixture_detector = FixtureDetector()
 
 # Mapper
-mapper = mapping.Mapper(TILE_SIZE)
+mapper = mapper.Mapper(TILE_SIZE)
 
 # Agents
 navigation_agent = GranularNavigationAgent(mapper)
