@@ -8,7 +8,7 @@ from mapping.camera_processor import CameraProcessor
 from mapping.point_cloud_processor import PointCloudProcessor
 from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
 
-from data_structures import lidar_persistent_grid, compound_pixel_grid
+from data_structures import compound_pixel_grid
 from data_structures.vectors import Position2D
 from algorithms.expandable_node_grid.bfs import bfs
 
@@ -25,9 +25,8 @@ class Mapper:
         self.robot_rotation = None
 
         # Data structures
-        self.lidar_grid = lidar_persistent_grid.LidarGrid(tile_size, 6, 100)
         pixels_per_tile = 10
-        self.granular_grid = compound_pixel_grid.PointGrid(np.array([1, 1]), pixels_per_tile / 0.06, (0.074 / 2) - 0.005)#+ 0.008)
+        self.granular_grid = compound_pixel_grid.Grid(np.array([1, 1]), pixels_per_tile / 0.06, (0.074 / 2) - 0.005)#+ 0.008)
 
         #Data processors
         self.point_cloud_processor = PointCloudProcessor(center_point=350, map_scale=50 / tile_size)
@@ -55,11 +54,6 @@ class Mapper:
             pass
         
         #DEBUG
-        
-
-        if SHOW_POINT_CLOUD:
-            self.lidar_grid.print_grid((600, 600))
-            self.lidar_grid.print_bool((600, 600))
         
         if SHOW_POINT_CLOUD or SHOW_GRANULAR_NAVIGATION_GRID or SHOW_DEBUG:
             cv.waitKey(1) 

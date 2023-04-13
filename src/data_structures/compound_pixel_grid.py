@@ -6,7 +6,7 @@ from data_structures.angle import Angle, Unit
 import math
 from utilities import StepCounter
 
-class PointGrid:
+class Grid:
     def __init__(self, initial_shape, pixel_per_m, robot_radius_m):
         self.array_shape = np.array(initial_shape, dtype=int)
         self.offsets = self.array_shape // 2
