@@ -13,7 +13,7 @@ class Lidar(TimedSensor):
         self.x = 0
         self.y = 0
         self.z = 0
-        self.rotation = Angle(0)
+        self.orientation = Angle(0)
         
         self.horizontal_fov = self.device.getFov()
         self.vertical_fov = self.device.getVerticalFov()
@@ -51,8 +51,8 @@ class Lidar(TimedSensor):
         if self.step_counter.check():
             return self.__out_of_bounds_point_cloud
 
-    def set_rotation(self, angle):
-        self.rotation = angle
+    def set_orientation(self, angle):
+        self.orientation = angle
 
 
     def update(self):
@@ -83,7 +83,7 @@ class Lidar(TimedSensor):
                 continue
 
             vertical_angle = layer_number * self.radian_per_layer_vertically + self.vertical_fov / 2
-            horizontal_angle = self.rotation_offset + ((2 * math.pi) - self.rotation.radians)
+            horizontal_angle = self.rotation_offset + ((2 * math.pi) - self.orientation.radians)
 
             for item in layer_depth_array:
                 # Item is out of bounds

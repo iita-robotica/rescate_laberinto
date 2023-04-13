@@ -4,15 +4,15 @@ class StateManager:
     """
     A simple state machine.
     """
-    def __init__(self, initialState):
-        self.state = initialState
+    def __init__(self, initial_state):
+        self.state = initial_state
 
-    def changeState(self, newState):
+    def change_state(self, new_state):
         """Sets the state the specified value."""
-        self.state = newState
+        self.state = new_state
         return True
 
-    def checkState(self, state):
+    def check_state(self, state):
         """Checks if the state corresponds the specified value."""
         return self.state == state
 
@@ -23,36 +23,36 @@ class SequenceManager:
     a sensor that must run continously. 
     This functions basically as an alternative to multithreading or multiprocessing.
     """
-    def __init__(self, resetFunction=None):
-        self.lineIdentifier = 0
-        self.linePointer = 1
+    def __init__(self, reset_function=None):
+        self.line_identifier = 0
+        self.line_pointer = 1
         self.done = False
-        self.resetFunction = resetFunction
+        self.reset_function = reset_function
 
-    def resetSequence(self):
+    def reset_sequence(self):
         """
         Resets the sequence and makes it start from the first event.
         """
-        if self.resetFunction is not None:
-            self.resetFunction()
-        self.linePointer = 1
+        if self.reset_function is not None:
+            self.reset_function()
+        self.line_pointer = 1
         if SHOW_DEBUG:
             print("----------------")
             print("reseting sequence")
             print("----------------")
 
-    def seqResetSequence(self):
+    def seq_reset_sequence(self):
         if self.check():
-            self.resetSequence()
+            self.reset_sequence()
             
             return True
         return False
 
-    def startSequence(self):
+    def start_sequence(self):
         """
         Starts the sequence. This must be at the start of any sequence of events.
         """
-        self.lineIdentifier = 0
+        self.line_identifier = 0
         self.done = False
 
 
@@ -62,63 +62,63 @@ class SequenceManager:
         Must be included at the end of any sequential function.
         """
         self.done = False
-        self.lineIdentifier += 1
-        return self.lineIdentifier == self.linePointer
+        self.line_identifier += 1
+        return self.line_identifier == self.line_pointer
 
-    def nextSeq(self):
+    def next_seq(self):
         """
         Changes to the next event.
         """
-        self.linePointer += 1
+        self.line_pointer += 1
         self.done = True
 
-    def seqDone(self):
+    def seq_done(self):
         """
         returns if the sequence has reached its end
         """
         return self.done
 
-    def simpleEvent(self, function=None, *args, **kwargs):
+    def simple_event(self, function=None, *args, **kwargs):
         """
         Can be used to make a function sequential or used with an if statement to make a code block sequential.
         """
         if self.check():
             if function is not None:
                 function(*args, **kwargs)
-            self.nextSeq()
+            self.next_seq()
             return True
         return False
 
-    def complexEvent(self, function, *args, **kwargs):
+    def complex_event(self, function, *args, **kwargs):
         """
         Can be used to make a function sequential. The function inputted must return True when it ends
         """
         if self.check():
             if function(*args, **kwargs):
-                self.nextSeq()
+                self.next_seq()
                 return True
         return False
     
-    def makeSimpleEvent(self, function):
+    def make_simple_event(self, function):
         """
         When inpuuted any function it returns a sequential version of it that can be used in a sequence.
         """
         def event(*args, **kwargs):
             if self.check():
                 function(*args, **kwargs)
-                self.nextSeq()
+                self.next_seq()
                 return True
             return False
         return event
 
-    def makeComplexEvent(self, function):
+    def make_complex_event(self, function):
         """
         When inputted a function that returns True when it ends returns a sequential version of it that can be used in a sequence.
         """
         def event(*args, **kwargs):
             if self.check():
                 if function(*args, **kwargs):
-                    self.nextSeq()
+                    self.next_seq()
                     return True
             return False
         return event

@@ -1,4 +1,4 @@
-from controller import Robot
+from controller import Robot as WebotsRobot
 
 import utilities
 
@@ -24,7 +24,7 @@ from flags import SHOW_DEBUG
 
 # Abstraction layer for robot
 # In charge of low level movement
-class RobotLayer:
+class Robot:
     def __init__(self, time_step):
         
         # The timestep
@@ -34,13 +34,13 @@ class RobotLayer:
         self.diameter = 0.074
 
         # Robot object provided by webots
-        self.robot = Robot()
+        self.robot = WebotsRobot()
 
         #Location data
-        self.prev_rotation = Angle(0, Unit.DEGREES)
-        self.rotation = Angle(0, Unit.DEGREES)
-        self.position = Position2D(0, 0)
+        self.prev_orientation = Angle(0, Unit.DEGREES)
+        self.orientation = Angle(0, Unit.DEGREES)
         self.prev_global_position = Position2D(0, 0)
+        self.position = Position2D(0, 0)
         self.position_offsets = Position2D(0, 0)
 
         self.time = 0
@@ -50,8 +50,8 @@ class RobotLayer:
         self.delay_start = self.robot.getTime()
 
         # Position and rotation sensors
-        self.auto_decide_rotation = True
-        self.rotation_sensor = "gyro"
+        self.auto_decide_orientation_sensor = True
+        self.orientation_sensor = "gyro"
 
         self.gyroscope = Gyroscope(self.robot.getDevice("gyro"), 1, self.time_step)
         self.gps = Gps(self.robot.getDevice("gps"), self.time_step)
@@ -158,39 +158,39 @@ class RobotLayer:
         
         # Get global position
         self.prev_global_position = self.position
-        self.position = self.gps.getPosition()
+        self.position = self.gps.get_position()
         self.position += self.position_offsets
 
         # Decides wich sensor to use for roatation detection
         # if the robot is going srtaight i tuses the gps
-        if self.auto_decide_rotation:
-            if self.gyroscope.getDiff() < 0.00001 and self.drive_base.get_wheel_direction() >= 0:
-                self.rotation_sensor = "gps"
+        if self.auto_decide_orientation_sensor:
+            if self.gyroscope.get_angular_velocity() < 0.00001 and self.drive_base.get_wheel_direction() >= 0:
+                self.orientation_sensor = "gps"
             # if it isn't going straight it uses the gyro
             else:
-                self.rotation_sensor = "gyro"
+                self.orientation_sensor = "gyro"
 
         # Remembers the corrent rotation for the next timestep
-        self.prev_rotation = self.rotation.degrees
+        self.prev_orientation = self.orientation.degrees
 
         # Gets global rotation
-        if self.rotation_sensor == "gyro":
-            self.rotation = self.gyroscope.get_angle()
+        if self.orientation_sensor == "gyro":
+            self.orientation = self.gyroscope.get_orientation()
             if SHOW_DEBUG:
                 print("USING GYRO")
         else:
             if SHOW_DEBUG:
                 print("USING GPS")
-            val = self.gps.getRotation()
+            val = self.gps.get_orientation()
             if val is not None:
-                self.rotation = val
-            self.gyroscope.set_angle(self.rotation)
+                self.orientation = val
+            self.gyroscope.set_orientation(self.orientation)
 
-        self.drive_base.orientation = self.rotation
+        self.drive_base.orientation = self.orientation
         self.drive_base.position = Position2D(self.position[0], self.position[1])
 
         # Lidar and camera update
-        self.lidar.set_rotation(self.rotation)
+        self.lidar.set_orientation(self.orientation)
         self.lidar.update()
 
         self.right_camera.update()

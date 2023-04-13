@@ -1,34 +1,37 @@
-import utilities
 from data_structures.angle import Angle
+from devices.sensor import Sensor
 
-# Tracks global rotation
-class Gyroscope:
-    def __init__(self, gyro, index, timeStep):
-        self.sensor = gyro
-        self.sensor.enable(timeStep)
-        self.oldTime = 0.0
+
+class Gyroscope(Sensor):
+    """
+    Tracks global rotation.
+    """
+    def __init__(self, webots_device, index, time_step):
+        super().__init__(webots_device, time_step)
+        self.old_time = 0.0
         self.index = index
-        self.rotation = Angle(0)
-        self.lastRads = Angle(0)
+        self.orientation = Angle(0)
+        self.angular_velocity = Angle(0)
 
-    # Do on every timestep
     def update(self, time):
-        timeElapsed = time - self.oldTime  # Time passed in time step
-        radsInTimestep = Angle((self.sensor.getValues())[self.index] * timeElapsed)
-        self.lastRads = radsInTimestep
-        self.rotation += radsInTimestep
-        self.rotation.normalize()
-        self.oldTime = time
+        """
+        Do on every timestep.
+        """
+        time_elapsed = self.time_step / 1000
+        sensor_y_value = self.device.getValues()[self.index]
+        self.angular_velocity = Angle(sensor_y_value * time_elapsed)
+        self.orientation += self.angular_velocity
+        self.orientation.normalize()
+        self.old_time = time
 
-    # Gets the actual angular Velocity
-    def getDiff(self):
-        if self.lastRads < 0:
-            return self.lastRads * -1
-        
-        return self.lastRads
+    def get_angular_velocity(self):
+        """
+        Gets the current angular velocity without direction data.
+        """
+        return abs(self.angular_velocity)
 
-    def get_angle(self):
-        return self.rotation
+    def get_orientation(self):
+        return self.orientation
     
-    def set_angle(self, angle):
-        self.rotation = angle
+    def set_orientation(self, angle):
+        self.orientation = angle

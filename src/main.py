@@ -20,16 +20,16 @@ TIME_IN_ROUND = 8 * 60
 
 # Components
 #Robot
-robot = robot.RobotLayer(TIME_STEP)
+robot = robot.Robot(TIME_STEP)
 
 # Stores, changes and compare states
-stateManager = state_machines.StateManager("init")
+state_machine = state_machines.StateManager("init")
 
 # Sequence manager
 # Resets flags that need to be in a certain value when changing sequence, for example when changing state
-def resetSequenceFlags():
+def reset_sequence_flags():
     robot.delay_first_time = True
-seq = state_machines.SequenceManager(resetFunction=resetSequenceFlags)
+seq = state_machines.SequenceManager(reset_function=reset_sequence_flags)
 
 
 # Fixture detection
@@ -48,15 +48,18 @@ do_victim_reporting = False
 
 # Functions
 # Sequential functions used frequently
-seqPrint = seq.makeSimpleEvent(print)
-seqDelaySec = seq.makeComplexEvent(robot.delay_sec)
-seqMoveWheels = seq.makeSimpleEvent(robot.move_wheels)
-seqRotateToDegs = seq.makeComplexEvent(robot.rotate_to_angle)
-seqMoveToCoords = seq.makeComplexEvent(robot.move_to_coords)
-seqResetSequenceFlags = seq.makeSimpleEvent(resetSequenceFlags)
+seq_print = seq.make_simple_event(print)
+seq_delay_seconds = seq.make_complex_event(robot.delay_sec)
+seq_move_wheels = seq.make_simple_event(robot.move_wheels)
+seq_rotate_to_angle = seq.make_complex_event(robot.rotate_to_angle)
+seq_move_to_coords = seq.make_complex_event(robot.move_to_coords)
+seq_reset_sequence_flags = seq.make_simple_event(reset_sequence_flags)
 
-# Calculates offsets in the robot position, in case it doesn't start perfectly centerd
-def calibratePositionOffsets():
+
+def calibrate_position_offsets():
+    """
+    Calculates offsets in the robot position, in case it doesn't start perfectly centerd
+    """
     actualTile = [robot.position[0] // TILE_SIZE, robot.position[1] // TILE_SIZE]
     robot.position_offsets = [
         round((actualTile[0] * TILE_SIZE) - robot.position[0]) + TILE_SIZE // 2,
@@ -64,23 +67,23 @@ def calibratePositionOffsets():
     robot.position_offsets = Position2D(robot.position_offsets[0] % TILE_SIZE, robot.position_offsets[1] % TILE_SIZE)
     print("positionOffsets: ", robot.position_offsets)
 
-def seqCalibrateRobotRotation():
+def seq_calibrate_robot_rotation():
     # Calibrates the robot rotation using the gps
-    if seq.simpleEvent():
-        robot.auto_decide_rotation = False
-    seqMoveWheels(-1, -1)
-    seqDelaySec(0.1)
-    if seq.simpleEvent(): robot.rotation_sensor = "gps"
-    seqMoveWheels(1, 1)
-    seqDelaySec(0.1)
-    if seq.simpleEvent(): robot.rotation_sensor= "gyro"
-    seqDelaySec(0.1)
-    seqMoveWheels(0, 0)
-    seqMoveWheels(-1, -1)
-    seqDelaySec(0.1)
-    seqMoveWheels(0, 0)
-    if seq.simpleEvent():
-        robot.auto_decide_rotation = True
+    if seq.simple_event():
+        robot.auto_decide_orientation_sensor = False
+    seq_move_wheels(-1, -1)
+    seq_delay_seconds(0.1)
+    if seq.simple_event(): robot.orientation_sensor = "gps"
+    seq_move_wheels(1, 1)
+    seq_delay_seconds(0.1)
+    if seq.simple_event(): robot.orientation_sensor= "gyro"
+    seq_delay_seconds(0.1)
+    seq_move_wheels(0, 0)
+    seq_move_wheels(-1, -1)
+    seq_delay_seconds(0.1)
+    seq_move_wheels(0, 0)
+    if seq.simple_event():
+        robot.auto_decide_orientation_sensor = True
 
 # Each timeStep
 while robot.do_loop():
@@ -94,7 +97,7 @@ while robot.do_loop():
                       robot.get_out_of_bounds_point_cloud(), 
                       robot.get_camera_images(), 
                       robot.position, 
-                      robot.rotation)
+                      robot.orientation)
 
         # Victim detection
         images = robot.get_camera_images()
@@ -108,28 +111,28 @@ while robot.do_loop():
                 if len(victims) > 0:
                     letter = fixture_detector.classify_fixture(victims[0])
                     if letter is not None:
-                        mapper.load_fixture_to_tile(letter, angle, robot.rotation.degrees)
+                        mapper.load_fixture_to_tile(letter, angle, robot.orientation.degrees)
                         
                     break
     
     else:
         # Only position and rotation
         mapper.update(robot_position=robot.position, 
-                      robot_rotation=robot.rotation)
+                      robot_rotation=robot.orientation)
     
     #fixture_detector.tune_filter(robot.get_camera_images()[1])
 
     # Updates state machine
-    if not stateManager.checkState("init"):
+    if not state_machine.check_state("init"):
         if SHOW_DEBUG:
             print("stuck_counter: ", robot.stuck_counter)
         if robot.is_stuck():
             if SHOW_DEBUG:
                 print("FRONT BLOCKED")
-            mapper.block_front_vortex(robot.rotation.degrees)
-            if not stateManager.checkState("stuck"):
-                seq.resetSequence()
-                stateManager.changeState("stuck")
+            mapper.block_front_vortex(robot.orientation.degrees)
+            if not state_machine.check_state("stuck"):
+                seq.reset_sequence()
+                state_machine.change_state("stuck")
     
         """
         if mapper.get_fixture_from_tile().exists and not mapper.get_fixture_from_tile().reported and do_victim_reporting:
@@ -138,97 +141,97 @@ while robot.do_loop():
                 stateManager.changeState("report_victim")
         """
 
-        if robot.comunicator.remainingTime < 30:
-            if not stateManager.checkState("go_back") and not stateManager.checkState("end"):
-                seq.resetSequence()
-                stateManager.changeState("go_back")
+        if robot.comunicator.remaining_time < 30:
+            if not state_machine.check_state("go_back") and not state_machine.check_state("end"):
+                seq.reset_sequence()
+                state_machine.change_state("go_back")
 
     if SHOW_DEBUG:
-        print("state: ", stateManager.state)
+        print("state: ", state_machine.state)
 
     # Runs once when starting the game
-    if stateManager.checkState("init"):
-        seq.startSequence()
-        seqDelaySec(0.5)
+    if state_machine.check_state("init"):
+        seq.start_sequence()
+        seq_delay_seconds(0.5)
         # Calculates offsets in the robot position, in case it doesn't start perfectly centerd
-        seq.simpleEvent(calibratePositionOffsets)
+        seq.simple_event(calibrate_position_offsets)
         # Informs the mapping components of the starting position of the robot
-        seq.simpleEvent(mapper.register_start, robot.position)
+        seq.simple_event(mapper.register_start, robot.position)
         # Calibrates the rotation of the robot using the gps
-        seqCalibrateRobotRotation()
+        seq_calibrate_robot_rotation()
         # Starts mapping walls
-        if seq.simpleEvent():
+        if seq.simple_event():
             do_mapping = True
             do_victim_reporting = True
-        if seq.simpleEvent():
+        if seq.simple_event():
             #do_mapping = False
             #do_victim_reporting = False
             pass
         # Changes state and resets the sequence
-        seq.simpleEvent(stateManager.changeState, "explore")
-        seq.seqResetSequence()
+        seq.simple_event(state_machine.change_state, "explore")
+        seq.seq_reset_sequence()
 
-    elif stateManager.checkState("stop"):
-        seq.startSequence()
-        seqMoveWheels(0, 0)
+    elif state_machine.check_state("stop"):
+        seq.start_sequence()
+        seq_move_wheels(0, 0)
 
     # Explores and maps the maze
-    elif stateManager.checkState("explore"):
-        seq.startSequence()
+    elif state_machine.check_state("explore"):
+        seq.start_sequence()
 
         navigation_agent.update()
 
-        if seqMoveToCoords(navigation_agent.get_target_position()):
+        if seq_move_to_coords(navigation_agent.get_target_position()):
             mapper.set_robot_node(robot.position)
 
-        seq.seqResetSequence()
+        seq.seq_reset_sequence()
 
         if SHOW_DEBUG:
-            print("rotation:", robot.rotation.degrees)
+            print("rotation:", robot.orientation.degrees)
             print("position:", robot.position)
 
     # Reports a victim
-    elif stateManager.checkState("report_victim"):
-        seq.startSequence()
-        seqMoveWheels(0, 0)
-        if seq.simpleEvent() and SHOW_DEBUG:
+    elif state_machine.check_state("report_victim"):
+        seq.start_sequence()
+        seq_move_wheels(0, 0)
+        if seq.simple_event() and SHOW_DEBUG:
             print("STOPPED")
-        seqDelaySec(3)
-        if seq.simpleEvent():
+        seq_delay_seconds(3)
+        if seq.simple_event():
             #robot.comunicator.sendVictim(robot.position, fixture.type)
             #fixture.reported = True
             pass
-        seq.simpleEvent(stateManager.changeState, "explore")
-        seq.seqResetSequence()
+        seq.simple_event(state_machine.change_state, "explore")
+        seq.seq_reset_sequence()
     
-    elif stateManager.checkState("teleported"):
-        seq.startSequence()
+    elif state_machine.check_state("teleported"):
+        seq.start_sequence()
         # parar mapping
         do_mapping = False
-        seqCalibrateRobotRotation()
+        seq_calibrate_robot_rotation()
         # Changes state and resets the sequence
-        seq.simpleEvent(stateManager.changeState, "explore")
-        seq.seqResetSequence()
+        seq.simple_event(state_machine.change_state, "explore")
+        seq.seq_reset_sequence()
     
-    elif stateManager.checkState("end"):
-        robot.comunicator.sendMap(mapper.get_grid_for_bonus())
-        robot.comunicator.sendEndOfPlay()
+    elif state_machine.check_state("end"):
+        robot.comunicator.send_map(mapper.get_grid_for_bonus())
+        robot.comunicator.send_end_of_play()
     
-    elif stateManager.checkState("stuck"):
+    elif state_machine.check_state("stuck"):
         if SHOW_DEBUG:
             print("IS IN STUCK")
-        seq.startSequence()
-        if seq.simpleEvent():
-            robot.auto_decide_rotation = False
-            robot.rotation_sensor = "gyro"
-        seqMoveWheels(-0.5, -0.5)
-        seqDelaySec(0.2)
-        seqMoveWheels(0, 0)
-        if seq.simpleEvent():
-            mapper.block_front_vortex(robot.rotation.degrees)
-            robot.auto_decide_rotation = True
-        seq.simpleEvent(stateManager.changeState, "explore")
-        seq.seqResetSequence()
+        seq.start_sequence()
+        if seq.simple_event():
+            robot.auto_decide_orientation_sensor = False
+            robot.orientation_sensor = "gyro"
+        seq_move_wheels(-0.5, -0.5)
+        seq_delay_seconds(0.2)
+        seq_move_wheels(0, 0)
+        if seq.simple_event():
+            mapper.block_front_vortex(robot.orientation.degrees)
+            robot.auto_decide_orientation_sensor = True
+        seq.simple_event(state_machine.change_state, "explore")
+        seq.seq_reset_sequence()
     
     """
     elif stateManager.checkState("go_back"):
@@ -254,7 +257,7 @@ while robot.do_loop():
                 print("position:", robot.position)
     """
     if SHOW_DEBUG:
-        print("robot time:", robot.comunicator.remainingTime)
+        print("robot time:", robot.comunicator.remaining_time)
     robot.comunicator.update()
         
 

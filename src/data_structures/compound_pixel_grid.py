@@ -340,7 +340,7 @@ class Grid:
         
         final_matrix = triangle_matrix * circle_matrix
 
-        cv.imshow("cone template", final_matrix * 100)
+        #cv.imshow("cone template", final_matrix * 100)
 
         return final_matrix
     
