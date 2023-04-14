@@ -132,7 +132,10 @@ class Position2D:
             raise IndexError("Vector index out of range")
         
     def astype(self, dtype: type):
-        return Position2D(dtype(self.x), dtype(self.y))
+        return self.apply_to_all(dtype)
+    
+    def apply_to_all(self, function):
+        return Position2D(function(self.x), function(self.y))
     
     def get_distance_to(self, other):
         return abs(self - other)
