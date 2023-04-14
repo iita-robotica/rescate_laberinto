@@ -15,17 +15,20 @@ from flags import SHOW_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID
 
 
 class Mapper:
-    def __init__(self, tile_size):
+    def __init__(self, tile_size, robot_diameter):
         self.ADJACENTS_NO_DIAGONALS =  (Position2D(1, 1), Position2D(1, -1), Position2D(-1, 1), Position2D(-1, -1))
 
         self.tile_size = tile_size
+        self.robot_diameter = robot_diameter
 
         self.robot_position = None
-        self.robot_rotation = None
+        self.robot_orientation = None
 
         # Data structures
         pixels_per_tile = 10
-        self.pixel_grid = compound_pixel_grid.Grid(np.array([1, 1]), pixels_per_tile / 0.06, (0.074 / 2) - 0.005)#+ 0.008)
+        self.pixel_grid = compound_pixel_grid.Grid(initial_shape=np.array([1, 1]), 
+                                                   pixel_per_m=pixels_per_tile / 0.06, 
+                                                   robot_radius_m=(self.robot_diameter / 2) - 0.005)#+ 0.008)
 
         #Data processors
         self.point_cloud_processor = PointCloudProcessor(center_point=350, map_scale=50 / tile_size)
@@ -39,15 +42,15 @@ class Mapper:
                out_of_bounds_point_cloud: list = None, 
                camera_images: list = None, 
                robot_position: Position2D = None, 
-               robot_rotation: Angle = None):
+               robot_orientation: Angle = None):
         
-        if robot_position is None or robot_rotation is None:
+        if robot_position is None or robot_orientation is None:
             return
         
         self.robot_position = robot_position
-        self.robot_rotation = robot_rotation
+        self.robot_orientation = robot_orientation
 
-        self.pixel_grid.load_robot(np.array(self.robot_position), self.robot_rotation)
+        self.pixel_grid.load_robot(np.array(self.robot_position), self.robot_orientation)
         
         # Load walls and obstacles (Lidar detections)
         if in_bounds_point_cloud is not None:

@@ -23,7 +23,6 @@ time_step = 32
 TILE_SIZE = 0.06
 TIME_IN_ROUND = 8 * 60
 
-
 # Components
 #Robot
 robot = Robot(time_step)
@@ -44,7 +43,7 @@ stuck_detector = StuckDetector()
 fixture_detector = FixtureDetector()
 
 # Mapper
-mapper = Mapper(TILE_SIZE)
+mapper = Mapper(TILE_SIZE, robot.diameter)
 
 # Agents
 navigation_agent = GranularNavigationAgent(mapper)
@@ -68,11 +67,11 @@ def calibrate_position_offsets():
     """
     Calculates offsets in the robot position, in case it doesn't start perfectly centerd
     """
-    actualTile = [robot.position[0] // TILE_SIZE, robot.position[1] // TILE_SIZE]
-    robot.position_offsets = [
-        round((actualTile[0] * TILE_SIZE) - robot.position[0]) + TILE_SIZE // 2,
-        round((actualTile[1] * TILE_SIZE) - robot.position[1]) + TILE_SIZE // 2]
-    robot.position_offsets = Position2D(robot.position_offsets[0] % TILE_SIZE, robot.position_offsets[1] % TILE_SIZE)
+    actualTile = robot.position // TILE_SIZE
+
+    robot.position_offsets = (actualTile * TILE_SIZE - robot.position).apply_to_all(round) + TILE_SIZE // 2
+
+    robot.position_offsets = robot.position_offsets % TILE_SIZE
     print("positionOffsets: ", robot.position_offsets)
 
 def seq_calibrate_robot_rotation():
@@ -132,7 +131,7 @@ while robot.do_loop():
     else:
         # Only position and rotation
         mapper.update(robot_position=robot.position, 
-                      robot_rotation=robot.orientation)
+                      robot_orientation=robot.orientation)
     
     #fixture_detector.tune_filter(robot.get_camera_images()[1])
 
@@ -143,7 +142,7 @@ while robot.do_loop():
         if stuck_detector.is_stuck():
             if SHOW_DEBUG:
                 print("FRONT BLOCKED")
-            mapper.block_front_vortex(robot.orientation.degrees)
+            mapper.block_front_vortex(robot.orientation)
             if not state_machine.check_state("stuck"):
                 seq.reset_sequence()
                 state_machine.change_state("stuck")
@@ -201,7 +200,7 @@ while robot.do_loop():
         seq.seq_reset_sequence()
 
         if SHOW_DEBUG:
-            print("rotation:", robot.orientation.degrees)
+            print("rotation:", robot.orientation)
             print("position:", robot.position)
 
     # Reports a victim
@@ -242,7 +241,7 @@ while robot.do_loop():
         seq_delay_seconds(0.2)
         seq_move_wheels(0, 0)
         if seq.simple_event():
-            mapper.block_front_vortex(robot.orientation.degrees)
+            mapper.block_front_vortex(robot.orientation)
             robot.auto_decide_orientation_sensor = True
         seq.simple_event(state_machine.change_state, "explore")
         seq.seq_reset_sequence()
