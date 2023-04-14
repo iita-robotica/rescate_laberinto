@@ -28,7 +28,6 @@ class Robot:
 
         self.diameter = 0.074 # Robot diameter in meters
         
-
         self.robot = WebotsRobot() # Robot object provided by webots
 
         self.gps = Gps(self.robot.getDevice("gps"), self.time_step)
@@ -132,6 +131,14 @@ class Robot:
     @property
     def previous_position(self):
         return self.pose_manager.previous_position
+    
+    @property
+    def position_offsets(self):
+        return self.pose_manager.position_offsets
+    
+    @position_offsets.setter
+    def position_offsets(self, value):
+        self.pose_manager.position_offsets = value
     
     @property
     def orientation(self):
