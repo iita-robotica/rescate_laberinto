@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from data_structures.angle import Angle, Unit
+from data_structures.angle import Angle
 
 class Position2D:
     def __init__(self, *args, **kwargs):
@@ -139,7 +139,7 @@ class Position2D:
     
     def get_angle_to(self, other):
         delta = self - other 
-        result = Angle(math.atan2(delta.x, delta.y)) + Angle(180, Unit.DEGREES)
+        result = Angle(math.atan2(delta.x, delta.y)) + Angle(180, Angle.DEGREES)
         result.normalize()
         return result
        

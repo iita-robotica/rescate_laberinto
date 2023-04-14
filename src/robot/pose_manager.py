@@ -1,6 +1,6 @@
 from robot.devices.gps import Gps
 from robot.devices.gyroscope import Gyroscope
-from data_structures.angle import Angle, Unit
+from data_structures.angle import Angle
 from data_structures.vectors import Position2D
 
 from flags import SHOW_DEBUG

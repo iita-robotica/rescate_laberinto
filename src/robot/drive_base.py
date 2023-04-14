@@ -1,6 +1,6 @@
 from utilities import mapVals
 from enum import Enum
-from data_structures.angle import Angle, Unit
+from data_structures.angle import Angle
 from data_structures.vectors import Position2D, Vector2D
 import math
 from flags import SHOW_DEBUG
@@ -78,9 +78,9 @@ class RotationManager:
         self.max_velocity = 1
         self.min_velocity = 0.2
 
-        self.velocity_reduction_threshold = Angle(10, Unit.DEGREES)
+        self.velocity_reduction_threshold = Angle(10, Angle.DEGREES)
 
-        self.accuracy = Angle(2, Unit.DEGREES)
+        self.accuracy = Angle(2, Angle.DEGREES)
 
     def rotate_to_angle(self, target_angle, criteria=Criteria.CLOSEST):
         if self.first_time:
@@ -215,9 +215,9 @@ class SmoothMovementToCoordinatesManager:
 
         self.finished_moving = False
 
-        self.angle_error_margin = Angle(2, Unit.DEGREES)
+        self.angle_error_margin = Angle(2, Angle.DEGREES)
 
-        self.strong_rotation_start = Angle(45, Unit.DEGREES)
+        self.strong_rotation_start = Angle(45, Angle.DEGREES)
 
     def move_to_position(self, target_position:Position2D):
         dist = abs(self.current_position.get_distance_to(target_position))

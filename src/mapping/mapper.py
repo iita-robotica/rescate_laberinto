@@ -2,7 +2,7 @@ import numpy as np
 import cv2 as cv
 
 from data_structures.vectors import Position2D
-from data_structures.angle import Angle, Unit
+from data_structures.angle import Angle
 
 from data_structures import compound_pixel_grid
 

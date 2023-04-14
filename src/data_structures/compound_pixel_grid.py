@@ -2,7 +2,7 @@ import numpy as np
 import cv2 as cv
 import copy
 from data_structures.vectors import Position2D, Vector2D
-from data_structures.angle import Angle, Unit
+from data_structures.angle import Angle
 import math
 from flow_control.step_counter import StepCounter
 
@@ -38,13 +38,13 @@ class Grid:
         print("ROBOT RADIUS:", self.robot_radius)
         self.robot_diameter = int(self.robot_radius * 2 + 1)
 
-        self.camera_pov_amplitude = Angle(30, Unit.DEGREES) # Horizontal amplitued of the fostrum of each camera
+        self.camera_pov_amplitude = Angle(30, Angle.DEGREES) # Horizontal amplitued of the fostrum of each camera
         self.camera_pov_lenght = int(0.12 * 2 * self.resolution) # Range of each camera
-        self.camera_orientations = (Angle(0, Unit.DEGREES), Angle(270, Unit.DEGREES), Angle(90, Unit.DEGREES)) # Orientation of the cameras
+        self.camera_orientations = (Angle(0, Angle.DEGREES), Angle(270, Angle.DEGREES), Angle(90, Angle.DEGREES)) # Orientation of the cameras
         
-        self.discovery_pov_amplitude =  Angle(170, Unit.DEGREES)
+        self.discovery_pov_amplitude =  Angle(170, Angle.DEGREES)
         self.discovery_pov_lenght = self.camera_pov_lenght
-        self.discovery_pov_orientation = Angle(0, Unit.DEGREES)
+        self.discovery_pov_orientation = Angle(0, Angle.DEGREES)
 
         # Circle with the radius of the robot
         self.robot_diameter_template = np.zeros((self.robot_diameter, self.robot_diameter), dtype=np.uint8)

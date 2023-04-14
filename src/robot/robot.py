@@ -2,7 +2,7 @@ from controller import Robot as WebotsRobot
 
 from flow_control.step_counter import StepCounter
 
-from data_structures.angle import Angle, Unit
+from data_structures.angle import Angle
 from data_structures.vectors import Position2D, Vector2D
 
 # Devices
@@ -101,7 +101,7 @@ class Robot:
         self.drive_base.move_wheels(left_ratio, right_ratio)
 
     def rotate_to_angle(self, angle, direction=Criteria.CLOSEST):
-        return self.drive_base.rotate_to_angle(Angle(angle, Unit.DEGREES), direction)
+        return self.drive_base.rotate_to_angle(Angle(angle, Angle.DEGREES), direction)
 
     def move_to_coords(self, targetPos):
         return self.drive_base.move_to_position(Position2D(targetPos[0], targetPos[1]))

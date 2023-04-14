@@ -1,14 +1,11 @@
-from enum import Enum
 import math
 from copy import copy
 
-class Unit(Enum):
+class Angle:
     RADIANS = 0
     DEGREES = 1
-
-class Angle:
-    def __init__(self, value, unit=Unit.RADIANS):
-        if unit == Unit.RADIANS:
+    def __init__(self, value, unit=RADIANS):
+        if unit == self.RADIANS:
             self.__radians = float(value)
         else:
             self.degrees = value
