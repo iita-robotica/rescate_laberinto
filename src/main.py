@@ -1,26 +1,32 @@
 import numpy as np
 import cv2 as cv
 
-from fixture_detection.fixture_detection import FixtureDetector
+from data_structures.vectors import Position2D
+
 from flow_control import state_machines
-import robot
+from flow_control.delay import DelayManager
+
+from executor.stuck_detector import StuckDetector
+
+from robot.robot import Robot
+
 from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
 
-from data_structures.vectors import Position2D
+from fixture_detection.fixture_detection import FixtureDetector
 
 from flags import SHOW_DEBUG
 
 # World constants
-TIME_STEP = 32
+time_step = 32
 TILE_SIZE = 0.06
 TIME_IN_ROUND = 8 * 60
 
 
 # Components
 #Robot
-robot = robot.Robot(TIME_STEP)
+robot = Robot(time_step)
 
 # Stores, changes and compare states
 state_machine = state_machines.StateManager("init")
@@ -31,6 +37,8 @@ def reset_sequence_flags():
     robot.delay_first_time = True
 seq = state_machines.SequenceManager(reset_function=reset_sequence_flags)
 
+delay_manager = DelayManager()
+stuck_detector = StuckDetector()
 
 # Fixture detection
 fixture_detector = FixtureDetector()
@@ -49,7 +57,7 @@ do_victim_reporting = False
 # Functions
 # Sequential functions used frequently
 seq_print = seq.make_simple_event(print)
-seq_delay_seconds = seq.make_complex_event(robot.delay_sec)
+seq_delay_seconds = seq.make_complex_event(delay_manager.delay_seconds)
 seq_move_wheels = seq.make_simple_event(robot.move_wheels)
 seq_rotate_to_angle = seq.make_complex_event(robot.rotate_to_angle)
 seq_move_to_coords = seq.make_complex_event(robot.move_to_coords)
@@ -68,15 +76,17 @@ def calibrate_position_offsets():
     print("positionOffsets: ", robot.position_offsets)
 
 def seq_calibrate_robot_rotation():
-    # Calibrates the robot rotation using the gps
+    """
+    Calibrates the robot rotation using the gps
+    """
     if seq.simple_event():
         robot.auto_decide_orientation_sensor = False
     seq_move_wheels(-1, -1)
     seq_delay_seconds(0.1)
-    if seq.simple_event(): robot.orientation_sensor = "gps"
+    if seq.simple_event(): robot.orientation_sensor = robot.GPS
     seq_move_wheels(1, 1)
     seq_delay_seconds(0.1)
-    if seq.simple_event(): robot.orientation_sensor= "gyro"
+    if seq.simple_event(): robot.orientation_sensor = robot.GYROSCOPE
     seq_delay_seconds(0.1)
     seq_move_wheels(0, 0)
     seq_move_wheels(-1, -1)
@@ -90,6 +100,10 @@ while robot.do_loop():
     # Updates robot position and rotation, sensor positions, etc.
     robot.update()
 
+    delay_manager.update(robot.time)
+    stuck_detector.update(robot.position,
+                          robot.previous_position,
+                          robot.drive_base.get_wheel_direction())
     
     if do_mapping:
         # Floor and lidar mapping
@@ -125,8 +139,8 @@ while robot.do_loop():
     # Updates state machine
     if not state_machine.check_state("init"):
         if SHOW_DEBUG:
-            print("stuck_counter: ", robot.stuck_counter)
-        if robot.is_stuck():
+            print("stuck_counter: ", stuck_detector.stuck_counter)
+        if stuck_detector.is_stuck():
             if SHOW_DEBUG:
                 print("FRONT BLOCKED")
             mapper.block_front_vortex(robot.orientation.degrees)
@@ -223,7 +237,7 @@ while robot.do_loop():
         seq.start_sequence()
         if seq.simple_event():
             robot.auto_decide_orientation_sensor = False
-            robot.orientation_sensor = "gyro"
+            robot.orientation_sensor = robot.GYROSCOPE
         seq_move_wheels(-0.5, -0.5)
         seq_delay_seconds(0.2)
         seq_move_wheels(0, 0)

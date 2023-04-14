@@ -1,5 +1,5 @@
 import numpy as np
-from devices.sensor import TimedSensor
+from robot.devices.sensor import TimedSensor
 
 # Captures images and processes them
 class Camera(TimedSensor):

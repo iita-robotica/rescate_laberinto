@@ -1,7 +1,7 @@
 import utilities
 import struct
 
-from devices.sensor import Sensor
+from robot.devices.sensor import Sensor
 
 class Comunicator(Sensor):
     def __init__(self, emmiter, receiver, timeStep):

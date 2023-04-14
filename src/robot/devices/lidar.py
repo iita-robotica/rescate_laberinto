@@ -3,7 +3,7 @@ import math
 import utilities
 from utilities import divide_into_chunks
 
-from devices.sensor import TimedSensor
+from robot.devices.sensor import TimedSensor
 from data_structures.angle import Angle
 
 # Returns a point cloud of the detctions it makes

@@ -1,5 +1,5 @@
 from data_structures.angle import Angle
-from devices.sensor import Sensor
+from robot.devices.sensor import Sensor
 
 
 class Gyroscope(Sensor):
@@ -8,12 +8,11 @@ class Gyroscope(Sensor):
     """
     def __init__(self, webots_device, index, time_step):
         super().__init__(webots_device, time_step)
-        self.old_time = 0.0
         self.index = index
         self.orientation = Angle(0)
         self.angular_velocity = Angle(0)
 
-    def update(self, time):
+    def update(self):
         """
         Do on every timestep.
         """
@@ -22,7 +21,6 @@ class Gyroscope(Sensor):
         self.angular_velocity = Angle(sensor_y_value * time_elapsed)
         self.orientation += self.angular_velocity
         self.orientation.normalize()
-        self.old_time = time
 
     def get_angular_velocity(self):
         """

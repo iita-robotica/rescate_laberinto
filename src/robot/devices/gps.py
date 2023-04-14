@@ -1,6 +1,6 @@
 from data_structures.vectors import Position2D
 
-from devices.sensor import Sensor
+from robot.devices.sensor import Sensor
 
 class Gps(Sensor):
     """
