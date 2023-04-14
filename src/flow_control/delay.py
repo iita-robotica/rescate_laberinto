@@ -22,3 +22,6 @@ class DelayManager:
                     self.delay_first_time = True
                     return True
             return False
+    
+    def reset_delay(self):
+         self.delay_first_time = True
