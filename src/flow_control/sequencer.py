@@ -1,22 +1,8 @@
 from flags import SHOW_DEBUG
 
-class StateManager:
-    """
-    A simple state machine.
-    """
-    def __init__(self, initial_state):
-        self.state = initial_state
 
-    def change_state(self, new_state):
-        """Sets the state the specified value."""
-        self.state = new_state
-        return True
 
-    def check_state(self, state):
-        """Checks if the state corresponds the specified value."""
-        return self.state == state
-
-class SequenceManager:
+class Sequencer:
     """
     Makes it possible to run arbitrary code sequentially without interrupting other code that must run continuoulsy.
     For example, one can make the robot execute a series of pre-programmed functions with delays and so on, without interrupting

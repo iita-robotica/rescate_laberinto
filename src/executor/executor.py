@@ -1,4 +1,5 @@
-from flow_control import state_machines
+from flow_control.sequencer import Sequencer
+from flow_control.state_machine import StateMachine
 from flow_control.delay import DelayManager
 
 from executor.stuck_detector import StuckDetector
@@ -15,15 +16,18 @@ from flags import SHOW_DEBUG
 
 class Executor:
     def __init__(self, agent: Agent, mapper: Mapper, robot: Robot) -> None:
-        self.agent = agent
-        self.mapper = mapper
-        self.robot = robot
+        self.agent = agent # Tells the executor what to do
+        self.mapper = mapper # Maps everything
+        self.robot = robot # Low level movement and sensing
 
         self.delay_manager = DelayManager()
-        self.stuck_detector = StuckDetector()
+        self.stuck_detector = StuckDetector() # Detects if the wheels of the robot are moving or not
 
-        self.state_machine = state_machines.StateManager("init")
-        self.sequencer = state_machines.SequenceManager(reset_function=self.delay_manager.reset_delay)
+        self.state_machine = StateMachine("init") # Manages states
+        self.state_machine.create_state("init", self.state_init, {"explore",}) # This state initializes and calibrates the robot
+        self.state_machine.create_state("explore", self.state_explore) # This state follows the position returned by the agent
+
+        self.sequencer = Sequencer(reset_function=self.delay_manager.reset_delay) # Allows for asynchronous programming
 
         self.fixture_detector = FixtureDetector()
         
@@ -39,10 +43,11 @@ class Executor:
         self.seq_move_to_coords =  self.sequencer.make_complex_event(self.robot.move_to_coords)
         self.seq_delay_seconds =   self.sequencer.make_complex_event(self.delay_manager.delay_seconds)
 
-    def update(self):
+    def run(self):
+        """Advances the simulation, updates all components and executes the state machine."""
+        
         while self.robot.do_loop():
-            # Updates robot position and rotation, sensor positions, etc.
-            self.robot.update()
+            self.robot.update() # Updates robot position and rotation, sensor positions and values, etc.
 
             self.delay_manager.update(self.robot.time)
             self.stuck_detector.update(self.robot.position,
@@ -50,10 +55,12 @@ class Executor:
                                        self.robot.drive_base.get_wheel_direction())
             
             self.do_mapping()
+
+            self.state_machine.run()
             
-            
-                
     def do_mapping(self):
+        """Updates the mapper is mapping is enabled."""
+
         if self.mapping_enabled:
                 # Floor and lidar mapping
                 self.mapper.update(self.robot.get_point_cloud(), 
@@ -64,13 +71,57 @@ class Executor:
         else:
             # Only position and rotation
             self.mapper.update(robot_position=self.robot.position, 
-                                robot_orientation=self.robot.orientation)
+                               robot_orientation=self.robot.orientation)
+            
+    # STATES
+    def state_init(self, change_state_function):
+        """Initializes and calibrates the robot."""
 
+        self.sequencer.start_sequence() # Starts the sequence
+        self.seq_delay_seconds(0.5)
+
+        self.sequencer.simple_event(self.calibrate_position_offsets) # Calculates offsets in the robot position, in case it doesn't start perfectly centerd
+        
+        self.sequencer.simple_event(self.mapper.register_start, self.robot.position) # Informs the mapping components of the starting position of the robot
+        
+        self.seq_calibrate_robot_rotation() # Calibrates the rotation of the robot using the gps
+
+        # Starts mapping walls
+        if self.sequencer.simple_event():
+            self.mapping_enabled = True
+            self.victim_reporting_enabled = True
+     
+        self.sequencer.simple_event(change_state_function, "explore") # Changes state
+        self.sequencer.seq_reset_sequence() # Resets the sequence
+
+    def state_explore(self, change_state_function):
+        """Follows the instructions of the agent."""
+
+        self.sequencer.start_sequence() # Starts the sequence
+
+        self.agent.update()
+
+        self.seq_move_to_coords(self.agent.get_target_position())
+
+        self.sequencer.seq_reset_sequence() # Resets the sequence but doesn't change state, so it starts all over again.
+
+        if SHOW_DEBUG:
+            print("rotation:", self.robot.orientation)
+            print("position:", self.robot.position)
+
+    def calibrate_position_offsets(self):
+        """Calculates offsets in the robot position, in case it doesn't start perfectly centerd."""
+
+        actualTile = self.robot.position // self.mapper.tile_size
+
+        self.robot.position_offsets = (actualTile * self.mapper.tile_size - self.robot.position).apply_to_all(round) + self.mapper.tile_size // 2
+
+        self.robot.position_offsets = self.robot.position_offsets % self.mapper.tile_size
+        print("positionOffsets: ", self.robot.position_offsets)
 
     def seq_calibrate_robot_rotation(self):
-        """
-        Calibrates the robot rotation using the gps.
-        """
+        """ Calibrates the robot rotation using the gps."""
+
         if self.sequencer.simple_event():
             self.robot.auto_decide_orientation_sensor = False
         self.seq_move_wheels(-1, -1)
