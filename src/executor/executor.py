@@ -1,3 +1,5 @@
+from data_structures.angle import Angle
+
 from flow_control.sequencer import Sequencer
 from flow_control.state_machine import StateMachine
 from flow_control.delay import DelayManager
@@ -5,6 +7,7 @@ from flow_control.delay import DelayManager
 from executor.stuck_detector import StuckDetector
 
 from robot.robot import Robot
+from robot.drive_base import Criteria as RotationCriteria
 
 from mapping.mapper import Mapper
 
@@ -90,7 +93,12 @@ class Executor:
         if self.sequencer.simple_event():
             self.mapping_enabled = True
             self.victim_reporting_enabled = True
-     
+
+        self.seq_delay_seconds(0.5)
+        self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(90, Angle.DEGREES), direction=RotationCriteria.LEFT)
+        self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
+        self.seq_delay_seconds(0.5)
+
         self.sequencer.simple_event(change_state_function, "explore") # Changes state
         self.sequencer.seq_reset_sequence() # Resets the sequence
 
