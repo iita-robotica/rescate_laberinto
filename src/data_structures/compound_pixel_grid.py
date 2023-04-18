@@ -57,71 +57,6 @@ class Grid:
         # A template to calculated the preference of each pixel for navigation taking into account the distance from the wall
         self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 2)
 
-    def load_point_cloud(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):
-        """
-        Loads into the corresponding arrays what has been seen by the lidar, what the lidar has detected, and
-        what walls the lidar has detected but the camera hasn't seen.
-        Calculates the travesable areas and the preference of each point for navigation.
-        """
-        # Seen by lidar
-        self.__load_seen_by_lidar(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position)
-
-        # Occupied points
-        for p in in_bounds_point_cloud:
-            p1 = np.array(p, dtype=float)
-            p1 += robot_position
-            p1 = self.coordinates_to_grid_index(p1)
-
-            self.expand_grid_to_grid_index(p1)
-            position = self.grid_index_to_array_index(p1)
-            
-            if not self.arrays["occupied"][position[0], position[1]]:
-                if self.arrays["detected_points"][position[0], position[1]] < self.to_boolean_threshold:
-                    self.arrays["detected_points"][position[0], position[1]] += 1
-                elif self.arrays["detected_points"][position[0], position[1]] >= self.to_boolean_threshold:
-                    if not self.arrays["traversed"][position[0], position[1]]:
-                        self.arrays["occupied"][position[0], position[1]] = True
-
-        # Filters out noise
-        self.__clean_up()
-        
-        occupied_as_int = self.arrays["occupied"].astype(np.uint8)
-
-        # Areas traversable by the robot
-        self.arrays["traversable"] = cv.filter2D(occupied_as_int, -1, self.robot_diameter_template.astype(np.uint8))
-        self.arrays["traversable"] = self.arrays["traversable"].astype(np.bool_)
-
-        # Areas that the robot prefers to navigate through
-        self.arrays["navigation_preference"] = cv.filter2D(occupied_as_int, -1, self.preference_template)
-
-    def __load_seen_by_lidar(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):
-        """
-        Loads into the corresponding arrays what has been seen by the lidar and
-        what walls the lidar has detected but the camera hasn't seen.
-        """
-
-        robot_position = robot_position.astype(float)
-        self.arrays["seen_by_lidar"] = np.zeros_like(self.arrays["seen_by_lidar"])
-        for p in in_bounds_point_cloud + out_of_bounds_point_cloud:
-            p1 = np.array(p, dtype=float)
-            p1 += robot_position
-            p1 = self.coordinates_to_grid_index(p1)
-            self.expand_grid_to_grid_index(p1)
-            position = self.grid_index_to_array_index(p1)
-            robot_grid_index = self.coordinates_to_grid_index(robot_position)
-            robot_array_index = self.grid_index_to_array_index(robot_grid_index)
-
-            self.arrays["seen_by_lidar"] = cv.line(self.arrays["seen_by_lidar"].astype(np.uint8), (position[1], position[0]), (robot_array_index[1], robot_array_index[0]), 255, thickness=1, lineType=cv.LINE_8)
-            self.arrays["seen_by_lidar"] = self.arrays["seen_by_lidar"].astype(np.bool_)
-        
-        self.arrays["walls_seen_by_camera"] = self.arrays["seen_by_camera"] * self.arrays["occupied"]
-        self.arrays["walls_not_seen_by_camera"] =  np.logical_xor(self.arrays["occupied"], self.arrays["walls_seen_by_camera"])
-
-    def __clean_up(self):
-        """
-        Filters out noise from the 'detected_points' array.
-        """
-        self.arrays["detected_points"] = self.arrays["detected_points"] * (self.arrays["detected_points"] > self.delete_threshold)
 
     def load_robot(self, robot_position, robot_rotation: Angle):
         """
@@ -138,7 +73,7 @@ class Grid:
     def __load_traversed_by_robot(self, robot_grid_index):
         circle = self.robot_diameter_indexes + np.array(robot_grid_index)
         for item in circle:
-            self.expand_grid_to_grid_index(item)
+            self.expand_to_grid_index(item)
             array_index = self.grid_index_to_array_index(item)
             self.arrays["traversed"][array_index[0], array_index[1]] = True
 
@@ -152,7 +87,7 @@ class Grid:
 
         camera_povs = self.__get_camera_povs_template_indexes(global_camera_orientations, robot_grid_index)
         for item in camera_povs:
-            self.expand_grid_to_grid_index(item)
+            self.expand_to_grid_index(item)
 
             array_index = self.grid_index_to_array_index(item)
             robot_array_index = self.grid_index_to_array_index(robot_grid_index)
@@ -170,29 +105,26 @@ class Grid:
         disc_povs = self._get_indexes_from_template(discovered_template, robot_grid_index - np.array((self.discovery_pov_lenght, self.discovery_pov_lenght)))
 
         for item in disc_povs:
-            self.expand_grid_to_grid_index(item)
+            self.expand_to_grid_index(item)
             array_index = self.grid_index_to_array_index(item)
 
             if self.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
                 self.arrays["discovered"][array_index[0], array_index[1]] = True
     
     # Index conversion
-    def coordinates_to_grid_index(self, coordinates) -> np.ndarray:
-        coords = np.array(coordinates)
-        coords = (coords * self.resolution).astype(int)
-        return np.array([coords[1], coords[0]])
+    def coordinates_to_grid_index(self, coordinates: np.ndarray) -> np.ndarray:
+        coords = (coordinates * self.resolution).astype(int)
+        return np.flip(coords)
 
-    def grid_index_to_coordinates(self, grid_index) -> np.ndarray:
-        index = np.array(grid_index)
-        index = (index.astype(float) / self.resolution)
-    
-        return np.array([index[1], index[0]])
+    def grid_index_to_coordinates(self, grid_index: np.ndarray) -> np.ndarray:
+        index = (grid_index.astype(float) / self.resolution)
+        return np.flip(index)
 
-    def array_index_to_grid_index(self, array_index) -> np.ndarray:
-        return np.array(array_index) - self.offsets
+    def array_index_to_grid_index(self, array_index: np.ndarray) -> np.ndarray:
+        return array_index - self.offsets
     
-    def grid_index_to_array_index(self, grid_index) -> np.ndarray:
-        return np.array(grid_index) + self.offsets
+    def grid_index_to_array_index(self, grid_index: np.ndarray) -> np.ndarray:
+        return grid_index + self.offsets
     
     def array_index_to_coordinates(self, array_index) -> np.ndarray:
         grid_index = self.array_index_to_grid_index(array_index)
@@ -203,7 +135,7 @@ class Grid:
         return self.grid_index_to_array_index(grid_index)
 
     # Grid expansion
-    def expand_grid_to_grid_index(self, grid_index: np.ndarray):
+    def expand_to_grid_index(self, grid_index: np.ndarray):
         """
         Expands all arrays to the specified index. 
         Note that all array_idexes should be recalculated after this operation.
@@ -368,8 +300,8 @@ class Grid:
         color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 100
         color_grid[self.arrays["traversable"]] = (1, 0, 0)
         
-        color_grid[self.arrays["discovered"]] = (0, 0, 1)
-        color_grid[self.arrays["seen_by_camera"]] = (1, 0, 0)
+        color_grid[self.arrays["discovered"]] += (0, 0, 0.5)
+        color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
 
         return color_grid

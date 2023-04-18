@@ -59,14 +59,16 @@ class PoseManager:
         return self.gyroscope.get_angular_velocity() < self.maximum_angular_velocity_for_gps and wheel_direction >= 0
 
     def calculate_orientation(self):
+        
          # Gets global rotation
         gps_orientation = self.gps.get_orientation()
 
-        if self.orientation_sensor == self.GYROSCOPE or gps_orientation == None:
+        if self.orientation_sensor == self.GYROSCOPE or gps_orientation is None:
             self.orientation = self.gyroscope.get_orientation()
             if SHOW_DEBUG: print("USING GYRO")
         else:
             self.orientation = gps_orientation
             self.gyroscope.set_orientation(self.orientation)
             if SHOW_DEBUG: print("USING GPS")
+        
 

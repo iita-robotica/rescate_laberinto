@@ -25,8 +25,8 @@ class Position2D:
         yield self.x
         yield self.y
     
-    def __array__(self):
-        return np.array([self.x, self.y])
+    def __array__(self, *args, **kwargs):
+        return np.array([self.x, self.y], *args, **kwargs)
         
     def __repr__(self):
         return f"Position2D({self.x}, {self.y})"

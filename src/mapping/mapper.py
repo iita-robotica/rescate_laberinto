@@ -7,7 +7,7 @@ from data_structures.angle import Angle
 from data_structures import compound_pixel_grid
 
 from mapping.camera_processor import CameraProcessor
-from mapping.point_cloud_processor import PointCloudProcessor
+from mapping.wall_mapper import WallMapper
 
 from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
 
@@ -28,10 +28,10 @@ class Mapper:
         pixels_per_tile = 10
         self.pixel_grid = compound_pixel_grid.Grid(initial_shape=np.array([1, 1]), 
                                                    pixel_per_m=pixels_per_tile / 0.06, 
-                                                   robot_radius_m=(self.robot_diameter / 2) - 0.005)#+ 0.008)
+                                                   robot_radius_m=(self.robot_diameter / 2) -0.008)#+ 0.008)
 
         #Data processors
-        self.point_cloud_processor = PointCloudProcessor(center_point=350, map_scale=50 / tile_size)
+        self.obstacle_mapper = WallMapper(self.pixel_grid, robot_diameter)
         self.camera_processor = CameraProcessor(tile_resolution=100)
 
         # Data extractors
@@ -50,39 +50,25 @@ class Mapper:
         self.robot_position = robot_position
         self.robot_orientation = robot_orientation
 
+        # Load walls and obstacles (Lidar detections)
+        if in_bounds_point_cloud is not None and out_of_bounds_point_cloud is not None:
+            self.obstacle_mapper.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position)
+        
         self.pixel_grid.load_robot(np.array(self.robot_position), self.robot_orientation)
         
-        # Load walls and obstacles (Lidar detections)
-        if in_bounds_point_cloud is not None:
-            self.pixel_grid.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, np.array(robot_position))
-            
         # Load floor colors
         if in_bounds_point_cloud is not None and camera_images is not None:
             pass
         
         #DEBUG
-        
         if SHOW_GRANULAR_NAVIGATION_GRID or SHOW_DEBUG:
-            cv.waitKey(1) 
+            cv.waitKey(1)
+
+    
         
     def register_start(self, robot_position):
         pass # TODO
 
-    def set_robot_node(self, robot_position):
-        pass # TODO
-
-    def block_front_vortex(self, robot_rotation):
-        pass # TODO
-
-    # Fixtures
-    def load_fixture_to_wall(self, letter, image_angle):
-        pass # TODO
-
-    def load_fixture_to_tile(self, letter, camera_angle, robot_rotation):
-        pass # TODO
-    
-    def get_fixture_from_tile(self):
-        pass # TODO
     
     # Grids
     def get_grid_for_bonus(self):

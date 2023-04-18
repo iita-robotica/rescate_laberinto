@@ -33,7 +33,7 @@ class PathFinder():
             self.target_position = target_position
 
         self.robot_grid_index = self.mapper.pixel_grid.coordinates_to_grid_index(self.mapper.robot_position) # Get robot position grid index
-        self.mapper.pixel_grid.expand_grid_to_grid_index(self.robot_grid_index) # Expand grid to robot position
+        self.mapper.pixel_grid.expand_to_grid_index(self.robot_grid_index) # Expand grid to robot position
 
         if SHOW_PATHFINDING_DEBUG: 
             if self.is_path_finished(): print("FINISHED PATH")
@@ -65,7 +65,7 @@ class PathFinder():
 
         # Expand grid to target index
         target_grid_index = self.mapper.pixel_grid.coordinates_to_grid_index(self.target_position)
-        self.mapper.pixel_grid.expand_grid_to_grid_index(target_grid_index)
+        self.mapper.pixel_grid.expand_to_grid_index(target_grid_index)
 
         # Get target array index (if target index occupied, get closest unoccupied point)
         target_array_index = self.mapper.pixel_grid.coordinates_to_array_index(self.target_position)
@@ -115,7 +115,7 @@ class PathFinder():
     def get_next_position(self) -> Position2D:
         self.a_star_index = min(self.a_star_index, len(self.a_star_path) -1)
         if len(self.smooth_astar_path):
-            pos = self.mapper.pixel_grid.grid_index_to_coordinates(self.smooth_astar_path[self.a_star_index])
+            pos = self.mapper.pixel_grid.grid_index_to_coordinates(np.array(self.smooth_astar_path[self.a_star_index]))
             pos = Position2D(pos[0], pos[1])
             return pos
         
