@@ -10,7 +10,7 @@ class FloorMapper:
         self.tile_resolution = tile_resolution
         self.tile_size = tile_size
         self.pixel_per_m = tile_resolution / tile_size
-        self.pov_distance_from_center = round((camera_distance_from_center + 0.03) * self.pixel_per_m) 
+        self.pov_distance_from_center = round((camera_distance_from_center + 0.022) * self.pixel_per_m) 
 
         tiles_up = 1
         tiles_down = 1
@@ -73,8 +73,6 @@ class FloorMapper:
         return imutils.rotate(image, angle.degrees, (image.shape[0] // 2, image.shape[1] // 2))
     
     def map_floor(self, camera_images, robot_grid_index):
-
-
         center_pov = self.flatten_camera_pov(np.rot90(camera_images[1].image,  k=3))
         center_pov = np.flip(center_pov, 1)
         center_pov = self.set_in_background(center_pov)
@@ -109,8 +107,9 @@ class FloorMapper:
         
         print("fc dtype", self.pixel_grid.arrays["floor_color"].dtype)
 
+        mask = povs[:,:,3] > 254
 
-        self.pixel_grid.arrays["floor_color"][start[0]:end[0], start[1]:end[1]][povs[:,:,3] > 254] = povs[:,:,:3][povs[:,:,3] > 254]
+        self.pixel_grid.arrays["floor_color"][start[0]:end[0], start[1]:end[1]][mask] = povs[:,:,:3][mask]
 
         
         
