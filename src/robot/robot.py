@@ -17,6 +17,8 @@ from robot.pose_manager import PoseManager
 
 from robot.drive_base import DriveBase, Criteria
 
+import cv2 as cv
+
 
 class Robot:
     """
@@ -43,18 +45,25 @@ class Robot:
                            layers_used=(2,))
         
         # Cameras
+        self.camera_distance_from_center = 0.0295
         camera_interval = 3
         self.center_camera = Camera(webots_device = self.robot.getDevice("camera1"),
                                     time_step = self.time_step * camera_interval,
-                                    step_counter = StepCounter(camera_interval))
+                                    step_counter = StepCounter(camera_interval),
+                                    orientation=Angle(0, Angle.DEGREES),
+                                    distance_from_center=self.camera_distance_from_center)
         
         self.right_camera = Camera(webots_device = self.robot.getDevice("camera2"),
                                    time_step = self.time_step * camera_interval,
-                                   step_counter = StepCounter(camera_interval))
+                                   step_counter = StepCounter(camera_interval),
+                                   orientation=Angle(270, Angle.DEGREES),
+                                   distance_from_center=self.camera_distance_from_center)
         
         self.left_camera = Camera(webots_device = self.robot.getDevice("camera3"), 
                                   time_step = self.time_step * camera_interval, 
                                   step_counter = StepCounter(camera_interval),
+                                  orientation=Angle(90, Angle.DEGREES),
+                                  distance_from_center=self.camera_distance_from_center,
                                   rotate180=True)
         
         # Comunicator (Emmiter and reciever)
@@ -83,9 +92,9 @@ class Robot:
         self.lidar.update()
 
         # Camera update
-        self.right_camera.update()
-        self.left_camera.update()
-        self.center_camera.update()
+        self.right_camera.update(self.orientation)
+        self.left_camera.update(self.orientation)
+        self.center_camera.update(self.orientation)
 
     def do_loop(self):
         """Advances the simulation by one step and returns True if the simulation is running."""

@@ -4,20 +4,20 @@ import cv2 as cv
 from data_structures.vectors import Position2D
 from data_structures.angle import Angle
 
-from data_structures import compound_pixel_grid
+from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
+from data_structures.tile_color_grid import TileColorExpandableGrid
 
 from mapping.camera_processor import CameraProcessor
 from mapping.wall_mapper import WallMapper
+from mapping.floor_mapper import FloorMapper
 
 from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
 
-from flags import SHOW_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID
+from flags import SHOW_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID, DO_WAIT_KEY
 
 
 class Mapper:
-    def __init__(self, tile_size, robot_diameter):
-        self.ADJACENTS_NO_DIAGONALS =  (Position2D(1, 1), Position2D(1, -1), Position2D(-1, 1), Position2D(-1, -1))
-
+    def __init__(self, tile_size, robot_diameter, camera_distance_from_center):
         self.tile_size = tile_size
         self.robot_diameter = robot_diameter
 
@@ -26,12 +26,20 @@ class Mapper:
 
         # Data structures
         pixels_per_tile = 10
-        self.pixel_grid = compound_pixel_grid.Grid(initial_shape=np.array([1, 1]), 
-                                                   pixel_per_m=pixels_per_tile / 0.06, 
-                                                   robot_radius_m=(self.robot_diameter / 2) -0.008)#+ 0.008)
+        self.pixel_grid = CompoundExpandablePixelGrid(initial_shape=np.array([1, 1]), 
+                                                      pixel_per_m=pixels_per_tile / 0.06, 
+                                                      robot_radius_m=(self.robot_diameter / 2) -0.008)
+        
+        self.tile_color_grid = TileColorExpandableGrid(initial_shape=np.array((1, 1)),
+                                                       tile_size=0.12)
 
         #Data processors
-        self.obstacle_mapper = WallMapper(self.pixel_grid, robot_diameter)
+        self.wall_mapper = WallMapper(self.pixel_grid, robot_diameter)
+        self.floor_mapper = FloorMapper(pixel_grid=self.pixel_grid, 
+                                        tile_resolution=pixels_per_tile * 2,
+                                        tile_size=0.12,
+                                        camera_distance_from_center=camera_distance_from_center)
+        
         self.camera_processor = CameraProcessor(tile_resolution=100)
 
         # Data extractors
@@ -52,16 +60,16 @@ class Mapper:
 
         # Load walls and obstacles (Lidar detections)
         if in_bounds_point_cloud is not None and out_of_bounds_point_cloud is not None:
-            self.obstacle_mapper.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position)
+            self.wall_mapper.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position)
         
         self.pixel_grid.load_robot(np.array(self.robot_position), self.robot_orientation)
         
         # Load floor colors
-        if in_bounds_point_cloud is not None and camera_images is not None:
-            pass
+        if camera_images is not None:
+            self.floor_mapper.map_floor(camera_images, self.pixel_grid.coordinates_to_grid_index(self.robot_position))
         
         #DEBUG
-        if SHOW_GRANULAR_NAVIGATION_GRID or SHOW_DEBUG:
+        if DO_WAIT_KEY:
             cv.waitKey(1)
 
     

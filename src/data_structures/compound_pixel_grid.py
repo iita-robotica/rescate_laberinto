@@ -6,7 +6,8 @@ from data_structures.angle import Angle
 import math
 from flow_control.step_counter import StepCounter
 
-class Grid:
+
+class CompoundExpandablePixelGrid:
     def __init__(self, initial_shape, pixel_per_m, robot_radius_m):
         self.array_shape = np.array(initial_shape, dtype=int)
         self.offsets = self.array_shape // 2
@@ -29,7 +30,7 @@ class Grid:
             "walls_seen_by_camera": np.zeros(self.array_shape, np.bool_),
             "walls_not_seen_by_camera": np.zeros(self.array_shape, np.bool_),
             "discovered": np.zeros(self.array_shape, np.bool_),
-            "floor_color": np.zeros(self.array_shape, np.uint8)
+            "floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8)
         }
 
         self.resolution = pixel_per_m # resolution of the grid with regards to the coordinate system of the gps / the world
@@ -180,19 +181,31 @@ class Grid:
             self.arrays[key] = self.__add_begining_column_to_grid(self.arrays[key], size)
 
     def __add_end_row_to_grid(self, grid, size):
-        grid = np.vstack((grid, np.zeros((size, self.array_shape[1]), dtype=grid.dtype)))
+        shape = np.array(grid.shape)
+        shape[0] = size
+        shape[1] = self.array_shape[1]
+        grid = np.vstack((grid, np.zeros(shape, dtype=grid.dtype)))
         return grid
     
     def __add_begining_row_to_grid(self, grid, size):
-        grid = np.vstack((np.zeros((size, self.array_shape[1]), dtype=grid.dtype), grid))
+        shape = np.array(grid.shape)
+        shape[0] = size
+        shape[1] = self.array_shape[1]
+        grid = np.vstack((np.zeros(shape, dtype=grid.dtype), grid))
         return grid
     
     def __add_end_column_to_grid(self, grid, size):
-        grid = np.hstack((grid, np.zeros((self.array_shape[0], size), dtype=grid.dtype)))
+        shape = np.array(grid.shape)
+        shape[0] = self.array_shape[0]
+        shape[1] = size
+        grid = np.hstack((grid, np.zeros(shape, dtype=grid.dtype)))
         return grid
 
     def __add_begining_column_to_grid(self, grid, size):
-        grid = np.hstack((np.zeros((self.array_shape[0], size), dtype=grid.dtype), grid))
+        shape = np.array(grid.shape)
+        shape[0] = self.array_shape[0]
+        shape[1] = size
+        grid = np.hstack((np.zeros(shape, dtype=grid.dtype), grid))
         return grid
     
     # Initialization methods
@@ -304,7 +317,9 @@ class Grid:
         color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
 
-        return color_grid
+        return self.arrays["floor_color"]
+
+        #return color_grid
     
     def print_grid(self):
         cv.imshow("circle_template", self.preference_template / 4)

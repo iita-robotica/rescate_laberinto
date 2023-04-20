@@ -1,13 +1,13 @@
 import numpy as np
 import cv2 as cv
-from data_structures.compound_pixel_grid import Grid
+from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 
 from data_structures.vectors import Position2D
 
 
 
 class WallMapper:
-    def __init__(self, compound_grid: Grid, robot_diameter: float) -> None:
+    def __init__(self, compound_grid: CompoundExpandablePixelGrid, robot_diameter: float) -> None:
         self.grid = compound_grid
 
         self.robot_diameter = int(robot_diameter * self.grid.resolution)

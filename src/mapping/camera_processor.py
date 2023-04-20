@@ -7,13 +7,6 @@ class CameraProcessor:
     def __init__(self, tile_resolution):
         self.tile_resolution = tile_resolution # 100
 
-    def sharpen_image(self, image):
-        kernel = np.array([[-1,-1,-1], [-1,5,-1], [-1,-1,-1]])
-        return cv.filter2D(image, -1, kernel)
-
-    def upscale_image(image, scale):
-        return cv.resize(image, (0,0), fx=scale, fy=scale, interpolation=cv.INTER_CUBIC)
-
     def flatten_image(self, image):
         tiles_up = 1
         tiles_down = 1
