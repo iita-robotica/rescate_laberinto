@@ -3,6 +3,7 @@ import cv2 as cv
 from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 from data_structures.angle import Angle
 import imutils
+from copy import copy, deepcopy
 
 class FloorMapper:
     def __init__(self, pixel_grid: CompoundExpandablePixelGrid, tile_resolution, tile_size, camera_distance_from_center) -> None:
@@ -10,23 +11,25 @@ class FloorMapper:
         self.tile_resolution = tile_resolution
         self.tile_size = tile_size
         self.pixel_per_m = tile_resolution / tile_size
-        self.pov_distance_from_center = round((camera_distance_from_center + 0.022) * self.pixel_per_m) 
+        self.pov_distance_from_center = round(0.064 * self.pixel_per_m) 
 
-        tiles_up = 1
+        tiles_up = 0
         tiles_down = 1
         tiles_sides = 1
 
         min_x = self.tile_resolution * tiles_sides
         max_x = self.tile_resolution * (tiles_sides + 1)
-        min_y = self.tile_resolution * tiles_up
-        max_y = self.tile_resolution * (tiles_up + 1)
+        min_y = self.tile_resolution * tiles_down
+        max_y = self.tile_resolution * (tiles_down + 1)
 
         self.center_tile_points_in_final_image = np.array(((min_x, min_y),
                                                            (max_x, min_y),
                                                            (max_x, max_y),
                                                            (min_x, max_y),), dtype=np.float32)
         
-        self.center_tile_points_in_input_image = np.array(([0, 24],  [39, 24], [32, 16], [7, 16]), dtype=np.float32)
+        self.y_correction = 0
+        
+        self.center_tile_points_in_input_image = np.array(([0, 24],  [39, 24], [32, 16 + self.y_correction], [7, 16 + self.y_correction]), dtype=np.float32)
 
         self.flattened_image_shape = (self.tile_resolution * (tiles_sides * 2 + 1),
                                       self.tile_resolution * (tiles_up + tiles_down + 1))
@@ -72,23 +75,20 @@ class FloorMapper:
     def rotate_image_to_angle(self, image: np.ndarray, angle: Angle):
         return imutils.rotate(image, angle.degrees, (image.shape[0] // 2, image.shape[1] // 2))
     
+
+    def get_unified_povs(self, camera_images):
+        povs_list = []
+        for camera_image in camera_images:
+            pov = self.flatten_camera_pov(np.rot90(copy(camera_image.image), k=3))
+            pov = np.flip(pov, 1)
+            pov = self.set_in_background(pov)
+            pov = self.rotate_image_to_angle(pov, camera_image.orientation)
+            povs_list.append(pov)
+
+        return sum(povs_list)
+    
     def map_floor(self, camera_images, robot_grid_index):
-        center_pov = self.flatten_camera_pov(np.rot90(camera_images[1].image,  k=3))
-        center_pov = np.flip(center_pov, 1)
-        center_pov = self.set_in_background(center_pov)
-        center_pov = self.rotate_image_to_angle(center_pov, camera_images[1].orientation)
-
-        right_pov = self.flatten_camera_pov(np.rot90(camera_images[0].image,  k=3))
-        right_pov = np.flip(right_pov, 1)
-        right_pov = self.set_in_background(right_pov)
-        right_pov = self.rotate_image_to_angle(right_pov, camera_images[0].orientation )
-
-        left_pov = self.flatten_camera_pov(np.rot90(camera_images[2].image, k=3))
-        left_pov = np.flip(left_pov, 1)
-        left_pov = self.set_in_background(left_pov)
-        left_pov = self.rotate_image_to_angle(left_pov, camera_images[2].orientation)
-
-        povs = center_pov + right_pov + left_pov
+        povs = self.get_unified_povs(camera_images)
 
         cv.imshow("final_pov", povs[:, :, 3])
 
@@ -104,13 +104,37 @@ class FloorMapper:
 
         start = self.pixel_grid.grid_index_to_array_index(start)
         end = self.pixel_grid.grid_index_to_array_index(end)
-        
-        print("fc dtype", self.pixel_grid.arrays["floor_color"].dtype)
 
         mask = povs[:,:,3] > 254
 
-        self.pixel_grid.arrays["floor_color"][start[0]:end[0], start[1]:end[1]][mask] = povs[:,:,:3][mask]
+        gradient = self.get_distance_to_center_gradient(povs.shape[:2])
+
+        povs_gradient = np.zeros_like(gradient)
+        povs_gradient[mask] = gradient[mask]
+
+        cv.imshow("gradient", povs_gradient)
 
         
-        
 
+        detection_distance_mask = self.pixel_grid.arrays["floor_color_detection_distance"][start[0]:end[0], start[1]:end[1]] < povs_gradient
+
+        seen_by_camera_mask = self.pixel_grid.arrays["seen_by_camera"][start[0]:end[0], start[1]:end[1]]
+
+        final_mask = seen_by_camera_mask * detection_distance_mask
+
+        self.pixel_grid.arrays["floor_color_detection_distance"][start[0]:end[0], start[1]:end[1]][final_mask] = povs_gradient[final_mask]
+
+        cv.imshow("detection_distance", self.pixel_grid.arrays["floor_color_detection_distance"])
+
+        self.pixel_grid.arrays["floor_color"][start[0]:end[0], start[1]:end[1]][final_mask] = povs[:,:,:3][final_mask]
+
+    
+    def get_distance_to_center_gradient(self, shape):
+        gradient = np.zeros(shape, dtype=np.float32)
+        for x in range(shape[0]):
+            for y in range(shape[1]):
+                gradient[x, y] = (x - shape[0] // 2) ** 2 + (y - shape[1] // 2) ** 2
+        
+        gradient = 1 - gradient / gradient.max()
+
+        return (gradient * 255).astype(np.uint8)

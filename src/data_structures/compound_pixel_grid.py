@@ -30,7 +30,8 @@ class CompoundExpandablePixelGrid:
             "walls_seen_by_camera": np.zeros(self.array_shape, np.bool_),
             "walls_not_seen_by_camera": np.zeros(self.array_shape, np.bool_),
             "discovered": np.zeros(self.array_shape, np.bool_),
-            "floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8)
+            "floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8),
+            "floor_color_detection_distance": np.zeros(self.array_shape, np.uint8),
         }
 
         self.resolution = pixel_per_m # resolution of the grid with regards to the coordinate system of the gps / the world
@@ -307,19 +308,19 @@ class CompoundExpandablePixelGrid:
         """
         Get graphical representation of the grid for debug.
         """
-        color_grid = np.zeros((self.array_shape[0], self.array_shape[1], 3), dtype=np.float32)
+        #color_grid = np.zeros((self.array_shape[0], self.array_shape[1], 3), dtype=np.float32)
 
-        color_grid[self.arrays["traversed"]] = (.5, 0., .5)
-        color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 100
-        color_grid[self.arrays["traversable"]] = (1, 0, 0)
+        #color_grid[self.arrays["traversed"]] = (.5, 0., .5)
+        #color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 100
+        #color_grid[self.arrays["traversable"]] = (1, 0, 0)
         
-        color_grid[self.arrays["discovered"]] += (0, 0, 0.5)
-        color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
+        #color_grid[self.arrays["discovered"]] += (0, 0, 0.5)
+        #color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
+        color_grid = self.arrays["floor_color"].astype(np.float32) / 255
+
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
 
-        return self.arrays["floor_color"]
-
-        #return color_grid
+        return color_grid
     
     def print_grid(self):
         cv.imshow("circle_template", self.preference_template / 4)
