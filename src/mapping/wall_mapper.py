@@ -35,6 +35,8 @@ class WallMapper:
         
         robot_position_as_array = np.array(robot_position, dtype=float)
         
+        self.__reset_seen_by_lidar()
+
         self.load_in_bounds_point_cloud(in_bounds_point_cloud, robot_position_as_array)
         self.load_out_of_bounds_point_cloud(out_of_bounds_point_cloud, robot_position_as_array)
 
@@ -87,9 +89,6 @@ class WallMapper:
         # Areas that the robot prefers to navigate through
         self.grid.arrays["navigation_preference"] = cv.filter2D(occupied_as_int, -1, self.preference_template)
 
-
-    
-
     def filter_out_noise(self):
         """
         Filters out noise from the 'detected_points' array.
@@ -132,3 +131,6 @@ class WallMapper:
     def __draw_bool_line(self, array, point1, point2):
         array = cv.line(array.astype(np.uint8), (point1[1], point1[0]), (point2[1], point2[0]), 255, thickness=1, lineType=cv.LINE_8)
         return array.astype(np.bool_)
+    
+    def __reset_seen_by_lidar(self):
+        self.grid.arrays["seen_by_lidar"] = np.zeros_like(self.grid.arrays["seen_by_lidar"])

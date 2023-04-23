@@ -27,9 +27,7 @@ class FloorMapper:
                                                            (max_x, max_y),
                                                            (min_x, max_y),), dtype=np.float32)
         
-        self.y_correction = 0
-        
-        self.center_tile_points_in_input_image = np.array(([0, 24],  [39, 24], [32, 16 + self.y_correction], [7, 16 + self.y_correction]), dtype=np.float32)
+        self.center_tile_points_in_input_image = np.array(([0, 24],  [39, 24], [32, 16], [7, 16]), dtype=np.float32)
 
         self.flattened_image_shape = (self.tile_resolution * (tiles_sides * 2 + 1),
                                       self.tile_resolution * (tiles_up + tiles_down + 1))
@@ -107,7 +105,7 @@ class FloorMapper:
 
         mask = povs[:,:,3] > 254
 
-        gradient = self.get_distance_to_center_gradient(povs.shape[:2])
+        gradient = self.__get_distance_to_center_gradient(povs.shape[:2])
 
         povs_gradient = np.zeros_like(gradient)
         povs_gradient[mask] = gradient[mask]
@@ -124,12 +122,14 @@ class FloorMapper:
 
         self.pixel_grid.arrays["floor_color_detection_distance"][start[0]:end[0], start[1]:end[1]][final_mask] = povs_gradient[final_mask]
 
-        cv.imshow("detection_distance", self.pixel_grid.arrays["floor_color_detection_distance"])
 
         self.pixel_grid.arrays["floor_color"][start[0]:end[0], start[1]:end[1]][final_mask] = povs[:,:,:3][final_mask]
 
+        blured = self.blur_floor_color(robot_grid_index)
+        cv.imshow("blured", blured)
+
     
-    def get_distance_to_center_gradient(self, shape):
+    def __get_distance_to_center_gradient(self, shape):
         gradient = np.zeros(shape, dtype=np.float32)
         for x in range(shape[0]):
             for y in range(shape[1]):
@@ -138,3 +138,44 @@ class FloorMapper:
         gradient = 1 - gradient / gradient.max()
 
         return (gradient * 255).astype(np.uint8)
+    
+    def __get_offsets(self, tile_size):
+        x_offset = int(self.pixel_grid.offsets[0] % tile_size + tile_size / 2) 
+        y_offset = int(self.pixel_grid.offsets[1] % tile_size + tile_size / 2)
+
+        return (x_offset, y_offset)
+    
+    def offset_array(self, array, offsets):
+        return array[offsets[0]:, offsets[1]:]
+    
+    def get_color_average_kernel(self):
+        tile_size = self.tile_size * self.pixel_per_m
+        square_propotion = 0.8
+        square_size = round(tile_size * square_propotion)
+
+        kernel = np.ones((square_size, square_size), dtype=np.float32)
+
+        kernel = kernel / kernel.sum()
+
+        return kernel
+
+    
+    def blur_floor_color(self, robot_position):
+        tile_size = self.tile_size * self.pixel_per_m
+        offsets = self.__get_offsets(tile_size)
+        floor_color = deepcopy(self.pixel_grid.arrays["floor_color"])
+
+        kernel = self.get_color_average_kernel()
+
+        #floor_color = cv.filter2D(floor_color, -1, kernel)
+        print("offsets", offsets)
+
+        for x in range(offsets[0], floor_color.shape[0], round(tile_size)):
+            for y in range(offsets[1], floor_color.shape[1], round(tile_size)):
+                floor_color[x, y, :] = 255
+
+        
+        #cv.imshow("floor_color", floor_color)
+            
+            
+        return floor_color
