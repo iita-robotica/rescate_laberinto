@@ -167,15 +167,20 @@ class FloorMapper:
 
         kernel = self.get_color_average_kernel()
 
-        #floor_color = cv.filter2D(floor_color, -1, kernel)
+        floor_color = cv.filter2D(floor_color, -1, kernel)
         print("offsets", offsets)
 
-        for x in range(offsets[0], floor_color.shape[0], round(tile_size)):
-            for y in range(offsets[1], floor_color.shape[1], round(tile_size)):
-                floor_color[x, y, :] = 255
+        image = []
 
-        
-        #cv.imshow("floor_color", floor_color)
+        for x in range(offsets[0], floor_color.shape[0], round(tile_size)):
+            row = []
+            for y in range(offsets[1], floor_color.shape[1], round(tile_size)):
+                row.append(floor_color[x, y, :])
+            image.append(row)
+
+        image = np.array(image, dtype=np.uint8)
+            
+        cv.imshow("floor_color", image)
             
             
         return floor_color
