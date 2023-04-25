@@ -90,11 +90,16 @@ class CompoundExpandablePixelGrid:
             global_camera_orientations.append(o1)
 
         camera_povs = self.__get_camera_povs_template_indexes(global_camera_orientations, robot_grid_index)
+
+        transposed = np.transpose(camera_povs)
+        self.expand_to_grid_index(np.array((np.max(transposed[0]), np.max(transposed[1]))))
+        self.expand_to_grid_index(np.array((np.min(transposed[0]), np.min(transposed[1]))))
+
         for item in camera_povs:
-            self.expand_to_grid_index(item)
+            #self.expand_to_grid_index(item)
 
             array_index = self.grid_index_to_array_index(item)
-            robot_array_index = self.grid_index_to_array_index(robot_grid_index)
+            #robot_array_index = self.grid_index_to_array_index(robot_grid_index)
             if self.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
                 self.arrays["seen_by_camera"][array_index[0], array_index[1]] = True
 
@@ -108,8 +113,12 @@ class CompoundExpandablePixelGrid:
         
         disc_povs = self._get_indexes_from_template(discovered_template, robot_grid_index - np.array((self.discovery_pov_lenght, self.discovery_pov_lenght)))
 
+        transposed = np.transpose(disc_povs)
+        self.expand_to_grid_index(np.array((np.max(transposed[0]), np.max(transposed[1]))))
+        self.expand_to_grid_index(np.array((np.min(transposed[0]), np.min(transposed[1]))))
+
         for item in disc_povs:
-            self.expand_to_grid_index(item)
+            #self.expand_to_grid_index(item)
             array_index = self.grid_index_to_array_index(item)
 
             if self.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
@@ -248,14 +257,6 @@ class CompoundExpandablePixelGrid:
         offsets = np.array(offsets)
         indexes[:][:] += offsets[:]
 
-        """
-        for x, row in enumerate(template):
-            for y, val in enumerate(row):
-                if val:
-                    indexes.append((x + offsets[0], y + offsets[1]))
-        
-        return np.array(indexes)
-        """
         return indexes
 
     
