@@ -42,6 +42,9 @@ class FloorMapper:
 
         self.flattened_image_shape = (self.tile_resolution * (tiles_sides * 2 + 1),
                                       self.tile_resolution * (tiles_up + tiles_down + 1))
+        
+        self.final_povs_shape = (120, 120)
+        self.distance_to_center_gradient = self.__get_distance_to_center_gradient(self.final_povs_shape)
 
     def flatten_camera_pov(self, camera_pov: np.ndarray):
         ipm_matrix = cv.getPerspectiveTransform(self.center_tile_points_in_input_image, 
@@ -118,8 +121,8 @@ class FloorMapper:
 
         gradient = self.__get_distance_to_center_gradient(povs.shape[:2])
 
-        povs_gradient = np.zeros_like(gradient)
-        povs_gradient[mask] = gradient[mask]
+        povs_gradient = np.zeros_like(self.distance_to_center_gradient)
+        povs_gradient[mask] = self.distance_to_center_gradient[mask]
 
         #cv.imshow("gradient", povs_gradient)
 

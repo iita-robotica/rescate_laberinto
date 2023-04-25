@@ -241,14 +241,22 @@ class CompoundExpandablePixelGrid:
 
         return self._get_indexes_from_template(diameter_template, (-radius, -radius))
     
-    def _get_indexes_from_template(self, template, offsets=(0, 0)):
+    def _get_indexes_from_template(self, template: np.ndarray, offsets=(0, 0)):
         indexes = []
+        indexes = np.transpose(template.nonzero())
+        np.array(indexes)
+        offsets = np.array(offsets)
+        indexes[:][:] += offsets[:]
+
+        """
         for x, row in enumerate(template):
             for y, val in enumerate(row):
                 if val:
                     indexes.append((x + offsets[0], y + offsets[1]))
         
         return np.array(indexes)
+        """
+        return indexes
 
     
     def __get_cone_template(self, lenght, orientation: Angle, amplitude: Angle):
