@@ -32,8 +32,11 @@ class BestPositionFinder:
 
         # DEBUG
         if SHOW_BEST_POSITION_FINDER_DEBUG:
-            closest_unseen_array_index = self.mapper.pixel_grid.grid_index_to_array_index(self.closest_unseen_grid_index)
-            debug_grid = self.mapper.pixel_grid.get_colored_grid()    
+            debug_grid = self.mapper.pixel_grid.get_colored_grid()  
+            if self.closest_unseen_grid_index is not None:
+                closest_unseen_array_index = self.mapper.pixel_grid.grid_index_to_array_index(self.closest_unseen_grid_index)
+            else:
+                closest_unseen_array_index = self.mapper.pixel_grid.coordinates_to_array_index(self.mapper.start_position)
             cv.circle(debug_grid, (closest_unseen_array_index[1], closest_unseen_array_index[0]), 4, (0, 255, 100), -1)
             cv.imshow("closest_position_finder_debug", debug_grid)
 
@@ -52,14 +55,14 @@ class BestPositionFinder:
         if len(closest_unseen_array_indexes):
             return self.mapper.pixel_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
         else:
-            return self.closest_unseen_grid_index
+            return None
 
     def get_best_position(self):
-        if self.closest_unseen_grid_index is not None:
+        if self.closest_unseen_grid_index is None:
+            return self.mapper.start_position
+        else:
             coords = self.mapper.pixel_grid.grid_index_to_coordinates(self.closest_unseen_grid_index)
             return Position2D(coords)
-        else:
-            return self.mapper.robot_position
     
 
     def __get_line(self, point1, point2):

@@ -1,3 +1,5 @@
+from copy import copy, deepcopy
+
 import numpy as np
 import cv2 as cv
 
@@ -23,6 +25,7 @@ class Mapper:
 
         self.robot_position = None
         self.robot_orientation = None
+        self.start_position = None
 
         # Data structures
         pixels_per_tile = 10
@@ -75,7 +78,8 @@ class Mapper:
     
         
     def register_start(self, robot_position):
-        pass # TODO
+        self.start_position = deepcopy(robot_position)
+        print("registered start position:", self.start_position)
 
     
     # Grids

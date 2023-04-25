@@ -19,25 +19,22 @@ class PoseManager:
         self.orientation = Angle(0)
         self.previous_orientation = Angle(0)
 
-        self.position = Position2D(0, 0)
-        self.previous_position = Position2D(0, 0)
+        self.__position = Position2D(0, 0)
+        self.__previous_position = Position2D(0, 0)
 
         self.orientation_sensor = self.GYROSCOPE
         self.automatically_decide_orientation_sensor = True
 
         self.position_offsets = position_offsets
     
-        
-
     def update(self, wheel_direction):
         # Gyro and gps update
         self.gps.update()
         self.gyroscope.update()
         
         # Get global position
-        self.previous_position = self.position
-        self.position = self.gps.get_position()
-        self.position += self.position_offsets
+        self.__previous_position = self.position
+        self.__position = self.gps.get_position()
 
         # Decides wich sensor to use for orientation detection
         if self.automatically_decide_orientation_sensor:
@@ -70,5 +67,13 @@ class PoseManager:
             self.orientation = gps_orientation
             self.gyroscope.set_orientation(self.orientation)
             if SHOW_DEBUG: print("USING GPS")
+
+    @property
+    def position(self):
+        return self.__position + self.position_offsets
+    
+    @property
+    def previous_position(self):
+        return self.__previous_position + self.position_offsets
         
 

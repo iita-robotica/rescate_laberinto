@@ -27,6 +27,8 @@ class PathFinder():
         self.a_star_index = 0
 
         self.mapper = mapper
+
+        self.path_not_found = False
     
     def update(self, target_position: np.ndarray = None) -> None:
         if target_position is not None:
@@ -85,6 +87,10 @@ class PathFinder():
 
             self.a_star_path = self.a_star_path[1:]
             self.a_star_index = 0
+            self.path_not_found = False
+        else:
+            if SHOW_PATHFINDING_DEBUG: print("PATH NOT FOUND")
+            self.path_not_found = True
         
         self.a_star_path = self.dither_path(self.a_star_path) # Remove every second positon of the path
         self.smooth_astar_path = self.a_star_path_smoother.smooth(self.a_star_path) # Smooth the path

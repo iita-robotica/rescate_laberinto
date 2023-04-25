@@ -28,7 +28,8 @@ class Executor:
 
         self.state_machine = StateMachine("init") # Manages states
         self.state_machine.create_state("init", self.state_init, {"explore",}) # This state initializes and calibrates the robot
-        self.state_machine.create_state("explore", self.state_explore) # This state follows the position returned by the agent
+        self.state_machine.create_state("explore", self.state_explore, {"end",}) # This state follows the position returned by the agent
+        self.state_machine.create_state("end", self.state_end)
 
         self.sequencer = Sequencer(reset_function=self.delay_manager.reset_delay) # Allows for asynchronous programming
 
@@ -116,6 +117,12 @@ class Executor:
         if SHOW_DEBUG:
             print("rotation:", self.robot.orientation)
             print("position:", self.robot.position)
+        
+        if self.agent.do_end():
+            self.state_machine.change_state("end")
+    
+    def state_end(self, change_state_function):
+        self.robot.comunicator.send_end_of_play()
 
     def calibrate_position_offsets(self):
         """Calculates offsets in the robot position, in case it doesn't start perfectly centerd."""
