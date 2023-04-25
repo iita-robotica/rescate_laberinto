@@ -5,7 +5,7 @@ from robot.robot import Robot
 
 def main():
     robot = Robot(time_step=32)
-    mapper = Mapper(tile_size=0.006, robot_diameter=robot.diameter, camera_distance_from_center=robot.diameter / 2)
+    mapper = Mapper(tile_size=0.06, robot_diameter=robot.diameter, camera_distance_from_center=robot.diameter / 2)
     agent = GranularNavigationAgent(mapper=mapper)
 
     executor = Executor(agent, mapper, robot)

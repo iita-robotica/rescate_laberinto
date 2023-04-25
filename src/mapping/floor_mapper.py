@@ -149,7 +149,7 @@ class FloorMapper:
         return array[offsets[0]:, offsets[1]:]
     
     def get_color_average_kernel(self):
-        tile_size = self.tile_size * self.pixel_per_m
+        tile_size = round(self.tile_size * self.pixel_per_m)
         square_propotion = 0.8
         square_size = round(tile_size * square_propotion)
 
@@ -168,26 +168,28 @@ class FloorMapper:
         kernel = self.get_color_average_kernel()
 
         floor_color = cv.filter2D(floor_color, -1, kernel)
-        print("offsets", offsets)
-
+        #print("offsets", offsets)
         image = []
 
-        for x in range(offsets[0] + round(tile_size / 2), floor_color.shape[0], round(tile_size)):
+        for x in range(round(offsets[0] + tile_size / 2), floor_color.shape[0], round(tile_size)):
             row = []
-            for y in range(offsets[1] + round(tile_size / 2), floor_color.shape[1], round(tile_size)):
+            for y in range(round(offsets[1] + tile_size / 2), floor_color.shape[1], round(tile_size)):
                 row.append(floor_color[x, y, :])
             image.append(row)
 
         image = np.array(image, dtype=np.uint8)
 
-        image = cv.resize(image, (0, 0), fx=tile_size, fy=tile_size, interpolation=cv.INTER_NEAREST)
+        try:
+            image = cv.resize(image, (0, 0), fx=tile_size, fy=tile_size, interpolation=cv.INTER_NEAREST)
 
-        
-        final_x = image.shape[0] if image.shape[0] + offsets[0] < self.pixel_grid.array_shape[0] else self.pixel_grid.array_shape[0] - offsets[0]
-        final_y = image.shape[1] if image.shape[1] + offsets[1] < self.pixel_grid.array_shape[1] else self.pixel_grid.array_shape[1] - offsets[1]
+                        
+            final_x = image.shape[0] if image.shape[0] + offsets[0] < self.pixel_grid.array_shape[0] else self.pixel_grid.array_shape[0] - offsets[0]
+            final_y = image.shape[1] if image.shape[1] + offsets[1] < self.pixel_grid.array_shape[1] else self.pixel_grid.array_shape[1] - offsets[1]
 
-        #self.pixel_grid.arrays["average_floor_color"] = np.zeros((final_x, final_y, 3), dtype=np.uint8)
+            #self.pixel_grid.arrays["average_floor_color"] = np.zeros((final_x, final_y, 3), dtype=np.uint8)
 
-        self.pixel_grid.arrays["average_floor_color"][offsets[0]:offsets[0] + final_x:, offsets[1]:offsets[1] + final_y, :] = image[:final_x,:final_y, :]
+            self.pixel_grid.arrays["average_floor_color"][offsets[0]:offsets[0] + final_x:, offsets[1]:offsets[1] + final_y, :] = image[:final_x,:final_y, :]
+        except:
+            pass
             
         return floor_color
