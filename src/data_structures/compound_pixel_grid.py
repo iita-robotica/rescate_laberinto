@@ -32,6 +32,7 @@ class CompoundExpandablePixelGrid:
             "discovered": np.zeros(self.array_shape, np.bool_),
             "floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8),
             "floor_color_detection_distance": np.zeros(self.array_shape, np.uint8),
+            "average_floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8),
         }
 
         self.resolution = pixel_per_m # resolution of the grid with regards to the coordinate system of the gps / the world
@@ -316,7 +317,7 @@ class CompoundExpandablePixelGrid:
         
         #color_grid[self.arrays["discovered"]] += (0, 0, 0.5)
         #color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
-        color_grid = self.arrays["floor_color"].astype(np.float32) / 255
+        color_grid = self.arrays["average_floor_color"].astype(np.float32) / 255
 
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
 

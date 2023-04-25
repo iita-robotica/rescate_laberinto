@@ -47,7 +47,7 @@ class FloorMapper:
         return ipm
     
     def set_in_background(self, pov: np.ndarray, background=None):
-        cv.imshow('pov', pov)
+        #cv.imshow('pov', pov)
         max_dim = max(pov.shape)
         if background  is None: background = np.zeros((max_dim * 2, max_dim * 2, 4), dtype=np.uint8)
 
@@ -56,7 +56,7 @@ class FloorMapper:
         
         background[start[0]:end[0], start[1]:end[1], :] = pov[:,:,:]
 
-        cv.imshow("pov in background", background)
+        #cv.imshow("pov in background", background)
 
         return background
     
@@ -88,7 +88,7 @@ class FloorMapper:
     def map_floor(self, camera_images, robot_grid_index):
         povs = self.get_unified_povs(camera_images)
 
-        cv.imshow("final_pov", povs[:, :, 3])
+        #cv.imshow("final_pov", povs[:, :, 3])
 
         self.load_povs_to_grid(robot_grid_index, povs)
 
@@ -110,7 +110,7 @@ class FloorMapper:
         povs_gradient = np.zeros_like(gradient)
         povs_gradient[mask] = gradient[mask]
 
-        cv.imshow("gradient", povs_gradient)
+        #cv.imshow("gradient", povs_gradient)
 
         
 
@@ -172,15 +172,22 @@ class FloorMapper:
 
         image = []
 
-        for x in range(offsets[0], floor_color.shape[0], round(tile_size)):
+        for x in range(offsets[0] + round(tile_size / 2), floor_color.shape[0], round(tile_size)):
             row = []
-            for y in range(offsets[1], floor_color.shape[1], round(tile_size)):
+            for y in range(offsets[1] + round(tile_size / 2), floor_color.shape[1], round(tile_size)):
                 row.append(floor_color[x, y, :])
             image.append(row)
 
         image = np.array(image, dtype=np.uint8)
-            
-        cv.imshow("floor_color", image)
-            
+
+        image = cv.resize(image, (0, 0), fx=tile_size, fy=tile_size, interpolation=cv.INTER_NEAREST)
+
+        
+        final_x = image.shape[0] if image.shape[0] + offsets[0] < self.pixel_grid.array_shape[0] else self.pixel_grid.array_shape[0] - offsets[0]
+        final_y = image.shape[1] if image.shape[1] + offsets[1] < self.pixel_grid.array_shape[1] else self.pixel_grid.array_shape[1] - offsets[1]
+
+        #self.pixel_grid.arrays["average_floor_color"] = np.zeros((final_x, final_y, 3), dtype=np.uint8)
+
+        self.pixel_grid.arrays["average_floor_color"][offsets[0]:offsets[0] + final_x:, offsets[1]:offsets[1] + final_y, :] = image[:final_x,:final_y, :]
             
         return floor_color
