@@ -5,6 +5,16 @@ from data_structures.angle import Angle
 import imutils
 from copy import copy, deepcopy
 
+class ColorFilter:
+    def __init__(self, lower_hsv, upper_hsv):
+        self.lower = np.array(lower_hsv)
+        self.upper = np.array(upper_hsv)
+    
+    def filter(self, img):
+        hsv_image = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+        mask = cv.inRange(hsv_image, self.lower, self.upper)
+        return mask
+
 class FloorMapper:
     def __init__(self, pixel_grid: CompoundExpandablePixelGrid, tile_resolution, tile_size, camera_distance_from_center) -> None:
         self.pixel_grid = pixel_grid
@@ -12,6 +22,7 @@ class FloorMapper:
         self.tile_size = tile_size
         self.pixel_per_m = tile_resolution / tile_size
         self.pov_distance_from_center = round(0.064 * self.pixel_per_m) 
+        self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 30))
 
         tiles_up = 0
         tiles_down = 1
@@ -112,8 +123,6 @@ class FloorMapper:
 
         #cv.imshow("gradient", povs_gradient)
 
-        
-
         detection_distance_mask = self.pixel_grid.arrays["floor_color_detection_distance"][start[0]:end[0], start[1]:end[1]] < povs_gradient
 
         seen_by_camera_mask = self.pixel_grid.arrays["seen_by_camera"][start[0]:end[0], start[1]:end[1]]
@@ -125,8 +134,11 @@ class FloorMapper:
 
         self.pixel_grid.arrays["floor_color"][start[0]:end[0], start[1]:end[1]][final_mask] = povs[:,:,:3][final_mask]
 
-        blured = self.blur_floor_color(robot_grid_index)
-        cv.imshow("blured", blured)
+        self.detect_holes()
+
+        #self.load_average_tile_color()
+        
+
 
     
     def __get_distance_to_center_gradient(self, shape):
@@ -158,9 +170,27 @@ class FloorMapper:
         kernel = kernel / kernel.sum()
 
         return kernel
-
     
-    def blur_floor_color(self, robot_position):
+    def detect_holes(self):
+        tile_size = self.tile_size * self.pixel_per_m
+        offsets = self.__get_offsets(tile_size)
+        floor_color = deepcopy(self.pixel_grid.arrays["floor_color"])
+
+        self.pixel_grid.arrays["holes"] = self.hole_color_filter.filter(self.pixel_grid.arrays["floor_color"])
+
+        self.pixel_grid.arrays["occupied"] += self.pixel_grid.arrays["holes"].astype(np.bool_)
+
+        """
+        for x in range(round(offsets[0] + tile_size / 2), floor_color.shape[0], round(tile_size)):
+            row = []
+            for y in range(round(offsets[1] + tile_size / 2), floor_color.shape[1], round(tile_size)):
+                row.append(floor_color[x, y, :])
+            image.append(row)
+
+        image = np.array(image, dtype=np.uint8)
+        """
+
+    def load_average_tile_color(self):
         tile_size = self.tile_size * self.pixel_per_m
         offsets = self.__get_offsets(tile_size)
         floor_color = deepcopy(self.pixel_grid.arrays["floor_color"])
@@ -179,17 +209,14 @@ class FloorMapper:
 
         image = np.array(image, dtype=np.uint8)
 
-        try:
-            image = cv.resize(image, (0, 0), fx=tile_size, fy=tile_size, interpolation=cv.INTER_NEAREST)
+        
+        image = cv.resize(image, (0, 0), fx=tile_size, fy=tile_size, interpolation=cv.INTER_NEAREST)
 
-                        
-            final_x = image.shape[0] if image.shape[0] + offsets[0] < self.pixel_grid.array_shape[0] else self.pixel_grid.array_shape[0] - offsets[0]
-            final_y = image.shape[1] if image.shape[1] + offsets[1] < self.pixel_grid.array_shape[1] else self.pixel_grid.array_shape[1] - offsets[1]
+                    
+        final_x = image.shape[0] if image.shape[0] + offsets[0] < self.pixel_grid.array_shape[0] else self.pixel_grid.array_shape[0] - offsets[0]
+        final_y = image.shape[1] if image.shape[1] + offsets[1] < self.pixel_grid.array_shape[1] else self.pixel_grid.array_shape[1] - offsets[1]
 
-            #self.pixel_grid.arrays["average_floor_color"] = np.zeros((final_x, final_y, 3), dtype=np.uint8)
+        #self.pixel_grid.arrays["average_floor_color"] = np.zeros((final_x, final_y, 3), dtype=np.uint8)
 
-            self.pixel_grid.arrays["average_floor_color"][offsets[0]:offsets[0] + final_x:, offsets[1]:offsets[1] + final_y, :] = image[:final_x,:final_y, :]
-        except:
-            pass
-            
-        return floor_color
+        self.pixel_grid.arrays["average_floor_color"][offsets[0]:offsets[0] + final_x:, offsets[1]:offsets[1] + final_y, :] = image[:final_x,:final_y, :]
+        
