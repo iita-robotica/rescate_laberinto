@@ -4,8 +4,6 @@ from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 
 from data_structures.vectors import Position2D
 
-
-
 class WallMapper:
     def __init__(self, compound_grid: CompoundExpandablePixelGrid, robot_diameter: float) -> None:
         self.grid = compound_grid
@@ -96,7 +94,7 @@ class WallMapper:
         self.grid.arrays["detected_points"] = self.grid.arrays["detected_points"] * (self.grid.arrays["detected_points"] > self.delete_threshold)
 
 
-        # Initialization methods
+    # Initialization methods
     def __generate_quadratic_circle_gradient(self, min_radius, max_radius):
         min_radius = round(min_radius)
         max_radius = round(max_radius)

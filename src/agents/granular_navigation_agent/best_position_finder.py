@@ -19,6 +19,8 @@ class BestPositionFinder:
                                                             traversable_function=lambda x: x == False,
                                                             max_result_number=1)
         
+        self.closest_free_point_finder = BFSAlgorithm(lambda x : x == 0)
+        
         self.closest_unseen_grid_index = None
         
 
@@ -49,9 +51,11 @@ class BestPositionFinder:
     def get_closest_unseen_grid_index(self):
         robot_array_index = self.mapper.pixel_grid.coordinates_to_array_index(self.mapper.robot_position)
 
+        start_node = self.get_closest_traversable_array_index(robot_array_index)
+
         closest_unseen_array_indexes = self.closest_unseen_finder.bfs(found_array=self.mapper.pixel_grid.arrays["discovered"],
                                                                       traversable_array=self.mapper.pixel_grid.arrays["traversable"],
-                                                                      start_node=robot_array_index)
+                                                                      start_node=start_node)
         if len(closest_unseen_array_indexes):
             return self.mapper.pixel_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
         else:
@@ -89,6 +93,15 @@ class BestPositionFinder:
                     break
         
         return farthest_points
+    
+
+
+    def get_closest_traversable_array_index(self, array_index):
+        if self.mapper.pixel_grid.arrays["traversable"][array_index[0], array_index[1]]:
+            return  self.closest_free_point_finder.bfs(array=self.mapper.pixel_grid.arrays["traversable"],
+                                                       start_node=array_index)
+        else:
+            return array_index
 
 
         

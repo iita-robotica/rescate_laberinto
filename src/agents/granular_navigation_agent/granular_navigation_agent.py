@@ -26,7 +26,9 @@ class GranularNavigationAgent(Agent):
         self.best_position = self.best_position_finder.get_best_position()
         self.path_finder.update(target_position=self.best_position)#np.array(Position2D(-0.08884384679907074, -0.01975882018000104)))
 
-        if self.path_finder.is_path_finished() and self.best_position == self.mapper.start_position:
+        if self.path_finder.is_path_finished() and \
+           self.best_position == self.mapper.start_position and \
+           self.best_position.get_distance_to(self.mapper.robot_position) < 0.04:
             self.__end = True
 
     def get_target_position(self) -> Position2D:

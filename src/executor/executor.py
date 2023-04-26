@@ -127,7 +127,7 @@ class Executor:
     def calibrate_position_offsets(self):
         """Calculates offsets in the robot position, in case it doesn't start perfectly centerd."""
         print("robot_position:", self.robot.position)
-        self.robot.position_offsets = self.robot.position % (self.mapper.tile_size * 2)
+        self.robot.position_offsets = self.robot.position % (self.mapper.quarter_tile_size * 2)
         print("positionOffsets: ", self.robot.position_offsets)
         
 
