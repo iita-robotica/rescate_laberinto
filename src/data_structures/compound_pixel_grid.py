@@ -141,11 +141,11 @@ class CompoundExpandablePixelGrid:
         """
         #color_grid = np.zeros((self.array_shape[0], self.array_shape[1], 3), dtype=np.float32)
         color_grid = self.arrays["floor_color"].astype(np.float32) / 255
-        color_grid[self.arrays["traversed"]] = (.5, 0., .5)
+        #color_grid[self.arrays["traversed"]] = (.5, 0., .5)
         #color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 200
         color_grid[self.arrays["traversable"]] = (1, 0, 0)
         
-        #color_grid[self.arrays["discovered"]] += (0, 0, 0.1)
+        #color_grid[self.arrays["discovered"]] = (0, 1, 1)
         #color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
 
         color_grid[self.arrays["occupied"]] = (1, 1, 1)

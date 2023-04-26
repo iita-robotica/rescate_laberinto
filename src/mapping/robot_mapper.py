@@ -50,10 +50,11 @@ class RobotMapper:
         self.pixel_grid.expand_to_grid_index(np.array((np.max(camera_povs[0]), np.max(camera_povs[1]))))
         self.pixel_grid.expand_to_grid_index(np.array((np.min(camera_povs[0]), np.min(camera_povs[1]))))
 
-        for item in np.transpose(camera_povs):
-            array_index = self.pixel_grid.grid_index_to_array_index(item)
-            if self.pixel_grid.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
-                self.pixel_grid.arrays["seen_by_camera"][array_index[0], array_index[1]] = True
+
+        camera_povs[0] += self.pixel_grid.offsets[0]
+        camera_povs[1] += self.pixel_grid.offsets[1]
+
+        self.pixel_grid.arrays["seen_by_camera"][camera_povs[0], camera_povs[1]] += self.pixel_grid.arrays["seen_by_lidar"][camera_povs[0], camera_povs[1]]
 
     def map_discovered_by_robot(self, robot_grid_index, robot_rotation: Angle):
         global_discovered_orientation = self.__discovery_pov_orientation + robot_rotation
@@ -67,13 +68,11 @@ class RobotMapper:
         
         self.pixel_grid.expand_to_grid_index(np.array((np.max(disc_povs[0]), np.max(disc_povs[1]))))
         self.pixel_grid.expand_to_grid_index(np.array((np.min(disc_povs[0]), np.min(disc_povs[1]))))
+        
+        disc_povs[0] += self.pixel_grid.offsets[0]
+        disc_povs[1] += self.pixel_grid.offsets[1]
 
-        transposed = np.transpose(disc_povs)
-        for item in transposed:
-            array_index = self.pixel_grid.grid_index_to_array_index(item)
-
-            if self.pixel_grid.arrays["seen_by_lidar"][array_index[0], array_index[1]]:
-                self.pixel_grid.arrays["discovered"][array_index[0], array_index[1]] = True
+        self.pixel_grid.arrays["discovered"][disc_povs[0], disc_povs[1]] += self.pixel_grid.arrays["seen_by_lidar"][disc_povs[0], disc_povs[1]]
 
     def __get_cone_template(self, lenght, orientation: Angle, amplitude: Angle):
         matrix_size = math.ceil(lenght) * 2
