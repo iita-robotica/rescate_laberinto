@@ -5,6 +5,7 @@ from utilities import divide_into_chunks
 
 from robot.devices.sensor import TimedSensor
 from data_structures.angle import Angle
+from data_structures.vectors import Vector2D
 
 # Returns a point cloud of the detctions it makes
 class Lidar(TimedSensor):
@@ -39,6 +40,7 @@ class Lidar(TimedSensor):
 
         self.__point_cloud = None
         self.__out_of_bounds_point_cloud = None
+        self.__distance_detections = None
 
     # Returns the in-bounds point cloud
     def get_point_cloud(self):
@@ -50,6 +52,10 @@ class Lidar(TimedSensor):
     def get_out_of_bounds_point_cloud(self):
         if self.step_counter.check():
             return self.__out_of_bounds_point_cloud
+        
+    def get_detections(self):
+        if self.step_counter.check():
+            return self.__distance_detections
 
     def set_orientation(self, angle):
         self.orientation = angle
@@ -73,6 +79,7 @@ class Lidar(TimedSensor):
 
         self.__point_cloud = []
         self.__out_of_bounds_point_cloud = []
+        self.__distance_detections = []
 
         total_depth_array = self.device.getRangeImage()
         total_depth_array = divide_into_chunks(total_depth_array, self.horizontal_resolution)
@@ -103,6 +110,8 @@ class Lidar(TimedSensor):
                         # Calculates 2d point from distance and horizontal angle
                         point = utilities.getCoordsFromRads(horizontal_angle, distance)
                         self.__point_cloud.append(self.__normalize_point(point))
+
+                        self.__distance_detections.append(Vector2D(Angle(horizontal_angle), distance))
                         
                         #Check if point is close
                         if self.__in_range_for_close_point(horizontal_angle) and distance < self.is_point_close_threshold:

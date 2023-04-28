@@ -4,6 +4,8 @@ from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 from data_structures.angle import Angle
 import imutils
 from copy import copy, deepcopy
+from robot.devices.camera import CameraImage
+from typing import List
 
 class ColorFilter:
     def __init__(self, lower_hsv, upper_hsv):
@@ -88,13 +90,13 @@ class FloorMapper:
         return imutils.rotate(image, angle.degrees, (image.shape[0] // 2, image.shape[1] // 2))
     
 
-    def get_unified_povs(self, camera_images):
+    def get_unified_povs(self, camera_images: List[CameraImage]):
         povs_list = []
         for camera_image in camera_images:
             pov = self.flatten_camera_pov(np.rot90(copy(camera_image.image), k=3))
             pov = np.flip(pov, 1)
             pov = self.set_in_background(pov)
-            pov = self.rotate_image_to_angle(pov, camera_image.orientation)
+            pov = self.rotate_image_to_angle(pov, camera_image.data.horizontal_orientation)
             povs_list.append(pov)
 
         return sum(povs_list)
@@ -141,8 +143,6 @@ class FloorMapper:
 
         #self.load_average_tile_color()
         
-
-
     
     def __get_distance_to_center_gradient(self, shape):
         gradient = np.zeros(shape, dtype=np.float32)

@@ -68,9 +68,10 @@ class Executor:
         if self.mapping_enabled:
                 # Floor and lidar mapping
                 self.mapper.update(self.robot.get_point_cloud(), 
-                                   self.robot.get_out_of_bounds_point_cloud(), 
+                                   self.robot.get_out_of_bounds_point_cloud(),
+                                   self.robot.get_lidar_detections(),
                                    self.robot.get_camera_images(), 
-                                   self.robot.position, 
+                                   self.robot.position,
                                    self.robot.orientation)
         else:
             # Only position and rotation

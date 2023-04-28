@@ -14,6 +14,7 @@ from mapping.floor_mapper import FloorMapper
 from mapping.robot_mapper import RobotMapper
 
 from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
+from fixture_detection.fixture_detection import FixtureDetector
 
 from flags import SHOW_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID, DO_WAIT_KEY
 
@@ -55,8 +56,11 @@ class Mapper:
         self.point_cloud_extractor = PointCloudExtarctor(resolution=6)
         self.floor_color_extractor = FloorColorExtractor(tile_resolution=50)
 
+        self.fixture_detector = FixtureDetector()
+
     def update(self, in_bounds_point_cloud: list = None, 
-               out_of_bounds_point_cloud: list = None, 
+               out_of_bounds_point_cloud: list = None,
+               lidar_detections: list = None,
                camera_images: list = None, 
                robot_position: Position2D = None, 
                robot_orientation: Angle = None):
@@ -80,6 +84,16 @@ class Mapper:
         # Load floor colors
         if camera_images is not None:
             self.floor_mapper.map_floor(camera_images, self.pixel_grid.coordinates_to_grid_index(self.robot_position))
+
+        if camera_images is not None and lidar_detections is not None:
+            debug_grid = self.pixel_grid.get_colored_grid()
+            for i in camera_images:
+                positions = self.fixture_detector.get_fixture_positions(robot_position, i, lidar_detections)
+                for pos in positions:
+                    index = self.pixel_grid.coordinates_to_array_index(pos)
+                    debug_grid[index[0], index[1]] = (0, 255, 0)
+
+            cv.imshow("fixture_debug_grid", debug_grid)
         
         #DEBUG
         if DO_WAIT_KEY:

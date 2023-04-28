@@ -125,6 +125,10 @@ class Robot:
     def get_out_of_bounds_point_cloud(self):
         return self.lidar.get_out_of_bounds_point_cloud()
     
+
+    def get_lidar_detections(self):
+        return self.lidar.get_detections()
+    
     # Wrapper for cameras
     def get_camera_images(self):
         if self.center_camera.step_counter.check():
