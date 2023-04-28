@@ -13,7 +13,7 @@ from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.granular_navigation_agent import Agent
 
-from fixture_detection.fixture_detection import FixtureDetector
+from fixture_detection.fixture_clasification import FixtureDetector
 
 from flags import SHOW_DEBUG
 
