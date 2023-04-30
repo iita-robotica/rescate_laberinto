@@ -56,7 +56,7 @@ class Mapper:
         self.point_cloud_extractor = PointCloudExtarctor(resolution=6)
         self.floor_color_extractor = FloorColorExtractor(tile_resolution=50)
 
-        self.fixture_detector = FixtureDetector()
+        self.fixture_detector = FixtureDetector(self.pixel_grid)
 
     def update(self, in_bounds_point_cloud: list = None, 
                out_of_bounds_point_cloud: list = None,
@@ -85,16 +85,33 @@ class Mapper:
         if camera_images is not None:
             self.floor_mapper.map_floor(camera_images, self.pixel_grid.coordinates_to_grid_index(self.robot_position))
 
+        
         if camera_images is not None and lidar_detections is not None:
-            debug_grid = self.pixel_grid.get_colored_grid()
+            #debug_grid = self.pixel_grid.get_colored_grid()
             for i in camera_images:
-                positions = self.fixture_detector.get_fixture_positions(robot_position, i, lidar_detections)
+                positions = self.fixture_detector.get_fixture_positions(self.robot_position, i, lidar_detections)
                 for pos in positions:
                     index = self.pixel_grid.coordinates_to_array_index(pos)
-                    debug_grid[index[0], index[1]] = (0, 255, 0)
+                    #debug_grid = cv.circle(debug_grid, (index[1], index[0]), 3, (0, 255, 0), -1)
 
-            cv.imshow("fixture_debug_grid", debug_grid)
+            #robot_array_index = self.pixel_grid.coordinates_to_array_index(self.robot_position)
+            #debug_grid = cv.circle(debug_grid, (robot_array_index[1], robot_array_index[0]), 5, (255, 0, 255), -1)
+
+            #cv.imshow("fixture_debug_grid", debug_grid)
         
+        """
+        if lidar_detections is not None:
+            debug_grid = self.pixel_grid.get_colored_grid()
+            for l in lidar_detections:
+                l.direction.normalize()
+                pos = l.to_position()
+                pos += self.robot_position
+                index = self.pixel_grid.coordinates_to_array_index(pos)
+                debug_grid = cv.circle(debug_grid, (index[1], index[0]), 1, (0, 255, 0), -1)
+
+            cv.imshow("lidar_debug_grid", debug_grid)
+        """
+
         #DEBUG
         if DO_WAIT_KEY:
             cv.waitKey(1)

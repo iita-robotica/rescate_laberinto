@@ -111,7 +111,10 @@ class Lidar(TimedSensor):
                         point = utilities.getCoordsFromRads(horizontal_angle, distance)
                         self.__point_cloud.append(self.__normalize_point(point))
 
-                        self.__distance_detections.append(Vector2D(Angle(horizontal_angle), distance))
+                        v = Vector2D(Angle(horizontal_angle), distance)
+                        v.direction = Angle(math.pi) - v.direction
+                        v.direction.normalize()
+                        self.__distance_detections.append(v)
                         
                         #Check if point is close
                         if self.__in_range_for_close_point(horizontal_angle) and distance < self.is_point_close_threshold:

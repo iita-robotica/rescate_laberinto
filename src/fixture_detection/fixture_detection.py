@@ -3,14 +3,21 @@ from data_structures.angle import Angle
 from typing import List
 from robot.devices.camera import CameraImage
 from fixture_detection.color_filter import ColorFilter
+import skimage
+
+import copy
 
 import math
 
 import numpy as np
 import cv2 as cv
 
+from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
+
 class FixtureDetector:
-    def __init__(self) -> None:
+    def __init__(self, pixel_grid: CompoundExpandablePixelGrid) -> None:
+        self.pixel_grid = pixel_grid
+
         # Color filtering
         self.colors = ("black", "white", "yellow", "red")
         self.color_filters = {
@@ -20,26 +27,43 @@ class FixtureDetector:
             "red": ColorFilter(lower_hsv=(160, 170, 127), upper_hsv=(170, 255, 255))
         }
 
+        self.max_detection_distance = 0.12 * 5
+
     def get_fixture_positions(self, robot_position: Position2D, camera_image: CameraImage, lidar_detections: List[Vector2D]) -> List[Position2D]:
-        positions_in_image = self.get_fixture_positions_in_image(camera_image.image)
+        positions_in_image = self.get_fixture_positions_in_image(np.flip(camera_image.image, axis=1))
+
+        debug = self.pixel_grid.get_colored_grid()
 
         fixture_positions = []
         for position in positions_in_image:
-            relative_horizontal_angle = Angle(position[1] * (camera_image.data.width / camera_image.data.horizontal_fov.radians))
+            relative_horizontal_angle = Angle(position[1] * (camera_image.data.horizontal_fov.radians / camera_image.data.width))
 
             fixture_horizontal_angle = (relative_horizontal_angle - camera_image.data.horizontal_fov / 2) + camera_image.data.horizontal_orientation 
 
             fixture_horizontal_angle.normalize()
 
-            best_lidar_detection = Vector2D()
-            best_diff = Angle(math.inf)
-            for lidar_detection in lidar_detections:
-                diff = abs(lidar_detection.direction - fixture_horizontal_angle)
-                if diff < best_diff:
-                    best_diff = diff
-                    best_lidar_detection = lidar_detection
-                
-            fixture_positions.append(best_lidar_detection.to_position() + robot_position)
+            camera_vector = Vector2D(camera_image.data.horizontal_orientation, camera_image.data.distance_from_center)
+            camera_pos = camera_vector.to_position()
+            camera_pos += robot_position
+
+            detection_vector = Vector2D(fixture_horizontal_angle, self.max_detection_distance)
+            detection_pos = detection_vector.to_position()
+
+            detection_pos += camera_pos
+
+            camera_array_index = self.pixel_grid.coordinates_to_array_index(camera_pos)
+            detection_array_index = self.pixel_grid.coordinates_to_array_index(detection_pos)
+
+            line_xx, line_yy = skimage.draw.line(camera_array_index[0], camera_array_index[1], detection_array_index[0], detection_array_index[1])
+
+            for x, y in zip(line_xx, line_yy):
+                if x >= 0 and y >= 0 and x < self.pixel_grid.array_shape[0] and y < self.pixel_grid.array_shape[1]:
+                    debug[x, y] = (0, 255, 0)
+
+            
+
+            fixture_positions.append(camera_pos)
+        cv.imshow("fixture_detection_debug", debug)
 
         return fixture_positions
     
@@ -53,10 +77,18 @@ class FixtureDetector:
         cv.imshow("fixtures", image_sum)
         
         contours, _ = cv.findContours(image_sum, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+
+        debug = copy.deepcopy(image)
         
         final_victims = []
         for c in contours:
             x, y, w, h = cv.boundingRect(c)
-            final_victims.append(Position2D((x + w) / 2, (y + h) / 2))
+            final_victims.append(Position2D((x + x + w) / 2, (y + y + h) / 2))
+
+        for f in final_victims:
+            debug = cv.circle(debug, np.array(f, dtype=int), 3, (255, 0, 0), -1)
         
+        cv.imshow("victim_pos_debug", debug)
+
         return final_victims

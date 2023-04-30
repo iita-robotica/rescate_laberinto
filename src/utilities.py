@@ -10,6 +10,13 @@ image_dir = os.path.join(script_dir, "images")
 def save_image(image, filename):
     cv.imwrite(os.path.join(image_dir, filename), image)
 
+
+def normalizeRads(rad):
+    rad %= 2 * math.pi
+    if rad < 0:
+        rad += 2 + math.pi
+    return rad
+
 # Converts from degrees to radians
 def degsToRads(deg):
     return deg * math.pi / 180

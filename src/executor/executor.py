@@ -17,6 +17,8 @@ from fixture_detection.fixture_clasification import FixtureDetector
 
 from flags import SHOW_DEBUG
 
+import time
+
 class Executor:
     def __init__(self, agent: Agent, mapper: Mapper, robot: Robot) -> None:
         self.agent = agent # Tells the executor what to do
@@ -61,6 +63,8 @@ class Executor:
             self.do_mapping()
 
             self.state_machine.run()
+
+            time.sleep(0.032)
             
     def do_mapping(self):
         """Updates the mapper is mapping is enabled."""
