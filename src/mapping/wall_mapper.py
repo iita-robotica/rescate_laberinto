@@ -73,8 +73,8 @@ class WallMapper:
         self.calculate_seen_walls()
 
     def calculate_seen_walls(self):
-        self.grid.arrays["walls_seen_by_camera"] = self.grid.arrays["seen_by_camera"] * self.grid.arrays["occupied"]
-        self.grid.arrays["walls_not_seen_by_camera"] =  np.logical_xor(self.grid.arrays["occupied"], self.grid.arrays["walls_seen_by_camera"])
+        self.grid.arrays["walls_seen_by_camera"] = self.grid.arrays["seen_by_camera"] * self.grid.arrays["walls"]
+        self.grid.arrays["walls_not_seen_by_camera"] =  np.logical_xor(self.grid.arrays["walls"], self.grid.arrays["walls_seen_by_camera"])
 
     def generate_navigation_margins(self):
         # Areas traversable by the robot
@@ -115,11 +115,12 @@ class WallMapper:
         return template * 0.5
     
     def occupy_point(self, point_array_index):        
-        if not self.grid.arrays["occupied"][point_array_index[0], point_array_index[1]]:
+        if not self.grid.arrays["walls"][point_array_index[0], point_array_index[1]]:
             self.grid.arrays["detected_points"][point_array_index[0], point_array_index[1]] += 1
             
             if self.grid.arrays["detected_points"][point_array_index[0], point_array_index[1]] > self.to_boolean_threshold:
                 if not self.grid.arrays["traversed"][point_array_index[0], point_array_index[1]]:
+                    self.grid.arrays["walls"][point_array_index[0], point_array_index[1]] = True
                     self.grid.arrays["occupied"][point_array_index[0], point_array_index[1]] = True
                     
 

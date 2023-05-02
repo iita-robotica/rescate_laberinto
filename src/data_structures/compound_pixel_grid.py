@@ -15,7 +15,8 @@ class CompoundExpandablePixelGrid:
 
         self.arrays = {
             "detected_points": np.zeros(self.array_shape, np.uint8), # Number of points detected in position
-            "occupied": np.zeros(self.array_shape, np.bool_), # Confermed occupied point
+            "walls": np.zeros(self.array_shape, np.bool_),
+            "occupied": np.zeros(self.array_shape, np.bool_), # Confirmed occupied point
             "traversable": np.zeros(self.array_shape, np.bool_), # Is or not traversable by the robot, assuming that the robot center is there. True means not traversable.
             "navigation_preference": np.zeros(self.array_shape, np.float32), # The preference for navigation for each pixel. More means less preferred to navigate through.
             "traversed": np.zeros(self.array_shape, np.bool_), # Robot has already gone through there
@@ -27,7 +28,9 @@ class CompoundExpandablePixelGrid:
             "floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8),
             "floor_color_detection_distance": np.zeros(self.array_shape, np.uint8),
             "average_floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8),
-            "holes": np.zeros(self.array_shape, np.bool_)
+            "holes": np.zeros(self.array_shape, np.bool_),
+            "victims": np.zeros(self.array_shape, np.bool_),
+            "victim_angles": np.zeros(self.array_shape, np.float32),
         }
 
     @property
@@ -149,5 +152,9 @@ class CompoundExpandablePixelGrid:
         #color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
 
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
+
+        color_grid *= 0.5
+
+        color_grid[self.arrays["victims"]] = (0, 1, 0)
 
         return color_grid

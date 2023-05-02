@@ -8,6 +8,7 @@ from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.path_finder import PathFinder
 from agents.granular_navigation_agent.best_position_finder import BestPositionFinder
+from agents.granular_navigation_agent.victim_position_finder import VictimPositionFinder
 
 class GranularNavigationAgent(Agent):
     """
@@ -16,6 +17,7 @@ class GranularNavigationAgent(Agent):
     def __init__(self, mapper: Mapper):
         self.path_finder = PathFinder(mapper)
         self.best_position_finder = BestPositionFinder(mapper)
+        self.victim_position_finder = VictimPositionFinder(mapper)
         self.best_position = None
         self.mapper = mapper
         self.__end = False
@@ -30,6 +32,8 @@ class GranularNavigationAgent(Agent):
            self.best_position == self.mapper.start_position and \
            self.best_position.get_distance_to(self.mapper.robot_position) < 0.04:
             self.__end = True
+
+        self.victim_position_finder.update()
 
     def get_target_position(self) -> Position2D:
         return self.path_finder.get_next_position()

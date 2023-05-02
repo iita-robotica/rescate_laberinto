@@ -29,12 +29,13 @@ class FixtureDetector:
 
         self.max_detection_distance = 0.12 * 5
 
-    def get_fixture_positions(self, robot_position: Position2D, camera_image: CameraImage, lidar_detections: List[Vector2D]) -> List[Position2D]:
+    def get_fixture_positions_and_angles(self, robot_position: Position2D, camera_image: CameraImage) -> list:
         positions_in_image = self.get_fixture_positions_in_image(np.flip(camera_image.image, axis=1))
 
-        debug = self.pixel_grid.get_colored_grid()
+        #debug = self.pixel_grid.get_colored_grid()
 
         fixture_positions = []
+        fixture_angles = []
         for position in positions_in_image:
             relative_horizontal_angle = Angle(position[1] * (camera_image.data.horizontal_fov.radians / camera_image.data.width))
 
@@ -58,14 +59,15 @@ class FixtureDetector:
 
             for x, y in zip(line_xx, line_yy):
                 if x >= 0 and y >= 0 and x < self.pixel_grid.array_shape[0] and y < self.pixel_grid.array_shape[1]:
-                    debug[x, y] = (0, 255, 0)
+                    #debug[x, y] = (0, 255, 0)
+                    if self.pixel_grid.arrays["walls"][x, y]:
+                        fixture_positions.append(self.pixel_grid.array_index_to_coordinates(np.array([x, y])))
+                        fixture_angles.append(copy.deepcopy(fixture_horizontal_angle))
+                        break
 
-            
+        #cv.imshow("fixture_detection_debug", debug)
 
-            fixture_positions.append(camera_pos)
-        cv.imshow("fixture_detection_debug", debug)
-
-        return fixture_positions
+        return fixture_positions, fixture_angles
     
     def get_fixture_positions_in_image(self, image: np.ndarray) -> List[Position2D]:
         image_sum = np.zeros(image.shape[:2], dtype=np.bool_)

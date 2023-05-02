@@ -85,13 +85,16 @@ class Mapper:
         if camera_images is not None:
             self.floor_mapper.map_floor(camera_images, self.pixel_grid.coordinates_to_grid_index(self.robot_position))
 
+
         
         if camera_images is not None and lidar_detections is not None:
             #debug_grid = self.pixel_grid.get_colored_grid()
             for i in camera_images:
-                positions = self.fixture_detector.get_fixture_positions(self.robot_position, i, lidar_detections)
-                for pos in positions:
+                positions, angles = self.fixture_detector.get_fixture_positions_and_angles(self.robot_position, i)
+                for pos, angle in zip(positions, angles):
                     index = self.pixel_grid.coordinates_to_array_index(pos)
+                    self.pixel_grid.arrays["victims"][index[0], index[1]] = True
+                    self.pixel_grid.arrays["victim_angles"][index[0], index[1]] = angle.radians
                     #debug_grid = cv.circle(debug_grid, (index[1], index[0]), 3, (0, 255, 0), -1)
 
             #robot_array_index = self.pixel_grid.coordinates_to_array_index(self.robot_position)

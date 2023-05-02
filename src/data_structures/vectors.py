@@ -145,6 +145,12 @@ class Position2D:
         result = Angle(math.atan2(delta.x, delta.y)) + Angle(180, Angle.DEGREES)
         result.normalize()
         return result
+    
+
+    def to_vector(self):
+        m = Position2D(0, 0).get_distance_to(self)
+        a = Position2D(0, 0).get_angle_to(self)
+        return Vector2D(a, m)
        
 class Vector2D:
     def __init__(self, direction:Angle=None, magnitude=None):
