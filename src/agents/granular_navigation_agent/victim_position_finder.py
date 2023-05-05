@@ -5,33 +5,71 @@ from mapping.mapper import Mapper
 from data_structures.vectors import Position2D, Vector2D
 from data_structures.angle import Angle
 
+import math
+
 class VictimPositionFinder:
     def __init__(self, mapper: Mapper) -> None:
         self.mapper = mapper
-        self.fixture_normal_template = self.get_fixture_normal_template(radius=3)
+        self.fixture_normal_template = self.get_fixture_normal_template(radius=8)
 
     def update(self):
-        pass
-        
         debug = self.mapper.pixel_grid.get_colored_grid()
         fixture_indexes = np.nonzero(self.mapper.pixel_grid.arrays["victims"])
         for fixture_x, fixture_y in zip(fixture_indexes[0], fixture_indexes[1]):
             pos1 = Position2D(fixture_x, fixture_y)
 
-            angle = self.mapper.pixel_grid.arrays["victim_angles"][fixture_x, fixture_y]
-            angle = Angle(angle)
-            angle = Angle(180, unit=Angle.DEGREES) + angle
-            angle.normalize()
+            detection_angle = self.mapper.pixel_grid.arrays["victim_angles"][fixture_x, fixture_y]
+            detection_angle = Angle(detection_angle)
+            detection_angle = Angle(180, unit=Angle.DEGREES) + detection_angle
+            detection_angle.normalize()
 
             fixture_square = self.get_fixture_normal_detection_square(np.array(pos1))
-            
+            if fixture_square.shape[0] > 1 and fixture_square.shape[1] > 1:
+                cv.imshow("fixture_square", fixture_square.astype(np.float32))
 
-            vec = Vector2D(Angle(angle), 10)
-            pos2 = vec.to_position()
-            pos2 = Position2D(pos2.y, pos2.x) + pos1
-            pos2 = pos2.astype(int)
 
-            debug = cv.line(debug, (pos1[1], pos1[0]), (pos2[1], pos2[0]), (0, 255, 0), 1)
+                indices = np.array(np.nonzero(fixture_square))
+
+                max_x = np.max(indices[0])
+                min_x = np.min(indices[0])
+                max_y = np.max(indices[1])
+                min_y = np.min(indices[1])
+
+                diff_x = max_x - min_x
+                diff_y = max_y - min_y
+
+                wall_angle = np.arctan(diff_x / diff_y)
+
+                wall_angle = Angle(wall_angle)
+
+                print(wall_angle)
+
+                #wall_angle = wall_angle + Angle(180, Angle.DEGREES) * ((detection_angle // Angle(180, Angle.DEGREES)) - (wall_angle // Angle(180, Angle.DEGREES)))
+
+                wall_angle.normalize()
+
+
+                absolute_diff = wall_angle.get_absolute_distance_to(detection_angle)
+
+                """
+                angle_difference = self.initial_angle - target_angle
+                if 180 > angle_difference.degrees > 0 or angle_difference.degrees < -180:
+                    return self.Directions.LEFT
+                else:
+                    return self.Directions.RIGHT
+                """
+
+                if absolute_diff > Angle(90, Angle.DEGREES):
+                    wall_angle = Angle(180, Angle.DEGREES) + wall_angle
+                
+                wall_angle.normalize()
+
+                vec = Vector2D(wall_angle, 10)
+                pos2 = vec.to_position()
+                pos2 = Position2D(pos2.y, pos2.x) + pos1
+                pos2 = pos2.astype(int)
+
+                debug = cv.line(debug, (pos1[1], pos1[0]), (pos2[1], pos2[0]), (0, 255, 0), 1)
         
         cv.imshow("victim_normal_debug", debug)
         

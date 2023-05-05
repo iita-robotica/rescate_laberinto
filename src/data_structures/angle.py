@@ -46,6 +46,9 @@ class Angle:
     def __str__(self):
         return str(self.degrees)
     
+    def __repr__(self):
+        return str(self.degrees)
+    
     def __add__(self, other):
         if isinstance(other, Angle):
             return Angle(self.radians + other.radians)
