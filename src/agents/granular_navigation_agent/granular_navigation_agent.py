@@ -24,8 +24,13 @@ class GranularNavigationAgent(Agent):
     
     def update(self) -> None:
         self.best_position_finder.calculate_best_position(finished_path=self.path_finder.is_path_finished() or self.path_finder.path_not_found)
+        self.victim_position_finder.update()
 
-        self.best_position = self.best_position_finder.get_best_position()
+        if self.victim_position_finder.is_there_victims():
+            self.best_position = self.victim_position_finder.get_victim_position()
+        else:
+            self.best_position = self.best_position_finder.get_best_position()
+
         self.path_finder.update(target_position=self.best_position)#np.array(Position2D(-0.08884384679907074, -0.01975882018000104)))
 
         if self.path_finder.is_path_finished() and \
@@ -33,8 +38,7 @@ class GranularNavigationAgent(Agent):
            self.best_position.get_distance_to(self.mapper.robot_position) < 0.04:
             self.__end = True
 
-        self.victim_position_finder.update()
-
+        
     def get_target_position(self) -> Position2D:
         return self.path_finder.get_next_position()
 
@@ -42,5 +46,7 @@ class GranularNavigationAgent(Agent):
         return self.__end
     
     def do_report_victim(self) -> bool:
-        return False
+        if self.victim_position_finder.is_close_to_victim():
+            self.mapper.fixture_detector.mark_reported_fixture(self.mapper.robot_position, self.victim_position_finder.get_victim_position())
+        return self.victim_position_finder.is_close_to_victim()
         

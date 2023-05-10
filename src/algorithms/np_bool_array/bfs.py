@@ -49,12 +49,15 @@ class NavigatingBFSAlgorithm:
         while len(open_list) > 0:
             node = open_list.pop(0)
 
-            if traversable_array[node[0], node[1]]:
+            if node[0] < 0 or node[1] < 0 or node[0] >= traversable_array.shape[0] or node[1] >= traversable_array.shape[1]:
+                continue
+
+            if not self.traversable_function(traversable_array[node[0], node[1]]):
                 continue
 
             value = found_array[node[0], node[1]]
 
-            if not value:
+            if self.found_function(value):
                 results.append(node)
                 if len(results) >= self.max_result_number:
                     return results

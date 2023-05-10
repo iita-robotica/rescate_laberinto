@@ -21,7 +21,7 @@ class FixtureType:
                 return False
         return True
             
-class FixtureDetector:
+class FixtureClasiffier:
     def __init__(self):
         # Victim classification
         self.victim_classifier = VictimClassifier()
@@ -38,6 +38,9 @@ class FixtureDetector:
         # Fixture filtering
         self.min_fixture_height = 23
         self.min_fixture_width = 19
+
+        #self.min_fixture_height = 20
+        #self.min_fixture_width = 15
     
         # Fixture classification
         self.possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
@@ -141,6 +144,8 @@ class FixtureDetector:
         for c in contours:
             x, y, w, h = cv.boundingRect(c)
             final_victims.append({"image":image[y:y + h, x:x + w], "position":(x, y)})
+
+        #print("unfiltered", len(final_victims))
         return self.filter_fixtures(final_victims)
             
     def count_colors(self, image) -> dict:

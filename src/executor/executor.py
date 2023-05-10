@@ -13,9 +13,9 @@ from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.granular_navigation_agent import Agent
 
-from fixture_detection.fixture_clasification import FixtureDetector
+from fixture_detection.fixture_clasification import FixtureClasiffier
 
-from flags import SHOW_DEBUG
+from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S
 
 import time
 
@@ -30,12 +30,14 @@ class Executor:
 
         self.state_machine = StateMachine("init") # Manages states
         self.state_machine.create_state("init", self.state_init, {"explore",}) # This state initializes and calibrates the robot
-        self.state_machine.create_state("explore", self.state_explore, {"end",}) # This state follows the position returned by the agent
+        self.state_machine.create_state("explore", self.state_explore, {"end", "detect_fixtures"}) # This state follows the position returned by the agent
         self.state_machine.create_state("end", self.state_end)
+        self.state_machine.create_state("detect_fixtures", self.state_detect_fixtures, {"explore", "report_fixture"})
+        self.state_machine.create_state("report_fixture", self.state_report_fixture, {"explore"})
 
         self.sequencer = Sequencer(reset_function=self.delay_manager.reset_delay) # Allows for asynchronous programming
 
-        self.fixture_detector = FixtureDetector()
+        self.fixture_detector = FixtureClasiffier()
         
         # Flags
         self.mapping_enabled = False
@@ -46,8 +48,11 @@ class Executor:
         self.seq_move_wheels =     self.sequencer.make_simple_event( self.robot.move_wheels)
 
         self.seq_rotate_to_angle = self.sequencer.make_complex_event(self.robot.rotate_to_angle)
+        self.seq_rotate_slowly_to_angle = self.sequencer.make_complex_event(self.robot.rotate_slowly_to_angle)
         self.seq_move_to_coords =  self.sequencer.make_complex_event(self.robot.move_to_coords)
         self.seq_delay_seconds =   self.sequencer.make_complex_event(self.delay_manager.delay_seconds)
+
+        self.letter_to_report = None
 
     def run(self):
         """Advances the simulation, updates all components and executes the state machine."""
@@ -64,7 +69,10 @@ class Executor:
 
             self.state_machine.run()
 
-            time.sleep(0.032)
+            if DO_SLOW_DOWN:
+                time.sleep(SLOW_DOWN_S)
+
+            print("state:", self.state_machine.state)
             
     def do_mapping(self):
         """Updates the mapper is mapping is enabled."""
@@ -108,6 +116,7 @@ class Executor:
         self.sequencer.simple_event(change_state_function, "explore") # Changes state
         self.sequencer.seq_reset_sequence() # Resets the sequence
 
+
     def state_explore(self, change_state_function):
         """Follows the instructions of the agent."""
 
@@ -125,9 +134,61 @@ class Executor:
         
         if self.agent.do_end():
             self.state_machine.change_state("end")
-    
+
+        if self.agent.do_report_victim():
+            change_state_function("detect_fixtures")
+
     def state_end(self, change_state_function):
         self.robot.comunicator.send_end_of_play()
+
+    def state_detect_fixtures(self, change_state_function):
+        self.sequencer.start_sequence()
+        self.seq_print("entered_detect_fixture")
+        self.seq_move_wheels(0, 0)
+
+        self.sequencer.complex_event(self.robot.rotate_slowly_to_angle, angle=Angle(90, Angle.DEGREES), direction=RotationCriteria.LEFT)
+        self.sequencer.complex_event(self.robot.rotate_slowly_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
+
+        self.seq_print("exiting_detect_fixture")
+        self.sequencer.simple_event(change_state_function, "explore")
+        self.sequencer.seq_reset_sequence() # Resets the sequence
+        
+        images = self.robot.get_camera_images()
+        if self.victim_reporting_enabled and images is not None:
+           
+            fixtures = self.fixture_detector.find_fixtures(images[1].image)   
+            if len(fixtures):
+                change_state_function("report_fixture")
+                self.sequencer.reset_sequence() # Resets the sequence
+
+    def state_report_fixture(self, change_state_function):
+        self.sequencer.start_sequence()
+        self.seq_print("entered_report_fixture")
+        self.seq_move_wheels(0, 0)
+        
+        if self.sequencer.simple_event():
+            
+            images = self.robot.get_last_camera_images()
+            if self.victim_reporting_enabled:
+                fixtures = self.fixture_detector.find_fixtures(images[1].image)      
+                if len(fixtures):
+                    self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
+                    
+        if self.letter_to_report is not None:
+            self.seq_move_wheels(0.3, 0.3)
+            self.seq_delay_seconds(0.2)
+            self.seq_move_wheels(0, 0)
+            self.seq_delay_seconds(2)
+
+        if self.sequencer.simple_event():
+            if self.letter_to_report is not None:
+                print("sending letter:", self.letter_to_report)
+                self.robot.comunicator.send_victim(self.robot.position, self.letter_to_report)
+        
+        if self.sequencer.simple_event():
+            self.letter_to_report = None
+        self.sequencer.simple_event(change_state_function, "explore")
+        self.sequencer.seq_reset_sequence() # Resets the sequence
 
     def calibrate_position_offsets(self):
         """Calculates offsets in the robot position, in case it doesn't start perfectly centerd."""
@@ -156,6 +217,7 @@ class Executor:
         self.seq_move_wheels(0, 0)
         if self.sequencer.simple_event():
             self.robot.auto_decide_orientation_sensor = True
+
             
 
 

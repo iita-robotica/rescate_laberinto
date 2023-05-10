@@ -43,6 +43,18 @@ class Angle:
 
         return Angle(min(clockwise_distance, counterclockwise_distance))
     
+    def get_distance_to(self, angle):
+        val = self.get_absolute_distance_to(angle)
+
+        angle_difference = self - angle
+
+        if 180 > angle_difference.degrees > 0 or angle_difference.degrees < -180:
+            return val
+        else:
+            return val * -1
+            
+        
+    
     def __str__(self):
         return str(self.degrees)
     

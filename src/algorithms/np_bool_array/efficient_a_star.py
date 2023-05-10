@@ -22,7 +22,8 @@ class aStarNode:
 class aStarAlgorithm:
     def __init__(self):
         self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], ]#[1, 1], [1, -1], [-1, -1], [-1, 1]]
-        self.preference_weight = 5
+        #self.preference_weight = 5
+        self.preference_weight = 2
     
     @staticmethod
     def reconstructpath(node):

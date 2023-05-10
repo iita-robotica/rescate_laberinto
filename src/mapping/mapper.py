@@ -12,6 +12,7 @@ from data_structures.tile_color_grid import TileColorExpandableGrid
 from mapping.wall_mapper import WallMapper
 from mapping.floor_mapper import FloorMapper
 from mapping.robot_mapper import RobotMapper
+from mapping.fixture_mapper import FixtureMapper
 
 from mapping.data_extractor import PointCloudExtarctor, FloorColorExtractor
 from fixture_detection.fixture_detection import FixtureDetector
@@ -50,6 +51,9 @@ class Mapper:
         self.robot_mapper = RobotMapper(pixel_grid=self.pixel_grid,
                                         robot_diameter=self.robot_diameter,
                                         pixels_per_m=pixels_per_tile / self.quarter_tile_size)
+
+        self.fixture_mapper = FixtureMapper(pixel_grid=self.pixel_grid,
+                                            tile_size=self.tile_size)
         
 
         # Data extractors
@@ -81,39 +85,15 @@ class Mapper:
         self.robot_mapper.map_seen_by_camera(self.robot_grid_index, self.robot_orientation)
         self.robot_mapper.map_discovered_by_robot(self.robot_grid_index, self.robot_orientation)
 
+        self.fixture_mapper.generate_detection_zone()
+
         # Load floor colors
         if camera_images is not None:
             self.floor_mapper.map_floor(camera_images, self.pixel_grid.coordinates_to_grid_index(self.robot_position))
 
-
-        
         if camera_images is not None and lidar_detections is not None:
-            #debug_grid = self.pixel_grid.get_colored_grid()
-            for i in camera_images:
-                positions, angles = self.fixture_detector.get_fixture_positions_and_angles(self.robot_position, i)
-                for pos, angle in zip(positions, angles):
-                    index = self.pixel_grid.coordinates_to_array_index(pos)
-                    self.pixel_grid.arrays["victims"][index[0], index[1]] = True
-                    self.pixel_grid.arrays["victim_angles"][index[0], index[1]] = angle.radians
-                    #debug_grid = cv.circle(debug_grid, (index[1], index[0]), 3, (0, 255, 0), -1)
-
-            #robot_array_index = self.pixel_grid.coordinates_to_array_index(self.robot_position)
-            #debug_grid = cv.circle(debug_grid, (robot_array_index[1], robot_array_index[0]), 5, (255, 0, 255), -1)
-
-            #cv.imshow("fixture_debug_grid", debug_grid)
+            self.fixture_detector.map_fixtures(camera_images, self.robot_position)
         
-        """
-        if lidar_detections is not None:
-            debug_grid = self.pixel_grid.get_colored_grid()
-            for l in lidar_detections:
-                l.direction.normalize()
-                pos = l.to_position()
-                pos += self.robot_position
-                index = self.pixel_grid.coordinates_to_array_index(pos)
-                debug_grid = cv.circle(debug_grid, (index[1], index[0]), 1, (0, 255, 0), -1)
-
-            cv.imshow("lidar_debug_grid", debug_grid)
-        """
 
         #DEBUG
         if DO_WAIT_KEY:

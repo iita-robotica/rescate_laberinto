@@ -29,10 +29,14 @@ class PathFinder():
         self.mapper = mapper
 
         self.path_not_found = False
+        self.position_changed = True
     
     def update(self, target_position: np.ndarray = None) -> None:
         if target_position is not None:
+            self.position_changed = self.target_position != target_position
             self.target_position = target_position
+
+
 
         self.robot_grid_index = self.mapper.pixel_grid.coordinates_to_grid_index(self.mapper.robot_position) # Get robot position grid index
         self.mapper.pixel_grid.expand_to_grid_index(self.robot_grid_index) # Expand grid to robot position
@@ -41,7 +45,7 @@ class PathFinder():
             if self.is_path_finished(): print("FINISHED PATH")
             if self.is_path_obstructed(): print("PATH OBSTRUCTED")
 
-        if self.is_path_finished() or self.is_path_obstructed():
+        if self.is_path_finished() or self.is_path_obstructed() or self.position_changed:
             self.calculate_path()
             
         self.calculate_path_index()

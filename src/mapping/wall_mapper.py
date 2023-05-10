@@ -9,7 +9,7 @@ class WallMapper:
         self.grid = compound_grid
 
         self.robot_diameter = int(robot_diameter * self.grid.resolution)
-        self.robot_radius = int(robot_diameter / 2 * self.grid.resolution)
+        self.robot_radius = int(robot_diameter / 2 * self.grid.resolution) - 2
 
         self.to_boolean_threshold = 3
         self.delete_threshold = 1
@@ -20,7 +20,8 @@ class WallMapper:
         self.robot_diameter_template = self.robot_diameter_template.astype(np.bool_)
 
         # A template to calculated the preference of each pixel for navigation taking into account the distance from the wall
-        self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 2)
+        #self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 2)
+        self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 1.5)
 
 
     def load_point_cloud(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):

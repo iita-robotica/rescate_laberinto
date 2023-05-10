@@ -110,6 +110,10 @@ class Robot:
 
     def rotate_to_angle(self, angle, direction=Criteria.CLOSEST):
         return self.drive_base.rotate_to_angle(Angle(angle, Angle.DEGREES), direction)
+    
+    def rotate_slowly_to_angle(self, angle, direction=Criteria.CLOSEST):
+        return self.drive_base.rotate_slowly_to_angle(angle, direction)
+        
 
     def move_to_coords(self, targetPos):
         return self.drive_base.move_to_position(Position2D(targetPos[0], targetPos[1]))
@@ -135,6 +139,11 @@ class Robot:
             return [self.right_camera.get_image(), 
                     self.center_camera.get_image(), 
                     self.left_camera.get_image()]
+        
+    def get_last_camera_images(self):
+        return [self.right_camera.get_last_image(),
+                self.center_camera.get_last_image(),
+                self.left_camera.get_last_image()]
         
     # Wrappers for pose
     @property

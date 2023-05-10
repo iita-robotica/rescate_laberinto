@@ -49,6 +49,10 @@ class Camera(TimedSensor):
     def get_image(self):
         if self.step_counter.check():
             return self.image
+    
+    def get_last_image(self):
+        return self.image
+
         
     def get_data(self):
         data = CameraData(self.height,

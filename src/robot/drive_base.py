@@ -17,6 +17,9 @@ class DriveBase:
         self.left_wheel = left_wheel
         self.right_wheel = right_wheel
         self.rotation_manager = RotationManager(self.left_wheel, self.right_wheel)
+        self.slow_rotation_manager = RotationManager(self.left_wheel, self.right_wheel)
+        self.slow_rotation_manager.max_velocity = 0.4
+        self.slow_rotation_manager.max_velocity_cap = 0.4
         #self.movement_manager = MovementToCoordinatesManager(self.left_wheel, self.right_wheel)
         self.movement_manager = SmoothMovementToCoordinatesManager(self.left_wheel, self.right_wheel)
 
@@ -28,6 +31,10 @@ class DriveBase:
     def rotate_to_angle(self, angle:Angle, criteria:Criteria.CLOSEST) -> bool:
         self.rotation_manager.rotate_to_angle(angle, criteria)
         return self.rotation_manager.finished_rotating
+    
+    def rotate_slowly_to_angle(self, angle:Angle, criteria:Criteria.CLOSEST) -> bool:
+        self.slow_rotation_manager.rotate_to_angle(angle, criteria)
+        return self.slow_rotation_manager.finished_rotating
     
     def move_to_position(self, position:Position2D) -> bool:
         self.movement_manager.move_to_position(position)
@@ -49,14 +56,13 @@ class DriveBase:
     def orientation(self, value:Angle):
         self.movement_manager.current_angle = value
         self.rotation_manager.current_angle = value
+        self.slow_rotation_manager.current_angle = value
 
 
     def get_wheel_direction(self):
         if self.right_wheel.velocity + self.left_wheel.velocity == 0:
             return 0
         return (self.right_wheel.velocity + self.left_wheel.velocity) / 2
-
-
 
 
 class RotationManager:

@@ -14,7 +14,7 @@ from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
 
-from fixture_detection.fixture_clasification import FixtureDetector
+from fixture_detection.fixture_clasification import FixtureClasiffier
 
 from flags import SHOW_DEBUG
 
@@ -40,7 +40,7 @@ delay_manager = DelayManager()
 stuck_detector = StuckDetector()
 
 # Fixture detection
-fixture_detector = FixtureDetector()
+fixture_detector = FixtureClasiffier()
 
 # Mapper
 mapper = Mapper(TILE_SIZE, robot.diameter)

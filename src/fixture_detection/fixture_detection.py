@@ -57,13 +57,19 @@ class FixtureDetector:
 
             line_xx, line_yy = skimage.draw.line(camera_array_index[0], camera_array_index[1], detection_array_index[0], detection_array_index[1])
 
+            index = 0
             for x, y in zip(line_xx, line_yy):
                 if x >= 0 and y >= 0 and x < self.pixel_grid.array_shape[0] and y < self.pixel_grid.array_shape[1]:
                     #debug[x, y] = (0, 255, 0)
+                    back_index = index -1
+                    back_index = max(back_index, 0)
                     if self.pixel_grid.arrays["walls"][x, y]:
-                        fixture_positions.append(self.pixel_grid.array_index_to_coordinates(np.array([x, y])))
+                        x1 = line_xx[back_index]
+                        y1 = line_yy[back_index]
+                        fixture_positions.append(self.pixel_grid.array_index_to_coordinates(np.array([x1, y1])))
                         fixture_angles.append(copy.deepcopy(fixture_horizontal_angle))
                         break
+                index += 1
 
         #cv.imshow("fixture_detection_debug", debug)
 
@@ -94,3 +100,17 @@ class FixtureDetector:
         cv.imshow("victim_pos_debug", debug)
 
         return final_victims
+    
+    def map_fixtures(self, camera_images, robot_position):
+        for i in camera_images:
+            positions, angles = self.get_fixture_positions_and_angles(robot_position, i)
+            for pos, angle in zip(positions, angles):
+                index = self.pixel_grid.coordinates_to_array_index(pos)
+                self.pixel_grid.arrays["victims"][index[0], index[1]] = True
+                self.pixel_grid.arrays["victim_angles"][index[0], index[1]] = angle.radians
+
+    def mark_reported_fixture(self, robot_position, fixture_position):
+        fixture_array_index = self.pixel_grid.coordinates_to_array_index(fixture_position)
+        rr, cc = skimage.draw.disk(fixture_array_index, 4)
+        self.pixel_grid.arrays["fixture_detection"][rr, cc] = True
+
