@@ -22,16 +22,19 @@ class VictimPositionFinder:
     def find_victim_position(self):
         victim_array = self.mapper.pixel_grid.arrays["victims"]
         victim_array[self.mapper.pixel_grid.arrays["fixture_detection"]] = False
-        robot_array_index = self.mapper.pixel_grid.grid_index_to_array_index(self.mapper.robot_grid_index)
-        results = self.bfs.bfs(victim_array,
-                               self.mapper.pixel_grid.arrays["fixture_detection_zone"], 
-                               robot_array_index)
-        
-        if len(results) == 0:
-            self.__is_victim = False
+        if np.count_nonzero(victim_array):
+            robot_array_index = self.mapper.pixel_grid.grid_index_to_array_index(self.mapper.robot_grid_index)
+            results = self.bfs.bfs(victim_array,
+                                self.mapper.pixel_grid.arrays["fixture_detection_zone"], 
+                                robot_array_index)
+            
+            if len(results) == 0:
+                self.__is_victim = False
+            else:
+                self.__is_victim = True
+                self.__victim_position = Position2D(self.mapper.pixel_grid.array_index_to_coordinates(results[0]))
         else:
-            self.__is_victim = True
-            self.__victim_position = Position2D(self.mapper.pixel_grid.array_index_to_coordinates(results[0]))
+            self.__is_victim = False
 
     def get_victim_position(self):
         return self.__victim_position

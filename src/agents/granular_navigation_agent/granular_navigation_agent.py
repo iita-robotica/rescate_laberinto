@@ -45,8 +45,11 @@ class GranularNavigationAgent(Agent):
     def do_end(self) -> bool:
         return self.__end
     
-    def do_report_victim(self) -> bool:
+    def do_report_fixture(self) -> bool:
         if self.victim_position_finder.is_close_to_victim():
             self.mapper.fixture_detector.mark_reported_fixture(self.mapper.robot_position, self.victim_position_finder.get_victim_position())
         return self.victim_position_finder.is_close_to_victim()
+    
+    def get_fixture_letter(self) -> str:
+        return "N"
         

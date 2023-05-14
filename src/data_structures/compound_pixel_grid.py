@@ -32,7 +32,9 @@ class CompoundExpandablePixelGrid:
             "victims": np.zeros(self.array_shape, np.bool_),
             "victim_angles": np.zeros(self.array_shape, np.float32),
             "fixture_detection": np.zeros(self.array_shape, np.bool_),
-            "fixture_detection_zone": np.zeros(self.array_shape, np.bool_)
+            "fixture_detection_zone": np.zeros(self.array_shape, np.bool_),
+            "fixture_distance_margin": np.zeros(self.array_shape, np.bool_),
+            "robot_detected_fixture_from": np.zeros(self.array_shape, np.bool_)
         }
 
     @property
@@ -153,9 +155,12 @@ class CompoundExpandablePixelGrid:
         #color_grid[self.arrays["discovered"]] = (0, 1, 1)
         #color_grid[self.arrays["seen_by_lidar"]] += (0.5, 0, 0)
         color_grid[self.arrays["fixture_detection_zone"]] = (0, 1, 1)
+        color_grid[self.arrays["fixture_distance_margin"]] = (0, 0, 1)
+
+
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
 
-        color_grid *= 0.5
+        color_grid *= 0.3
 
         color_grid[self.arrays["victims"]] = (0, 1, 0)
         

@@ -19,5 +19,9 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def do_report_victim(self) -> bool:
+    def do_report_fixture(self) -> bool:
+        pass
+
+    @abstractmethod
+    def get_fixture_letter(self) -> str:
         pass

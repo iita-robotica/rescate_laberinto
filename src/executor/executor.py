@@ -11,7 +11,8 @@ from robot.drive_base import Criteria as RotationCriteria
 
 from mapping.mapper import Mapper
 
-from agents.granular_navigation_agent.granular_navigation_agent import Agent
+from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
+from agents.victim_following_agent.victim_following_agent import VictimFollowingAgent
 
 from fixture_detection.fixture_clasification import FixtureClasiffier
 
@@ -20,8 +21,9 @@ from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S
 import time
 
 class Executor:
-    def __init__(self, agent: Agent, mapper: Mapper, robot: Robot) -> None:
-        self.agent = agent # Tells the executor what to do
+    def __init__(self, mapper: Mapper, robot: Robot) -> None:
+        self.exploration_agent = GranularNavigationAgent(mapper) # Tells the executor what to do
+        self.fixture_following_agent = VictimFollowingAgent(mapper)
         self.mapper = mapper # Maps everything
         self.robot = robot # Low level movement and sensing
 
@@ -122,9 +124,15 @@ class Executor:
 
         self.sequencer.start_sequence() # Starts the sequence
 
-        self.agent.update()
+        self.exploration_agent.update()
+        self.fixture_following_agent.update()
 
-        self.seq_move_to_coords(self.agent.get_target_position())
+        fixture_pos = self.fixture_following_agent.get_target_position()
+
+        if fixture_pos is None:
+            self.seq_move_to_coords(self.exploration_agent.get_target_position())
+        else:
+            self.seq_move_to_coords(fixture_pos)
 
         self.sequencer.seq_reset_sequence() # Resets the sequence but doesn't change state, so it starts all over again.
 
@@ -132,11 +140,13 @@ class Executor:
             print("rotation:", self.robot.orientation)
             print("position:", self.robot.position)
         
-        if self.agent.do_end():
+        if self.exploration_agent.do_end():
             self.state_machine.change_state("end")
 
-        if self.agent.do_report_victim():
+        """
+        if self.exploration_agent.do_report_fixture():
             change_state_function("detect_fixtures")
+        """
 
     def state_end(self, change_state_function):
         self.robot.comunicator.send_end_of_play()
