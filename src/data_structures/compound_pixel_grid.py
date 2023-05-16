@@ -34,7 +34,8 @@ class CompoundExpandablePixelGrid:
             "fixture_detection": np.zeros(self.array_shape, np.bool_),
             "fixture_detection_zone": np.zeros(self.array_shape, np.bool_),
             "fixture_distance_margin": np.zeros(self.array_shape, np.bool_),
-            "robot_detected_fixture_from": np.zeros(self.array_shape, np.bool_)
+            "robot_detected_fixture_from": np.zeros(self.array_shape, np.bool_),
+            "robot_center_traversed": np.zeros(self.array_shape, np.bool_),
         }
 
     @property
@@ -148,7 +149,7 @@ class CompoundExpandablePixelGrid:
         """
         #color_grid = np.zeros((self.array_shape[0], self.array_shape[1], 3), dtype=np.float32)
         color_grid = self.arrays["floor_color"].astype(np.float32) / 255
-        #color_grid[self.arrays["traversed"]] = (.5, 0., .5)
+        
         #color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 200
         color_grid[self.arrays["traversable"]] = (1, 0, 0)
         
@@ -163,6 +164,8 @@ class CompoundExpandablePixelGrid:
         color_grid *= 0.3
 
         color_grid[self.arrays["victims"]] = (0, 1, 0)
+
+        color_grid[self.arrays["robot_center_traversed"]] = (.5, 0., .5)
         
  
         return color_grid

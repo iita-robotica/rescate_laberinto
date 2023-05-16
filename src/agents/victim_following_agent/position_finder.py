@@ -54,7 +54,7 @@ class VictimPositionFinder:
         detection_line_array = copy.deepcopy(self.mapper.pixel_grid.arrays["fixture_distance_margin"])
         detection_line_array[mask] = False
 
-        detection_line_array[self.mapper.pixel_grid.arrays["traversed"]] = False
+        detection_line_array[self.mapper.pixel_grid.arrays["robot_center_traversed"]] = False
 
         debug = self.mapper.pixel_grid.get_colored_grid()
         debug[detection_line_array] = (1, 1, 1)
