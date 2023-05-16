@@ -32,9 +32,9 @@ class Executor:
 
         self.state_machine = StateMachine("init") # Manages states
         self.state_machine.create_state("init", self.state_init, {"explore",}) # This state initializes and calibrates the robot
-        self.state_machine.create_state("explore", self.state_explore, {"end", "detect_fixtures"}) # This state follows the position returned by the agent
+        self.state_machine.create_state("explore", self.state_explore, {"end", "report_fixture"}) # This state follows the position returned by the agent
         self.state_machine.create_state("end", self.state_end)
-        self.state_machine.create_state("detect_fixtures", self.state_detect_fixtures, {"explore", "report_fixture"})
+        #self.state_machine.create_state("detect_fixtures", self.state_detect_fixtures, {"explore", "report_fixture"})
         self.state_machine.create_state("report_fixture", self.state_report_fixture, {"explore"})
 
         self.sequencer = Sequencer(reset_function=self.delay_manager.reset_delay) # Allows for asynchronous programming
@@ -143,46 +143,22 @@ class Executor:
         if self.exploration_agent.do_end():
             self.state_machine.change_state("end")
 
-        """
-        if self.exploration_agent.do_report_fixture():
-            change_state_function("detect_fixtures")
-        """
+        cam_images = self.robot.get_camera_images()
+        if self.victim_reporting_enabled and cam_images is not None and not self.mapper.has_detected_victim_from_position():
+            for cam_image in cam_images:
+                fixtures = self.fixture_detector.find_fixtures(cam_image.image)   
+                if len(fixtures):
+                    self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
+                    change_state_function("report_fixture")
+                    self.sequencer.reset_sequence() # Resets the sequence
 
     def state_end(self, change_state_function):
         self.robot.comunicator.send_end_of_play()
-
-    def state_detect_fixtures(self, change_state_function):
-        self.sequencer.start_sequence()
-        self.seq_print("entered_detect_fixture")
-        self.seq_move_wheels(0, 0)
-
-        self.sequencer.complex_event(self.robot.rotate_slowly_to_angle, angle=Angle(90, Angle.DEGREES), direction=RotationCriteria.LEFT)
-        self.sequencer.complex_event(self.robot.rotate_slowly_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
-
-        self.seq_print("exiting_detect_fixture")
-        self.sequencer.simple_event(change_state_function, "explore")
-        self.sequencer.seq_reset_sequence() # Resets the sequence
-        
-        images = self.robot.get_camera_images()
-        if self.victim_reporting_enabled and images is not None:
-           
-            fixtures = self.fixture_detector.find_fixtures(images[1].image)   
-            if len(fixtures):
-                change_state_function("report_fixture")
-                self.sequencer.reset_sequence() # Resets the sequence
 
     def state_report_fixture(self, change_state_function):
         self.sequencer.start_sequence()
         self.seq_print("entered_report_fixture")
         self.seq_move_wheels(0, 0)
-        
-        if self.sequencer.simple_event():
-            
-            images = self.robot.get_last_camera_images()
-            if self.victim_reporting_enabled:
-                fixtures = self.fixture_detector.find_fixtures(images[1].image)      
-                if len(fixtures):
-                    self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
                     
         if self.letter_to_report is not None:
             self.seq_move_wheels(0.3, 0.3)
@@ -193,10 +169,12 @@ class Executor:
         if self.sequencer.simple_event():
             if self.letter_to_report is not None:
                 print("sending letter:", self.letter_to_report)
-                self.robot.comunicator.send_victim(self.robot.position, self.letter_to_report)
+                self.robot.comunicator.send_victim(self.robot.raw_position, self.letter_to_report)
         
         if self.sequencer.simple_event():
             self.letter_to_report = None
+            self.mapper.fixture_mapper.map_detected_fixture(self.robot.position)
+
         self.sequencer.simple_event(change_state_function, "explore")
         self.sequencer.seq_reset_sequence() # Resets the sequence
 

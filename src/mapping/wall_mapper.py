@@ -9,7 +9,7 @@ class WallMapper:
         self.grid = compound_grid
 
         self.robot_diameter = int(robot_diameter * self.grid.resolution)
-        self.robot_radius = int(robot_diameter / 2 * self.grid.resolution) - 2
+        self.robot_radius = int(robot_diameter / 2 * self.grid.resolution)
 
         self.to_boolean_threshold = 3
         self.delete_threshold = 1

@@ -73,6 +73,10 @@ class PoseManager:
         return self.__position + self.position_offsets
     
     @property
+    def raw_position(self):
+        return self.__position
+    
+    @property
     def previous_position(self):
         return self.__previous_position + self.position_offsets
         

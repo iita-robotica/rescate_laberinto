@@ -86,6 +86,7 @@ class Mapper:
         self.robot_mapper.map_discovered_by_robot(self.robot_grid_index, self.robot_orientation)
 
         self.fixture_mapper.generate_detection_zone()
+        self.fixture_mapper.clean_up_fixtures()
 
         # Load floor colors
         if camera_images is not None:
@@ -130,3 +131,7 @@ class Mapper:
                 for direction in value:
                     self.node_grid.load_straight_wall((xx, yy),  direction)
         """
+
+    def has_detected_victim_from_position(self):
+        robot_array_index = self.pixel_grid.grid_index_to_array_index(self.robot_grid_index)
+        return self.pixel_grid.arrays["robot_detected_fixture_from"][robot_array_index[0], robot_array_index[1]]

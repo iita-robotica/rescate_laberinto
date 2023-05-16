@@ -61,7 +61,7 @@ class FixtureDetector:
             for x, y in zip(line_xx, line_yy):
                 if x >= 0 and y >= 0 and x < self.pixel_grid.array_shape[0] and y < self.pixel_grid.array_shape[1]:
                     #debug[x, y] = (0, 255, 0)
-                    back_index = index - 5
+                    back_index = index - 2
                     back_index = max(back_index, 0)
                     if self.pixel_grid.arrays["walls"][x, y]:
                         x1 = line_xx[back_index]

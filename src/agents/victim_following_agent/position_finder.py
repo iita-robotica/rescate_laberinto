@@ -14,7 +14,7 @@ class VictimPositionFinder:
     def __init__(self, mapper: Mapper) -> None:
         self.mapper = mapper
         self.fixture_finder = NavigatingBFSAlgorithm(lambda x: x, lambda x: True)
-        self.detection_position_finder = NavigatingBFSAlgorithm(lambda x: not x, lambda x: True)
+        self.detection_position_finder = NavigatingBFSAlgorithm(lambda x: not x, lambda x: not x, max_result_number=5)
         self.robot_position_finder = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.min_fixture_detection_distance = 0.06
         self.detection_line_size = 10
@@ -40,8 +40,10 @@ class VictimPositionFinder:
             
         
         robot_array_index = Position2D(self.mapper.pixel_grid.grid_index_to_array_index(self.mapper.robot_grid_index))
-        robot_detection_array_index = self.detection_position_finder.bfs(self.mapper.pixel_grid.arrays["fixture_detection_zone"], self.mapper.pixel_grid.arrays["fixture_detection_zone"], fixture_array_index)
-
+        robot_detection_array_index = self.detection_position_finder.bfs(self.mapper.pixel_grid.arrays["fixture_detection_zone"], self.mapper.pixel_grid.arrays["occupied"], fixture_array_index)
+        
+        if not len(robot_detection_array_index):
+            return None
         
         circle_indexes = skimage.draw.disk(tuple(robot_detection_array_index[0]), self.detection_line_size//2, shape=tuple(self.mapper.pixel_grid.array_shape))
 

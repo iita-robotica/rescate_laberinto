@@ -151,6 +151,10 @@ class Robot:
         return self.pose_manager.position
     
     @property
+    def raw_position(self):
+        return self.pose_manager.raw_position
+    
+    @property
     def previous_position(self):
         return self.pose_manager.previous_position
     
