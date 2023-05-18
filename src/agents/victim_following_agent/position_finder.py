@@ -17,7 +17,7 @@ class VictimPositionFinder:
         self.detection_position_finder = NavigatingBFSAlgorithm(lambda x: not x, lambda x: not x, max_result_number=5)
         self.robot_position_finder = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.min_fixture_detection_distance = 0.06
-        self.detection_line_size = 10
+        self.detection_line_size = 12
         self.path = []
 
         
@@ -35,12 +35,12 @@ class VictimPositionFinder:
         fixture_array_index = self.find_fixture_array_index()
 
         if fixture_array_index is None:
-            print("not any victims")
+            #print("not any victims")
             return None
             
         
         robot_array_index = Position2D(self.mapper.pixel_grid.grid_index_to_array_index(self.mapper.robot_grid_index))
-        robot_detection_array_index = self.detection_position_finder.bfs(self.mapper.pixel_grid.arrays["fixture_detection_zone"], self.mapper.pixel_grid.arrays["occupied"], fixture_array_index)
+        robot_detection_array_index = self.detection_position_finder.bfs(self.mapper.pixel_grid.arrays["fixture_detection_zone"], self.mapper.pixel_grid.arrays["walls"], fixture_array_index)
         
         if not len(robot_detection_array_index):
             return None

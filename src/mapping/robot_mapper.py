@@ -17,7 +17,8 @@ class RobotMapper:
         self.__robot_diameter_indexes = self.__get_circle_template_indexes(self.robot_radius)
 
 
-        self.__camera_pov_amplitude = Angle(30, Angle.DEGREES) # Horizontal amplitued of the fostrum of each camera
+        #self.__camera_pov_amplitude = Angle(30, Angle.DEGREES) # Horizontal amplitued of the fostrum of each camera
+        self.__camera_pov_amplitude = Angle(25, Angle.DEGREES) # Horizontal amplitued of the fostrum of each camera
         self.__camera_pov_lenght = int(0.12 * 2 * pixels_per_m) # Range of each camera
         self.__camera_orientations = (Angle(0, Angle.DEGREES), Angle(270, Angle.DEGREES), Angle(90, Angle.DEGREES)) # Orientation of the cameras
         

@@ -36,11 +36,11 @@ class FixtureClasiffier:
         }
 
         # Fixture filtering
-        self.min_fixture_height = 23
-        self.min_fixture_width = 19
+        #self.min_fixture_height = 23
+        #self.min_fixture_width = 19
 
-        #self.min_fixture_height = 20
-        #self.min_fixture_width = 15
+        self.min_fixture_height = 10
+        self.min_fixture_width = 19
     
         # Fixture classification
         self.possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
@@ -117,6 +117,9 @@ class FixtureClasiffier:
         return final_victims
 
     def find_fixtures(self, image) -> list:
+        
+        image = np.rot90(image, k=3)
+        cv.imshow("image", image)
         """
         Finds fixtures in the image.
         Returns a list of dictionaries containing fixture positions and images.

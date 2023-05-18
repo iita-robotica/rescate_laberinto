@@ -4,12 +4,16 @@ from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 
 from data_structures.vectors import Position2D
 
+import skimage
+
 class WallMapper:
     def __init__(self, compound_grid: CompoundExpandablePixelGrid, robot_diameter: float) -> None:
         self.grid = compound_grid
 
-        self.robot_diameter = int(robot_diameter * self.grid.resolution)
-        self.robot_radius = int(robot_diameter / 2 * self.grid.resolution)
+        compensation = 0
+
+        self.robot_diameter = int(robot_diameter * self.grid.resolution) + compensation * 2
+        self.robot_radius = int(robot_diameter / 2 * self.grid.resolution) + compensation
 
         self.to_boolean_threshold = 3
         self.delete_threshold = 1
@@ -21,7 +25,7 @@ class WallMapper:
 
         # A template to calculated the preference of each pixel for navigation taking into account the distance from the wall
         #self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 2)
-        self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 1.5)
+        self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 1.7)
 
 
     def load_point_cloud(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):
@@ -126,11 +130,15 @@ class WallMapper:
                     
 
     def mark_point_as_seen_by_lidar(self, robot_array_index, point_array_index):
-        self.grid.arrays["seen_by_lidar"] = self.__draw_bool_line(self.grid.arrays["seen_by_lidar"], point_array_index, robot_array_index)
+        self.grid.arrays["seen_by_lidar"] = self.__draw_bool_line(self.grid.arrays["seen_by_lidar"], robot_array_index, point_array_index)
     
     def __draw_bool_line(self, array, point1, point2):
-        array = cv.line(array.astype(np.uint8), (point1[1], point1[0]), (point2[1], point2[0]), 255, thickness=1, lineType=cv.LINE_8)
-        return array.astype(np.bool_)
+        indexes = skimage.draw.line(point1[0], point1[1], point2[0], point2[1])
+    
+        array[indexes[0][:-2], indexes[1][:-2]] = True
+        return array
+        #array = cv.line(array.astype(np.uint8), (point1[1], point1[0]), (point2[1], point2[0]), 255, thickness=1, lineType=cv.LINE_8)
+        #return array.astype(np.bool_)
     
     def __reset_seen_by_lidar(self):
         self.grid.arrays["seen_by_lidar"] = np.zeros_like(self.grid.arrays["seen_by_lidar"])

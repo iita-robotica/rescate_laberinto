@@ -74,7 +74,7 @@ class Executor:
             if DO_SLOW_DOWN:
                 time.sleep(SLOW_DOWN_S)
 
-            print("state:", self.state_machine.state)
+            #print("state:", self.state_machine.state)
             
     def do_mapping(self):
         """Updates the mapper is mapping is enabled."""
@@ -159,10 +159,10 @@ class Executor:
         self.sequencer.start_sequence()
         self.seq_print("entered_report_fixture")
         self.seq_move_wheels(0, 0)
-                    
+
         if self.letter_to_report is not None:
-            self.seq_move_wheels(0.3, 0.3)
-            self.seq_delay_seconds(0.2)
+            #self.seq_move_wheels(0.3, 0.3)
+            #self.seq_delay_seconds(0.2)
             self.seq_move_wheels(0, 0)
             self.seq_delay_seconds(2)
 

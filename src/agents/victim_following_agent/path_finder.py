@@ -94,10 +94,11 @@ class PathFinder():
             self.path_not_found = False
         else:
             if SHOW_PATHFINDING_DEBUG: print("PATH NOT FOUND")
+            print("PATH NOT FOUND")
             self.path_not_found = True
         
         self.__a_star_path = self.__dither_path(self.__a_star_path) # Remove every second positon of the path
-        self.__smooth_astar_path = self.__a_star_path_smoother.smooth(self.__a_star_path) # Smooth the path
+        self.__smooth_astar_path = self.__a_star_path # Smooth the path
 
     def __calculate_path_index(self):
         self.__a_star_index = min(self.__a_star_index, len(self.__a_star_path) - 1)   
@@ -117,6 +118,9 @@ class PathFinder():
         for index, value in enumerate(path):
             if index % dither_interval == 0:
                 final_path.append(value)
+        if tuple(final_path[-1]) != tuple(path[-1]):
+            final_path.append(path[-1])
+
         if len(final_path):
             return final_path
         else:
