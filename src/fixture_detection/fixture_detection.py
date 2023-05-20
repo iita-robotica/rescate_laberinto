@@ -13,6 +13,7 @@ import numpy as np
 import cv2 as cv
 
 from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
+from flags import SHOW_FIXTURE_DEBUG
 
 class FixtureDetector:
     def __init__(self, pixel_grid: CompoundExpandablePixelGrid) -> None:
@@ -61,7 +62,7 @@ class FixtureDetector:
             for x, y in zip(line_xx, line_yy):
                 if x >= 0 and y >= 0 and x < self.pixel_grid.array_shape[0] and y < self.pixel_grid.array_shape[1]:
                     #debug[x, y] = (0, 255, 0)
-                    back_index = index -1
+                    back_index = index - 2
                     back_index = max(back_index, 0)
                     if self.pixel_grid.arrays["walls"][x, y]:
                         x1 = line_xx[back_index]
@@ -82,22 +83,24 @@ class FixtureDetector:
 
         image_sum = image_sum.astype(np.uint8) * 255
 
-        cv.imshow("fixtures", image_sum)
+        if SHOW_FIXTURE_DEBUG:
+            cv.imshow("fixtures", image_sum)
         
         contours, _ = cv.findContours(image_sum, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
-
-        debug = copy.deepcopy(image)
+        
         
         final_victims = []
         for c in contours:
             x, y, w, h = cv.boundingRect(c)
             final_victims.append(Position2D((x + x + w) / 2, (y + y + h) / 2))
 
-        for f in final_victims:
-            debug = cv.circle(debug, np.array(f, dtype=int), 3, (255, 0, 0), -1)
-        
-        cv.imshow("victim_pos_debug", debug)
+        if SHOW_FIXTURE_DEBUG:
+            debug = copy.deepcopy(image)
+            for f in final_victims:
+                debug = cv.circle(debug, np.array(f, dtype=int), 3, (255, 0, 0), -1)
+            
+            cv.imshow("victim_pos_debug", debug)
 
         return final_victims
     

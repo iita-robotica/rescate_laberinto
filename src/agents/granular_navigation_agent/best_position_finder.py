@@ -56,9 +56,13 @@ class BestPositionFinder:
         closest_unseen_array_indexes = self.closest_unseen_finder.bfs(found_array=self.mapper.pixel_grid.arrays["discovered"],
                                                                       traversable_array=self.mapper.pixel_grid.arrays["traversable"],
                                                                       start_node=start_node)
+        
         if len(closest_unseen_array_indexes):
+            print("found not discovered")
             return self.mapper.pixel_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
+        
         else:
+            print("Ain't found no nothin'")
             return None
 
     def get_best_position(self):

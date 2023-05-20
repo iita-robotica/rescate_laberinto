@@ -1,14 +1,11 @@
 from executor.executor import Executor
-from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
 from mapping.mapper import Mapper
 from robot.robot import Robot
 
 def main():
     robot = Robot(time_step=32)
     mapper = Mapper(tile_size=0.12, robot_diameter=robot.diameter, camera_distance_from_center=robot.diameter / 2)
-    agent = GranularNavigationAgent(mapper=mapper)
-
-    executor = Executor(agent, mapper, robot)
+    executor = Executor(mapper, robot)
 
     executor.run()
 

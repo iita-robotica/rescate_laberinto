@@ -9,12 +9,16 @@ class RobotMapper:
     def __init__(self, pixel_grid: CompoundExpandablePixelGrid, robot_diameter, pixels_per_m) -> None:
         self.pixel_grid = pixel_grid
         self.robot_radius = round(robot_diameter / 2 * pixels_per_m)
+        self.robot_center_radius = round(0.02 * pixels_per_m)
+
+        self.__robot_center_indexes = self.__get_circle_template_indexes(self.robot_center_radius)
         
         # True indexes inside the circle
         self.__robot_diameter_indexes = self.__get_circle_template_indexes(self.robot_radius)
 
 
-        self.__camera_pov_amplitude = Angle(30, Angle.DEGREES) # Horizontal amplitued of the fostrum of each camera
+        #self.__camera_pov_amplitude = Angle(30, Angle.DEGREES) # Horizontal amplitued of the fostrum of each camera
+        self.__camera_pov_amplitude = Angle(25, Angle.DEGREES) # Horizontal amplitued of the fostrum of each camera
         self.__camera_pov_lenght = int(0.12 * 2 * pixels_per_m) # Range of each camera
         self.__camera_orientations = (Angle(0, Angle.DEGREES), Angle(270, Angle.DEGREES), Angle(90, Angle.DEGREES)) # Orientation of the cameras
         
@@ -36,6 +40,25 @@ class RobotMapper:
         circle[1] = self.__robot_diameter_indexes[1] + robot_array_index[1]
 
         self.pixel_grid.arrays["traversed"][circle[0], circle[1]] = True
+
+        self.map_traversed_by_center_of_robot(robot_grid_index)
+
+    def map_traversed_by_center_of_robot(self, robot_grid_index):
+        circle = np.zeros_like(self.__robot_center_indexes)
+        circle[0] = self.__robot_center_indexes[0] + np.array(robot_grid_index)[0]
+        circle[1] = self.__robot_center_indexes[1] + np.array(robot_grid_index)[1]
+
+        self.pixel_grid.expand_to_grid_index((np.max(circle[0]), np.max(circle[1])))
+        self.pixel_grid.expand_to_grid_index((np.min(circle[0]), np.min(circle[1])))
+
+        robot_array_index =  self.pixel_grid.grid_index_to_array_index(robot_grid_index)[:]
+
+        circle[0] = self.__robot_center_indexes[0] + robot_array_index[0]
+        circle[1] = self.__robot_center_indexes[1] + robot_array_index[1]
+
+        self.pixel_grid.arrays["robot_center_traversed"][circle[0], circle[1]] = True
+
+
 
     def map_seen_by_camera(self, robot_grid_index, robot_rotation: Angle):
         global_camera_orientations = []
