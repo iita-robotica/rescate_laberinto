@@ -150,7 +150,8 @@ class MovementToCoordinatesManager:
         self.right_wheel = right_wheel
         self.rotation_manager = RotationManager(self.left_wheel, self.right_wheel)
 
-        self.error_margin = 0.0005
+        #self.error_margin = 0.0005
+        self.error_margin = 0.001
         self.desceleration_start = 0.5 * 0.12
 
         self.max_velocity_cap = 1
@@ -195,6 +196,7 @@ class MovementToCoordinatesManager:
 
                 self.right_wheel.move(velocity)
                 self.left_wheel.move(velocity)
+
 
             else:
                 
@@ -258,7 +260,7 @@ class SmoothMovementToCoordinatesManager:
                     self.left_wheel.move(self.velocity)
 
             else:
-                distance_speed = dist * -self.distance_weight
+                distance_speed = abs(dist * -self.distance_weight)
                 angle_speed = absolute_angle_diff.radians * self.angle_weight
 
                 speed = angle_speed * self.turning_speed_multiplier

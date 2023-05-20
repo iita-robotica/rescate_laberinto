@@ -60,19 +60,7 @@ class BestPositionFinder:
         if len(closest_unseen_array_indexes):
             print("found not discovered")
             return self.mapper.pixel_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
-        else:
-            debug = self.mapper.pixel_grid.get_colored_grid()
-            found = self.mapper.pixel_grid.arrays["seen_by_camera"] + self.mapper.pixel_grid.arrays["robot_center_traversed"]
-            debug[found] = (0, 1, 0)
-
-            cv.imshow("found", debug)
-
-            closest_unseen_array_indexes = self.closest_unseen_finder.bfs(found_array=found,
-                                                                          traversable_array=self.mapper.pixel_grid.arrays["traversable"],
-                                                                          start_node=start_node)
-        if len(closest_unseen_array_indexes):
-            print("found not seen by camera")
-            return self.mapper.pixel_grid.array_index_to_grid_index(closest_unseen_array_indexes[0])
+        
         else:
             print("Ain't found no nothin'")
             return None

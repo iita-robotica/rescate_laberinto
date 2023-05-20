@@ -119,7 +119,8 @@ class FixtureClasiffier:
     def find_fixtures(self, image) -> list:
         
         image = np.rot90(image, k=3)
-        cv.imshow("image", image)
+        if SHOW_FIXTURE_DEBUG:
+            cv.imshow("image", image)
         """
         Finds fixtures in the image.
         Returns a list of dictionaries containing fixture positions and images.

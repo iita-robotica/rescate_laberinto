@@ -12,7 +12,7 @@ from robot.drive_base import Criteria as RotationCriteria
 from mapping.mapper import Mapper
 
 from agents.granular_navigation_agent.granular_navigation_agent import GranularNavigationAgent
-from agents.victim_following_agent.victim_following_agent import VictimFollowingAgent
+from agents.wall_following_agent.wall_following_agent import WallFollowingAgent as VictimFollowingAgent
 
 from fixture_detection.fixture_clasification import FixtureClasiffier
 

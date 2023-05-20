@@ -11,7 +11,7 @@ class FixtureMapper:
         self.tile_size = tile_size
         self.grid = pixel_grid
 
-        template_radious = int(0.04 * self.grid.resolution)
+        template_radious = int(0.05 * self.grid.resolution)
         template_diameter = math.ceil(template_radious * 2 + 1)
 
         # Solid disk with the radius of the fixture detection zone
@@ -33,7 +33,7 @@ class FixtureMapper:
 
         self.grid.arrays["fixture_distance_margin"] = cv.filter2D(occupied_as_float, -1, self.fixture_distance_margin_template) > 0.999
 
-        cv.imshow("detection_template", self.fixture_detection_zone_template)
+        #cv.imshow("detection_template", self.fixture_detection_zone_template)
 
     def clean_up_fixtures(self):
         self.grid.arrays["victims"][self.grid.arrays["occupied"]] = False
