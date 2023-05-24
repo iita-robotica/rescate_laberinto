@@ -21,13 +21,13 @@ class GranularNavigationAgent(Agent):
         self.mapper = mapper
         self.__end = False
     
-    def update(self) -> None:
+    def update(self, force=False) -> None:
         self.best_position_finder.calculate_best_position(finished_path=self.path_finder.is_path_finished() or self.path_finder.path_not_found)
         
 
         self.best_position = self.best_position_finder.get_best_position()
 
-        self.path_finder.update(target_position=self.best_position)#np.array(Position2D(-0.08884384679907074, -0.01975882018000104)))
+        self.path_finder.update(target_position=self.best_position, force=force)#np.array(Position2D(-0.08884384679907074, -0.01975882018000104)))
 
         if self.path_finder.is_path_finished() and \
            self.best_position == self.mapper.start_position and \
