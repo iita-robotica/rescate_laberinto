@@ -6,7 +6,7 @@ from mapping.mapper import Mapper
 
 from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 from algorithms.np_bool_array.efficient_a_star import aStarAlgorithm
-from algorithms.np_bool_array.bfs import BFSAlgorithm
+from algorithms.np_bool_array.bfs import NavigatingBFSAlgorithm
 
 from agents.granular_navigation_agent.path_smoothing import PathSmoother
 
@@ -15,7 +15,7 @@ from flags import SHOW_PATHFINDING_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID
 class PathFinder():
     def __init__(self, mapper: Mapper):
         self.__a_star = aStarAlgorithm()
-        self.__closest_free_point_finder = BFSAlgorithm(lambda x : x == 0)
+        self.__closest_free_point_finder = NavigatingBFSAlgorithm(lambda x : x == 0, lambda x: True)
 
         self.__a_star_path_smoother = PathSmoother(1)
 
@@ -31,7 +31,7 @@ class PathFinder():
         self.path_not_found = False
         self.__position_changed = True
     
-    def update(self, target_position: np.ndarray = None) -> None:
+    def update(self, target_position: np.ndarray = None, force=False) -> None:
         if target_position is not None:
             self.__position_changed = np.any(self.__target_position != target_position)
             self.__target_position = target_position
@@ -45,7 +45,7 @@ class PathFinder():
             if self.is_path_finished(): print("FINISHED PATH")
             if self.__is_path_obstructed(): print("PATH OBSTRUCTED")
 
-        if self.is_path_finished() or self.__is_path_obstructed() or self.__position_changed:
+        if self.is_path_finished() or self.__is_path_obstructed() or self.__position_changed or force:
             self.__calculate_path()
             
         self.__calculate_path_index()
@@ -163,7 +163,8 @@ class PathFinder():
 
     def __get_closest_traversable_array_index(self, array_index):
         if self.__mapper.pixel_grid.arrays["traversable"][array_index[0], array_index[1]]:
-            return  self.__closest_free_point_finder.bfs(array=self.__mapper.pixel_grid.arrays["traversable"],
-                                                       start_node=array_index)
+            return  self.__closest_free_point_finder.bfs(found_array=self.__mapper.pixel_grid.arrays["traversable"],
+                                                         traversable_array=self.__mapper.pixel_grid.arrays["traversable"],
+                                                         start_node=array_index)[0]
         else:
             return array_index

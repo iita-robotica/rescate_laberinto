@@ -23,6 +23,9 @@ from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S
 import time
 
 class Executor:
+    EXPLORATION_AGENT = 0
+    WALL_FOLLOWING_AGENT = 1
+
     def __init__(self, mapper: Mapper, robot: Robot) -> None:
         self.exploration_agent = GranularNavigationAgent(mapper) # Tells the executor what to do
         self.fixture_following_agent = VictimFollowingAgent(mapper)
@@ -59,6 +62,9 @@ class Executor:
         self.seq_delay_seconds =   self.sequencer.make_complex_event(self.delay_manager.delay_seconds)
 
         self.letter_to_report = None
+
+        self.current_agent = None
+        self.previous_agent = None
 
     def run(self):
         """Advances the simulation, updates all components and executes the state machine."""
@@ -123,6 +129,10 @@ class Executor:
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.seq_delay_seconds(0.5)
 
+        if self.sequencer.simple_event():
+            self.current_agent = self.EXPLORATION_AGENT
+            self.previous_agent = self.EXPLORATION_AGENT
+
         self.sequencer.simple_event(change_state_function, "explore") # Changes state
         self.sequencer.seq_reset_sequence() # Resets the sequence
 
@@ -132,15 +142,30 @@ class Executor:
 
         self.sequencer.start_sequence() # Starts the sequence
 
-        self.exploration_agent.update()
-        self.fixture_following_agent.update()
+        if self.agent_changed():
+            print("CHANGING AGENT")
 
-        fixture_pos = None#self.fixture_following_agent.get_target_position()
+        self.exploration_agent.update(force=self.agent_changed())
+        self.fixture_following_agent.update(force=self.agent_changed())
+
+        self.previous_agent = self.current_agent
+
+        fixture_pos = self.fixture_following_agent.get_target_position()
 
         if fixture_pos is None:
-            self.seq_move_to_coords(self.exploration_agent.get_target_position())
+            self.current_agent = self.EXPLORATION_AGENT
         else:
+            self.current_agent = self.WALL_FOLLOWING_AGENT
+
+        if self.current_agent == self.EXPLORATION_AGENT:
+            print("exploring not seen")
+            self.seq_move_to_coords(self.exploration_agent.get_target_position())
+        elif self.current_agent == self.WALL_FOLLOWING_AGENT:
+            print("following wall")
             self.seq_move_to_coords(fixture_pos)
+        else:
+            print("WARNING: NO AGENT HAS GIVEN A POSITION")
+            self.seq_move_wheels(0, 0)
 
         self.sequencer.seq_reset_sequence() # Resets the sequence but doesn't change state, so it starts all over again.
 
@@ -215,6 +240,9 @@ class Executor:
         self.seq_move_wheels(0, 0)
         if self.sequencer.simple_event():
             self.robot.auto_decide_orientation_sensor = True
+
+    def agent_changed(self):
+        return self.current_agent != self.previous_agent
 
             
 

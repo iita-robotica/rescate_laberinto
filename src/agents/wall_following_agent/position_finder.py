@@ -3,6 +3,7 @@ from data_structures.vectors import Position2D
 from algorithms.np_bool_array.bfs import NavigatingBFSAlgorithm
 from mapping.mapper import Mapper
 import numpy as np
+import cv2 as cv
 import copy
 
 class PositionFinder():
@@ -14,7 +15,10 @@ class PositionFinder():
 
     def __update(self):
         possible_targets_array = self.__mapper.pixel_grid.arrays["fixture_distance_margin"]
+        self.__smooth(possible_targets_array, dither_interval=2)
         possible_targets_array[self.__mapper.pixel_grid.arrays["robot_center_traversed"]] = False
+
+        #cv.imshow("possible wall targets", possible_targets_array.astype(np.uint8) * 255)
 
         if not np.any(possible_targets_array):
             print("no tragets")
@@ -53,3 +57,15 @@ class PositionFinder():
         array_index = self.__mapper.pixel_grid.grid_index_to_array_index(grid_index)
 
         return self.__mapper.pixel_grid.arrays["robot_center_traversed"][array_index[0], array_index[1]]
+    
+
+    def __smooth(self, possible_targets_array: np.ndarray, dither_interval=2):
+        mask = np.ones_like(possible_targets_array)
+
+        mask[::dither_interval, ::dither_interval] = False
+
+        mask[dither_interval//2::dither_interval, dither_interval//2::dither_interval] = False
+
+        #cv.imshow("dither_mask", (mask == False).astype(np.uint8) * 255)
+
+        possible_targets_array[mask] = False

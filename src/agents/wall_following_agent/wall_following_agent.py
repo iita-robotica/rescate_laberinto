@@ -15,13 +15,15 @@ class WallFollowingAgent(Agent):
 
         self.__position = None
 
-    def update(self):
+    def update(self, force=False):
         target = self.__position_finder.get_target_position()
         if target is None:
             self.__position = None
         else:
-            self.__pathfinder.update(np.array(target))
+            self.__pathfinder.update(np.array(target), force)
             self.__position = self.__pathfinder.get_next_position()
+            if self.__position is None:
+                print("WARNING: NO POSITION FOUND")
 
     def get_target_position(self) -> Position2D:
         return self.__position
