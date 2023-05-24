@@ -16,6 +16,8 @@ from agents.wall_following_agent.wall_following_agent import WallFollowingAgent 
 
 from fixture_detection.fixture_clasification import FixtureClasiffier
 
+from final_matrix_creation.final_matrix_creator import FinalMatrixCreator
+
 from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S
 
 import time
@@ -40,6 +42,8 @@ class Executor:
         self.sequencer = Sequencer(reset_function=self.delay_manager.reset_delay) # Allows for asynchronous programming
 
         self.fixture_detector = FixtureClasiffier()
+
+        self.final_matrix_creator = FinalMatrixCreator(mapper.tile_size, mapper.pixel_grid.resolution)
         
         # Flags
         self.mapping_enabled = False
@@ -71,8 +75,12 @@ class Executor:
 
             self.state_machine.run()
 
+            #self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
+
             if DO_SLOW_DOWN:
                 time.sleep(SLOW_DOWN_S)
+
+            
 
             #print("state:", self.state_machine.state)
             
@@ -127,7 +135,7 @@ class Executor:
         self.exploration_agent.update()
         self.fixture_following_agent.update()
 
-        fixture_pos = self.fixture_following_agent.get_target_position()
+        fixture_pos = None#self.fixture_following_agent.get_target_position()
 
         if fixture_pos is None:
             self.seq_move_to_coords(self.exploration_agent.get_target_position())
@@ -153,6 +161,8 @@ class Executor:
                     self.sequencer.reset_sequence() # Resets the sequence
 
     def state_end(self, change_state_function):
+        final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
+        self.robot.comunicator.send_map(final_matrix)
         self.robot.comunicator.send_end_of_play()
 
     def state_report_fixture(self, change_state_function):

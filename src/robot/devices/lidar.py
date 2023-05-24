@@ -34,7 +34,7 @@ class Lidar(TimedSensor):
         self.is_point_close_threshold = 0.03
         self.is_point_close_range = (0, 360)
 
-        self.distance_bias = 0#0.06 * 0.12
+        self.distance_bias = 0.005#0.06 * 0.12
 
         self.layers_used = layers_used
 
