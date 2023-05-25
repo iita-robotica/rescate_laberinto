@@ -121,12 +121,9 @@ class FloorMapper:
 
         mask = povs[:,:,3] > 254
 
-        gradient = self.__get_distance_to_center_gradient(povs.shape[:2])
-
         povs_gradient = np.zeros_like(self.distance_to_center_gradient)
         povs_gradient[mask] = self.distance_to_center_gradient[mask]
 
-        #cv.imshow("gradient", povs_gradient)
 
         detection_distance_mask = self.pixel_grid.arrays["floor_color_detection_distance"][start[0]:end[0], start[1]:end[1]] < povs_gradient
 

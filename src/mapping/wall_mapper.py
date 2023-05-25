@@ -28,6 +28,8 @@ class WallMapper:
         self.preference_template = self.__generate_quadratic_circle_gradient(self.robot_radius, self.robot_radius * 1.7)
 
 
+
+
     def load_point_cloud(self, in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position):
         """
         Loads into the corresponding arrays what has been seen by the lidar, what the lidar has detected, and
@@ -142,3 +144,4 @@ class WallMapper:
     
     def __reset_seen_by_lidar(self):
         self.grid.arrays["seen_by_lidar"] = np.zeros_like(self.grid.arrays["seen_by_lidar"])
+

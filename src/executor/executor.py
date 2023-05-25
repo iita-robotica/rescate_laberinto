@@ -142,7 +142,7 @@ class Executor:
 
         self.sequencer.start_sequence() # Starts the sequence
 
-        if self.agent_changed():
+        if SHOW_DEBUG and self.agent_changed():
             print("CHANGING AGENT")
 
         self.exploration_agent.update(force=self.agent_changed())
@@ -158,10 +158,10 @@ class Executor:
             self.current_agent = self.WALL_FOLLOWING_AGENT
 
         if self.current_agent == self.EXPLORATION_AGENT:
-            print("exploring not seen")
+            #print("exploring not seen")
             self.seq_move_to_coords(self.exploration_agent.get_target_position())
         elif self.current_agent == self.WALL_FOLLOWING_AGENT:
-            print("following wall")
+            #print("following wall")
             self.seq_move_to_coords(fixture_pos)
         else:
             print("WARNING: NO AGENT HAS GIVEN A POSITION")

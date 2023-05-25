@@ -11,6 +11,9 @@ from data_structures.tile_color_grid import TileColorExpandableGrid
 
 from mapping.wall_mapper import WallMapper
 from mapping.floor_mapper import FloorMapper
+
+from mapping.array_filtering import ArrayFilterer
+
 from mapping.robot_mapper import RobotMapper
 from mapping.fixture_mapper import FixtureMapper
 
@@ -47,6 +50,8 @@ class Mapper:
                                         tile_resolution=pixels_per_tile * 2,
                                         tile_size=self.tile_size,
                                         camera_distance_from_center=camera_distance_from_center)
+        
+        self.filterer = ArrayFilterer()
         
         self.robot_mapper = RobotMapper(pixel_grid=self.pixel_grid,
                                         robot_diameter=self.robot_diameter,
@@ -95,6 +100,9 @@ class Mapper:
         if camera_images is not None and lidar_detections is not None:
             self.fixture_detector.map_fixtures(camera_images, self.robot_position)
         
+        self.filterer.remove_isolated_points(self.pixel_grid.arrays["occupied"])
+
+        self.filterer.smooth_edges(self.pixel_grid.arrays["occupied"])
 
         #DEBUG
         if DO_WAIT_KEY:
