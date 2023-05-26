@@ -141,14 +141,14 @@ class PathFinder():
             array_index_path.append(self.mapper.pixel_grid.grid_index_to_array_index(n))
             
         for position in array_index_path:
-            if position[0] >= self.mapper.pixel_grid.arrays["traversable"].shape[0] or \
-               position[1] >=  self.mapper.pixel_grid.arrays["traversable"].shape[1]:
+            if position[0] >= self.mapper.pixel_grid.array_shape[0] or \
+               position[1] >=  self.mapper.pixel_grid.array_shape[1]:
                 continue
 
-            if position[0] < 0 or position[1] < 0:
+            elif position[0] < 0 or position[1] < 0:
                 continue
 
-            if self.mapper.pixel_grid.arrays["traversable"][position[0], position[1]]:
+            elif self.mapper.pixel_grid.arrays["traversable"][position[0], position[1]]:
                 return True
             
         return False

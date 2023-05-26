@@ -173,8 +173,6 @@ class FloorMapper:
     
     def detect_holes(self):
         tile_size = self.tile_size * self.pixel_per_m
-        offsets = self.__get_offsets(tile_size)
-        floor_color = deepcopy(self.pixel_grid.arrays["floor_color"])
 
         self.pixel_grid.arrays["holes"] = self.hole_color_filter.filter(self.pixel_grid.arrays["floor_color"])
 
