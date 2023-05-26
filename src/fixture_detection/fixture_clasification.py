@@ -150,7 +150,27 @@ class FixtureClasiffier:
             final_victims.append({"image":image[y:y + h, x:x + w], "position":(x, y)})
 
         #print("unfiltered", len(final_victims))
-        return self.filter_fixtures(final_victims)
+        fixtures =  self.filter_fixtures(final_victims)
+
+        biggest = self.get_biggest_fixture(fixtures)
+
+        if biggest is None:
+            return []
+        else:
+            return [biggest]
+    
+
+    def get_biggest_fixture(self, fixtures):
+        biggest = None
+        max_size = 0
+        for f in fixtures:
+            size = f["image"].shape[0] * f["image"].shape[1]
+            if size > max_size:
+                max_size = size
+                biggest = f
+        
+        return biggest
+
             
     def count_colors(self, image) -> dict:
         color_point_counts = {}

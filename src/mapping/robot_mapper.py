@@ -9,7 +9,7 @@ class RobotMapper:
     def __init__(self, pixel_grid: CompoundExpandablePixelGrid, robot_diameter, pixels_per_m) -> None:
         self.pixel_grid = pixel_grid
         self.robot_radius = round(robot_diameter / 2 * pixels_per_m)
-        self.robot_center_radius = round(0.02 * pixels_per_m)
+        self.robot_center_radius = round(0.01 * pixels_per_m)
 
         self.__robot_center_indexes = self.__get_circle_template_indexes(self.robot_center_radius)
         
