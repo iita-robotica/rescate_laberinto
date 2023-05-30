@@ -86,7 +86,10 @@ class Executor:
             if DO_SLOW_DOWN:
                 time.sleep(SLOW_DOWN_S)
 
-            
+
+            #final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
+
+            #print(final_matrix)
 
             #print("state:", self.state_machine.state)
             

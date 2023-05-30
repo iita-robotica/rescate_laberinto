@@ -7,11 +7,10 @@ import skimage
 import numpy as np
 import cv2 as cv
 
-
-class FinalMatrixCreator:
-    def __init__(self, tile_size: float, resolution: float):
+class WallMatrixCreator:
+    def __init__(self, square_size_px: int):
         self.threshold = 8
-        self.__square_size_px = round(tile_size / 2 * resolution)
+        self.__square_size_px = square_size_px
 
         straight = [
             [0, 0, 1, 2, 2, 2, 2, 1, 0, 0],
@@ -71,9 +70,7 @@ class FinalMatrixCreator:
 
         return status
 
-    def __transform_wall_array_to_bool_node_array(self, wall_array: np.ndarray, offsets: np.ndarray) -> np.ndarray:
-        
-
+    def transform_wall_array_to_bool_node_array(self, wall_array: np.ndarray, offsets: np.ndarray) -> np.ndarray:
         grid = []
         bool_array_copy = wall_array.astype(np.uint8) * 100
         for x in range(offsets[0], wall_array.shape[0] - self.__square_size_px, self.__square_size_px):
@@ -116,43 +113,150 @@ class FinalMatrixCreator:
                     final_wall_grid[final_y, final_x] = True
         
         return final_wall_grid
+    
+
+class FloorMatrixCreator:
+    def __init__(self, square_size_px: int) -> None:
+        self.__square_size_px = square_size_px * 2
+        self.__floor_color_ranges = {
+                    "0": # Normal
+                        {   
+                            "range":   ((0, 0, 37), (0, 0, 192)), 
+                            "threshold":0.2},
+
+                    "0": # Void
+                        {
+                            "range":((100, 0, 0), (101, 1, 1)),
+                            "threshold":0.9},
+                    
+                    "4": # Checkpoint
+                        {
+                            "range":((95, 0, 65), (128, 122, 198)),
+                            "threshold":0.2},
+                    "2": # Hole
+                        {
+                            "range":((0, 0, 10), (0, 0, 30)),
+                            "threshold":0.2},
+                    
+                    "3": # swamp
+                        {
+                            "range":((19, 112, 32), (19, 141, 166)),
+                            "threshold":0.2},
+
+                    "6": # Connection 1-2
+                        {
+                            "range":((120, 182, 49), (120, 204, 232)),
+                            "threshold":0.2},
+
+                    "8": # connection 3-4
+                        {
+                            "range":((132, 156, 36), (133, 192, 185)),
+                            "threshold":0.2},
+
+                    "7": # Connection2-3
+                        {
+                            "range":((0, 182, 49), (0, 204, 232)),
+                            "threshold":0.2},
+                    }
+        
+                    #TODO Add Connection 1-4
+                    
+        self.final_image = np.zeros((700, 700, 3), np.uint8)
+        
+    def __get_square_color(self, min_x, min_y, max_x, max_y, floor_array: np.ndarray) -> str:
+        square = floor_array[min_x:max_x, min_y:max_y]
+
+        square = cv.cvtColor(square, cv.COLOR_BGR2HSV)
+        
+        if np.count_nonzero(square) == 0:
+            return "0"
+        
+        color_counts = {}
+        for color_key, color_range in self.__floor_color_ranges.items():
+            colour_count = np.count_nonzero(cv.inRange(square, color_range["range"][0], color_range["range"][1]))
+            if colour_count > color_range["threshold"] * square.shape[0] * square.shape[1]:
+                color_counts[color_key] = colour_count
+        
+        if len(color_counts) == 0:
+            return "0"
+        else:
+            return max(color_counts, key=color_counts.get)
+    
+
+    def get_floor_colors(self, floor_array: np.ndarray, offsets: np.ndarray) -> np.ndarray:
+
+        array_copy = copy.deepcopy(floor_array)
+
+        grid = []
+
+        for x in range(offsets[0], floor_array.shape[0] - self.__square_size_px, self.__square_size_px):
+            row = []
+            for y in range(offsets[1], floor_array.shape[1] - self.__square_size_px, self.__square_size_px):
+                min_x = x
+                min_y = y
+                max_x = x + self.__square_size_px
+                max_y = y + self.__square_size_px
+                
+                array_copy = cv.rectangle(array_copy, (min_y, min_x), (max_y, max_x), (255, 255, 255), 1)
+                
+                color_key = self.__get_square_color(min_x, min_y, max_x, max_y, floor_array)
+
+                row.append(color_key)
+            grid.append(row)
+
+        cv.imshow("array copy", array_copy)
+
+        return grid
+        
+
+class FinalMatrixCreator:
+    def __init__(self, tile_size: float, resolution: float):
+        self.__square_size_px = round(tile_size / 2 * resolution)
+
+        self.wall_matrix_creator = WallMatrixCreator(self.__square_size_px)
+        self.floor_matrix_creator = FloorMatrixCreator(self.__square_size_px)
 
 
     def pixel_grid_to_final_grid(self, pixel_grid: CompoundExpandablePixelGrid, robot_start_position: np.ndarray) -> np.ndarray:
-        
+        np.set_printoptions(linewidth=1000000000000, threshold=100000000000000)
         wall_array = pixel_grid.arrays["walls"]
         color_array = pixel_grid.arrays["floor_color"]
 
         offsets = self.__get_offsets(self.__square_size_px, pixel_grid.offsets)
         
-        wall_node_array = self.__transform_wall_array_to_bool_node_array(wall_array, offsets)
+        # Walls
+        wall_node_array = self.wall_matrix_creator.transform_wall_array_to_bool_node_array(wall_array, offsets)
 
+
+        floor_offsets = self.__get_offsets(self.__square_size_px * 2, pixel_grid.offsets + self.__square_size_px)
+
+        # Floor
+        floor_string_array = self.floor_matrix_creator.get_floor_colors(color_array, floor_offsets)
+
+        # Start tile
         if robot_start_position is None:
             return np.array([])
         
         start_array_index = pixel_grid.coordinates_to_array_index(robot_start_position)
-
         start_array_index -= offsets
-
         robot_node = np.round((start_array_index / self.__square_size_px) * 2).astype(int) - 1
 
-        text_grid = self.__get_final_text_grid(wall_node_array, robot_node)
+
+        # Mix everything togehter
+        text_grid = self.__get_final_text_grid(wall_node_array, floor_string_array, robot_node)
+
 
         return np.array(text_grid)
 
         #wall_array = self.offset_array(wall_array, self.square_size_px, pixel_grid.offsets)
         #color_array = self.offset_array(color_array, self.square_size_px, pixel_grid.offsets)
 
-    def __get_final_text_grid(self, wall_node_array: np.ndarray, robot_node: np.ndarray) -> list:
-        
-        #wall_node_array[robot_node[0], robot_node[1]] = True
-
+    def __get_final_text_grid(self, wall_node_array: np.ndarray, floor_type_array: np.ndarray, robot_node: np.ndarray) -> list:
         cv.imshow("final_grid", cv.resize(wall_node_array.astype(np.uint8) * 255, (0, 0), fx=10, fy=10, interpolation=cv.INTER_AREA))
-
-
         
         final_text_grid = []
 
+        # set walls
         for row in wall_node_array:
             f_row = []
             for val in row:
@@ -161,6 +265,14 @@ class FinalMatrixCreator:
                 else:
                     f_row.append("0")
             final_text_grid.append(f_row)
+
+        #set floor
+        for y, row in enumerate(floor_type_array):
+            for x, val in enumerate(row):
+                x1 = x * 4 + 3
+                y1 = y * 4 + 3
+                self.__set_node_as_character(final_text_grid, np.array([y1, x1]), val)
+
         
         self.__set_node_as_character(final_text_grid, robot_node, "5")
 
@@ -174,117 +286,10 @@ class FinalMatrixCreator:
     def __set_node_as_character(self, final_text_grid: list, node: np.ndarray, character: str) -> list:
         for diagonal in np.array(((1, 1), (-1, 1), (-1, -1), (1, -1))):
             n = node + diagonal
-            final_text_grid[n[0]][n[1]] = character
+            try:
+                final_text_grid[n[0]][n[1]] = character
+            except IndexError:
+                pass
 
         return final_text_grid
-
-
-
-"""
-class FinalMatrixCreator:
-    def __init__(self, tile_size, resolution) -> None:
-        self.square_size_px = round(tile_size / 2 * resolution)
-
-        straight = [
-            [0, 0,-1,-4,-8,-8,-4,-1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 2, 2, 4, 4, 2, 2, 1, 0],
-            [0, 1, 2, 2, 4, 4, 2, 2, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 2, 2, 4, 4, 2, 2, 1, 0],
-            [0, 1, 2, 2, 4, 4, 2, 2, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0,-1,-4,-8,-8,-4,-1, 0, 0],
-                ]
-        
-        self.horizontal_template = np.array(straight, dtype=np.int8)
-
-        self.template_match_threshold = 0.4
-
-    def pixel_grid_to_final_grid(self, pixel_grid: CompoundExpandablePixelGrid) -> np.ndarray:
-        
-        
-        wall_array = pixel_grid.arrays["walls"]
-        color_array = pixel_grid.arrays["floor_color"]
-        wall_array = self.offset_array(wall_array, self.square_size_px, pixel_grid.offsets)
-        color_array = self.offset_array(color_array, self.square_size_px, pixel_grid.offsets)
-        
-        shape = np.ceil(np.array(wall_array.shape) / self.square_size_px * 2).astype(int)
-
-        final_grid = np.zeros(shape, np.bool_)
-
-        
-        #debug_array = wall_array.astype(np.uint8) * 255
-        #for x in range(0, shape[1] -1, 2):
-        #    for y in range(1, shape[0] -1, 2):
-        #       final_grid[y][x] = self.analyze_wall_square(x // 2, y // 2 + 0.5, wall_array, final_grid, debug_array)
-        
-
-        final_grid = cv.filter2D(wall_array.astype(np.float32), -1, self.horizontal_template)
-        
-        bool_final = (final_grid * (1 / np.sum(self.horizontal_template[self.horizontal_template > 0])) > self.template_match_threshold).astype(np.uint8) * 255
-
-        cv.imshow("final_grid", bool_final[::self.square_size_px, ::self.square_size_px])#cv.resize(final_grid.astype(np.uint8) * 255, (0, 0), fx=10, fy=10, interpolation=cv.INTER_AREA))
-
-        cv.imshow("template", self.horizontal_template.astype(np.float32)  * (1 / np.max(self.horizontal_template)))
-        
-        #cv.imshow("wall_array_tile_debug", debug_array)
-
-    
-    def analyze_wall_square(self, x: int, y: int, wall_array: np.ndarray, final_grid: list, debug_array = None):
-        min_x = round(x * self.square_size_px)
-        min_y = round(y * self.square_size_px)
-        max_x = round(min_x + self.square_size_px)
-        max_y = round(min_y + self.square_size_px)
-        #print(min_x, min_y, max_x, max_y)
-
-        cv.rectangle(debug_array, (min_x, min_y), (max_x, max_y), (255,), 1)
-        
-        print("x:", min_x, max_x, "y:", min_y, max_y)
-        square_array = wall_array[min_y:max_y, min_x:max_x]
-        
-        val = self.get_tile_value(square_array)
-
-        if np.any(square_array) and val:
-            cv.imshow("example wall", square_array.astype(np.uint8) * 255)
-
-        return val
-
-
-    def get_tile_value(self, square_array: np.ndarray) -> bool:
-        try:    
-            count = np.sum(self.horizontal_template[square_array])
-        except IndexError:
-            return False
-        
-        ratio = count / np.sum(self.horizontal_template)
-
-        return ratio > self.template_match_threshold
-    
-    def offset_array(self, array: np.ndarray, square_size: float, raw_offsets: Position2D) -> np.ndarray:
-        offsets = self.get_offsets(square_size, raw_offsets)
-        return array[offsets[0]:, offsets[1]:]
-    
-    def get_offsets(self, square_size: float, raw_offsets: np.array) -> np.ndarray:
-        return np.round(raw_offsets % square_size).astype(int)
-    
-
-    def generate_horizontal_wall_template(self, square_size_px: np.ndarray) -> np.ndarray:
-        array = np.zeros([square_size_px]*2, np.uint8)
-        line_width = round(self.horizontal_line_width_ratio * square_size_px)
-        vertical_margin = round((square_size_px - line_width) / 2)
-
-        line_lenght = round(self.horizontal_line_lenght_ratio * square_size_px)
-        horizontal_margin = round((square_size_px - line_lenght) / 2)
-
-        array[vertical_margin:-vertical_margin, horizontal_margin:-horizontal_margin] = 1
-
-        horizontal_gap_size = self.horizontal_line_middle_gap_ratio * square_size_px // 2
-        middle = array.shape[0] // 2
-        array[int(middle - horizontal_gap_size): int(middle + horizontal_gap_size), 0:-1] = 0
-
-        return array
-
-"""
 
