@@ -5,7 +5,7 @@
 import os
 import pathlib
 
-script_dir = pathlib.Path(os.path.dirname(__file__))
+script_dir = pathlib.Path(os.path.abspath(__file__)).parent
 rel_path = pathlib.Path("src/run.py")
 
 abs_target_file_path = pathlib.Path(script_dir.parent, rel_path)

@@ -8,7 +8,7 @@ from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 from algorithms.np_bool_array.efficient_a_star import aStarAlgorithm
 from algorithms.np_bool_array.bfs import NavigatingBFSAlgorithm
 
-from agents.granular_navigation_agent.path_smoothing import PathSmoother
+from agent.pathfinding.path_smoothing import PathSmoother
 
 from flags import SHOW_PATHFINDING_DEBUG, SHOW_GRANULAR_NAVIGATION_GRID
 
@@ -31,7 +31,7 @@ class PathFinder():
         self.path_not_found = False
         self.__position_changed = True
     
-    def update(self, target_position: np.ndarray = None, force=False) -> None:
+    def update(self, target_position: np.ndarray = None, force_calculation=False) -> None:
         if target_position is not None:
             self.__position_changed = np.any(self.__target_position != target_position)
             self.__target_position = target_position
@@ -45,7 +45,7 @@ class PathFinder():
             if self.is_path_finished(): print("FINISHED PATH")
             if self.__is_path_obstructed(): print("PATH OBSTRUCTED")
 
-        if self.is_path_finished() or self.__is_path_obstructed() or self.__position_changed or force:
+        if self.is_path_finished() or self.__is_path_obstructed() or self.__position_changed or force_calculation:
             self.__calculate_path()
             
         self.__calculate_path_index()
