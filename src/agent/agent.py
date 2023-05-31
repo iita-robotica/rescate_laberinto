@@ -52,6 +52,7 @@ class Agent(AgentInterface):
 
         self.do_force_calculation = False
         self.end_reached_distance_threshold = 0.04
+        self.return_time_out_seconds = 60
 
         self.__target_position = None
 
@@ -84,7 +85,9 @@ class Agent(AgentInterface):
             self.__target_position = self.__return_to_start_agent.get_target_position()
         
     def __little_time_left(self) -> bool:
-        return False
+        print("time:", self.__mapper.time)
+        print("limit:", (self.__mapper.run_duration_seconds - self.return_time_out_seconds))
+        return self.__mapper.time > (self.__mapper.run_duration_seconds - self.return_time_out_seconds)
     
     def __set_force_calculation(self):
         self.do_force_calculation = True

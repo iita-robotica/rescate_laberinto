@@ -156,7 +156,7 @@ class CompoundExpandablePixelGrid:
         #color_grid[self.arrays["discovered"]] = (0, 1, 1)
         #color_grid[self.arrays["seen_by_camera"]] += (0.5, 0, 0)
         #color_grid[self.arrays["fixture_detection_zone"]] = (0, 1, 1)
-        color_grid[self.arrays["fixture_distance_margin"]] = (0, 0, 1)
+        
 
 
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
@@ -164,7 +164,9 @@ class CompoundExpandablePixelGrid:
         #color_grid[self.arrays["walls_not_seen_by_camera"]] = (0, 0, 1)
 
         color_grid *= 0.3
-
+        
+        color_grid[self.arrays["fixture_distance_margin"]] = (0, 0, 1)
+        
         color_grid[self.arrays["victims"]] = (0, 1, 0)
 
         color_grid[self.arrays["robot_center_traversed"]] = (.5, 0., .5)

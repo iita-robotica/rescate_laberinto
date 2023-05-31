@@ -12,6 +12,7 @@ class PositionFinder(PositionFinderInterface):
         self.__mapper = mapper
         self.__next_position_finder = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.__still_reachable_bfs = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
+        self.__closest_free_point_finder = NavigatingBFSAlgorithm(lambda x : x == 0, lambda x: True)
         self.__target = None
 
 
@@ -42,6 +43,8 @@ class PositionFinder(PositionFinderInterface):
             return
 
         robot_array_index = self.__mapper.pixel_grid.grid_index_to_array_index(self.__mapper.robot_grid_index)
+
+        robot_array_index = self.__get_closest_traversable_array_index(robot_array_index)
 
         results = self.__next_position_finder.bfs(possible_targets_array, self.__mapper.pixel_grid.arrays["traversable"], robot_array_index)
 
@@ -74,3 +77,13 @@ class PositionFinder(PositionFinderInterface):
         #cv.imshow("dither_mask", (mask == False).astype(np.uint8) * 255)
 
         possible_targets_array[mask] = False
+
+    
+
+    def __get_closest_traversable_array_index(self, array_index):
+        if self.__mapper.pixel_grid.arrays["traversable"][array_index[0], array_index[1]]:
+            return  self.__closest_free_point_finder.bfs(found_array=self.__mapper.pixel_grid.arrays["traversable"],
+                                                         traversable_array=self.__mapper.pixel_grid.arrays["traversable"],
+                                                         start_node=array_index)[0]
+        else:
+            return array_index

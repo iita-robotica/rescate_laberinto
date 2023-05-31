@@ -67,12 +67,19 @@ class Mapper:
 
         self.fixture_detector = FixtureDetector(self.pixel_grid)
 
+        self.time = 0
+
+        self.run_duration_seconds = 8 * 60
+
     def update(self, in_bounds_point_cloud: list = None, 
                out_of_bounds_point_cloud: list = None,
                lidar_detections: list = None,
                camera_images: list = None, 
                robot_position: Position2D = None, 
-               robot_orientation: Angle = None):
+               robot_orientation: Angle = None,
+               time: float = 0):
+        
+        self.time = time
         
         if robot_position is None or robot_orientation is None:
             return
@@ -86,7 +93,7 @@ class Mapper:
         if in_bounds_point_cloud is not None and out_of_bounds_point_cloud is not None:
             self.wall_mapper.load_point_cloud(in_bounds_point_cloud, out_of_bounds_point_cloud, robot_position)
         
-        self.robot_mapper.map_traversed_by_robot(self.robot_grid_index)
+        self.robot_mapper.map_traversed_by_robot(self.robot_grid_index, self.robot_orientation)
         self.robot_mapper.map_seen_by_camera(self.robot_grid_index, self.robot_orientation)
         self.robot_mapper.map_discovered_by_robot(self.robot_grid_index, self.robot_orientation)
 

@@ -4,12 +4,13 @@ from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
 from data_structures.angle import Angle
 from data_structures.vectors import Position2D, Vector2D
 import math
+import skimage
 
 class RobotMapper:
     def __init__(self, pixel_grid: CompoundExpandablePixelGrid, robot_diameter, pixels_per_m) -> None:
         self.pixel_grid = pixel_grid
         self.robot_radius = round(robot_diameter / 2 * pixels_per_m)
-        self.robot_center_radius = round(0.02 * pixels_per_m)
+        self.robot_center_radius = round(0.012 * pixels_per_m)
 
         self.__robot_center_indexes = self.__get_circle_template_indexes(self.robot_center_radius)
         
@@ -26,7 +27,7 @@ class RobotMapper:
         self.__discovery_pov_lenght = self.__camera_pov_lenght
         self.__discovery_pov_orientation = Angle(0, Angle.DEGREES)
 
-    def map_traversed_by_robot(self, robot_grid_index):
+    def map_traversed_by_robot(self, robot_grid_index, robot_orientation):
         circle = np.zeros_like(self.__robot_diameter_indexes)
         circle[0] = self.__robot_diameter_indexes[0] + np.array(robot_grid_index)[0]
         circle[1] = self.__robot_diameter_indexes[1] + np.array(robot_grid_index)[1]
@@ -41,9 +42,10 @@ class RobotMapper:
 
         self.pixel_grid.arrays["traversed"][circle[0], circle[1]] = True
 
-        self.map_traversed_by_center_of_robot(robot_grid_index)
+        self.map_traversed_by_center_of_robot(robot_grid_index, robot_orientation)
 
-    def map_traversed_by_center_of_robot(self, robot_grid_index):
+    
+    def map_traversed_by_center_of_robot(self, robot_grid_index, robot_orientation):
         circle = np.zeros_like(self.__robot_center_indexes)
         circle[0] = self.__robot_center_indexes[0] + np.array(robot_grid_index)[0]
         circle[1] = self.__robot_center_indexes[1] + np.array(robot_grid_index)[1]
@@ -57,7 +59,10 @@ class RobotMapper:
         circle[1] = self.__robot_center_indexes[1] + robot_array_index[1]
 
         self.pixel_grid.arrays["robot_center_traversed"][circle[0], circle[1]] = True
-
+        
+        self.__draw_line_at_angle(self.pixel_grid.arrays["robot_center_traversed"], Position2D(robot_array_index), robot_orientation, 0, 8)
+    
+    
 
 
     def map_seen_by_camera(self, robot_grid_index, robot_rotation: Angle):
@@ -169,3 +174,20 @@ class RobotMapper:
         indexes[0] += offsets[0]
         indexes[1] += offsets[1]
         return indexes
+    
+
+    def __draw_bool_line(self, array, point1, point2):
+        indexes = skimage.draw.line(point1[0], point1[1], point2[0], point2[1])
+    
+        array[indexes[0][:-2], indexes[1][:-2]] = True
+        return array
+    
+    def __draw_line_at_angle(self, array: np.ndarray, center: Position2D, angle: Angle, line_width: int, line_lenght: int) -> None:
+        v1 = Vector2D(angle, line_lenght / 2)
+        v2 = Vector2D(angle, -line_lenght / 2)
+
+        p1 = v1.to_position().astype(int)
+        p2 = v2.to_position().astype(int)
+
+        self.__draw_bool_line(array, p1 + center, p2 + center)
+
