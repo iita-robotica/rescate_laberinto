@@ -23,7 +23,7 @@ class SubAgentInterface(ABC):
         self.mapper = mapper
 
     @abstractmethod
-    def update(self) -> None:
+    def update(self, force_calculation=False) -> None:
         pass
     
     @abstractmethod
