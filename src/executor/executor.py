@@ -57,6 +57,7 @@ class Executor:
         self.seq_delay_seconds =   self.sequencer.make_complex_event(self.delay_manager.delay_seconds)
 
         self.letter_to_report = None
+        self.report_orientation = Angle(0)
 
     def run(self):
         """Advances the simulation, updates all components and executes the state machine."""
@@ -156,6 +157,7 @@ class Executor:
                 fixtures = self.fixture_detector.find_fixtures(cam_image.image)   
                 if len(fixtures):
                     self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
+                    self.report_orientation = cam_image.data.horizontal_orientation
                     change_state_function("report_fixture")
                     self.sequencer.reset_sequence() # Resets the sequence
 
@@ -170,8 +172,10 @@ class Executor:
         self.seq_move_wheels(0, 0)
 
         if self.letter_to_report is not None:
-            #self.seq_move_wheels(0.3, 0.3)
-            #self.seq_delay_seconds(0.2)
+            self.report_orientation.normalize()
+            self.seq_rotate_to_angle(self.report_orientation.degrees)
+            self.seq_move_wheels(0.3, 0.3)
+            self.seq_delay_seconds(0.2)
             self.seq_move_wheels(0, 0)
             self.seq_delay_seconds(2)
 

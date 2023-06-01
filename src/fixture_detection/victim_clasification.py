@@ -35,9 +35,14 @@ class VictimClassifier:
             }
         
         self.letters = {
-            "H":{'top': False, 'middle': True, 'bottom': False},
-            "S":{'top': True, 'middle': True, 'bottom': True},
-            "U":{'top': False, 'middle': False, 'bottom': True}
+            "H":[{'top': False, 'middle': True, 'bottom': False}],
+            
+            "S":[{'top': True, 'middle': True, 'bottom': True},
+                 {'top': True, 'middle': False, 'bottom': True}],
+
+            "U":[{'top': False, 'middle': False, 'bottom': True}, 
+                 {'top': False, 'middle': False, 'bottom': False}],
+
             }
 
     def crop_white(self, binaryImg):
@@ -100,10 +105,10 @@ class VictimClassifier:
             counts[key] = count > self.min_count_in_area
 
 
-        final_letter = random.choice(list(self.letters.keys()))
         for letter_key in self.letters.keys():
-            if counts == self.letters[letter_key]:
-                final_letter = letter_key
-                break
+            for template in self.letters[letter_key]:
+                if counts == template:
+                    print("Found:", letter_key)
+                    return letter_key
         
-        return final_letter
+        return random.choice(list(self.letters.keys()))

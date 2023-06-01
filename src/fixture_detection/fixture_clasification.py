@@ -36,11 +36,12 @@ class FixtureClasiffier:
         }
 
         # Fixture filtering
-        #self.min_fixture_height = 23
+        #self.min_fixture_height = 10
         #self.min_fixture_width = 19
 
-        self.min_fixture_height = 10
-        self.min_fixture_width = 19
+
+        self.min_fixture_height = 15
+        self.min_fixture_width = 15
     
         # Fixture classification
         self.possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
