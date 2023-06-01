@@ -113,6 +113,8 @@ class PathFinder():
                 self.__a_star_index += 1
 
     def __dither_path(self, path):
+        if not len(path):
+            return path
         final_path = []
         dither_interval = 2
         for index, value in enumerate(path):
