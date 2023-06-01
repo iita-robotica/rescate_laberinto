@@ -34,7 +34,7 @@ class StateMachine:
             self.current_function = self.state_functions[self.state]
 
         else:
-            raise RuntimeWarning("Can't change state. New state is not in the possible changes for old state.")
+            print(f"WARNING: Can't change to state {new_state}. New state is not in the possible changes for {self.state}.")
         return True
 
     def check_state(self, state):
