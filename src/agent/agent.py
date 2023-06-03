@@ -1,17 +1,17 @@
 from collections import namedtuple
 from data_structures.vectors import Position2D
 
-from agent.agent_interface import AgentInterface, SubAgentInterface
+from agent.agent_interface import AgentInterface, SubagentInterface
 from mapping.mapper import Mapper
 
-from agent.sub_agents.follow_walls.follow_walls_sub_agent import FollowWallsAgent
-from agent.sub_agents.go_to_non_discovered.go_to_non_discovered_sub_agent import GoToNonDiscoveredAgent
-from agent.sub_agents.return_to_start.return_to_start_sub_agent import ReturnToStartAgent
+from agent.subagents.follow_walls.follow_walls_subagent import FollowWallsAgent
+from agent.subagents.go_to_non_discovered.go_to_non_discovered_subagent import GoToNonDiscoveredAgent
+from agent.subagents.return_to_start.return_to_start_subagent import ReturnToStartAgent
 
 from flow_control.state_machine import StateMachine
 
 
-class AgentPriorityCombiner(SubAgentInterface):
+class SubagentPriorityCombiner(SubagentInterface):
     """Tries different startegies succesively until one returns a position."""
     def __init__(self, agents: list) -> None:
         self.__agent_list = agents
@@ -19,7 +19,7 @@ class AgentPriorityCombiner(SubAgentInterface):
         self.__previous_agent_index = 0
 
     def update(self, force_calculation=False) -> None:
-        agent: SubAgentInterface
+        agent: SubagentInterface
         for index, agent in enumerate(self.__agent_list):
             agent.update(force_calculation=self.__agent_changed() or force_calculation)
             if agent.target_position_exists():
@@ -41,8 +41,8 @@ class Agent(AgentInterface):
     def __init__(self, mapper: Mapper) -> None:
         self.__mapper = mapper
 
-        self.__navigation_agent = AgentPriorityCombiner([FollowWallsAgent(self.__mapper), 
-                                                         GoToNonDiscoveredAgent(self.__mapper)])
+        self.__navigation_agent = SubagentPriorityCombiner([FollowWallsAgent(self.__mapper), 
+                                                            GoToNonDiscoveredAgent(self.__mapper)])
         
         self.__return_to_start_agent = ReturnToStartAgent(self.__mapper)
 

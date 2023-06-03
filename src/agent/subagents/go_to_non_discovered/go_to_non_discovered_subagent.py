@@ -1,15 +1,15 @@
 import numpy as np
 import cv2 as cv
 
-from agent.agent_interface import SubAgentInterface
+from agent.agent_interface import SubagentInterface
 
 from data_structures.vectors import Position2D
 from mapping.mapper import Mapper
 
 from agent.pathfinding.pathfinder import PathFinder
-from agent.sub_agents.go_to_non_discovered.got_to_non_discovered_position_finder import PositionFinder
+from agent.subagents.go_to_non_discovered.go_to_non_discovered_position_finder import PositionFinder
 
-class GoToNonDiscoveredAgent(SubAgentInterface):
+class GoToNonDiscoveredAgent(SubagentInterface):
     """
     Navigates the map without any concept of 'tiles'.
     """

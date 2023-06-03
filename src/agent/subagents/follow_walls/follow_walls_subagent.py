@@ -1,13 +1,13 @@
 import numpy as np
 from data_structures.vectors import Position2D
 
-from agent.agent_interface import SubAgentInterface
+from agent.agent_interface import SubagentInterface
 from mapping.mapper import Mapper
 
-from agent.sub_agents.follow_walls.follow_walls_position_finder import PositionFinder
+from agent.subagents.follow_walls.follow_walls_position_finder import PositionFinder
 from agent.pathfinding.pathfinder import PathFinder
 
-class FollowWallsAgent(SubAgentInterface):
+class FollowWallsAgent(SubagentInterface):
     def __init__(self, mapper: Mapper) -> None:
         self.mapper = mapper
         self.__position_finder = PositionFinder(mapper)
