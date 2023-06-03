@@ -18,7 +18,7 @@ class AgentInterface(ABC):
     def do_end(self) -> bool:
         pass
 
-class SubAgentInterface(ABC):
+class SubagentInterface(ABC):
     def __init__(self, mapper) -> None:
         self.mapper = mapper
 
