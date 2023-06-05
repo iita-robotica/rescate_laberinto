@@ -17,9 +17,11 @@ from fixture_detection.fixture_clasification import FixtureClasiffier
 
 from final_matrix_creation.final_matrix_creator import FinalMatrixCreator
 
-from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S
+from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S, DO_SAVE_FIXTURE_DEBUG, SAVE_FIXTURE_DEBUG_DIR
 
 import time
+
+import cv2 as cv
 
 class Executor:
     def __init__(self, mapper: Mapper, robot: Robot) -> None:
@@ -158,8 +160,13 @@ class Executor:
                 if len(fixtures):
                     self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
                     self.report_orientation = cam_image.data.horizontal_orientation
+
+                    #TODO Sacar en codigo final
+                    if DO_SAVE_FIXTURE_DEBUG:
+                        cv.imwrite(f"{SAVE_FIXTURE_DEBUG_DIR}/{str(time.time()).rjust(50)}-{self.letter_to_report}-{self.robot.position}.png", cam_image.image)
                     change_state_function("report_fixture")
                     self.sequencer.reset_sequence() # Resets the sequence
+                    break
 
     def state_end(self, change_state_function):
         final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
