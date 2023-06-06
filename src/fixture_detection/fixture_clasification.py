@@ -59,7 +59,7 @@ class FixtureClasiffier:
             FixtureType("organic_peroxide", "O", {"red":   (1,    math.inf), 
                                                   "yellow":(1,    math.inf),}),
 
-            FixtureType("victim",    "H",        {"white": (4000, math.inf), 
+            FixtureType("victim",    "H",        {"white": (3500, math.inf), 
                                                   "black": (100,  4000),}),
 
             FixtureType("corrosive", "C",        {"white": (700,  2500), 
