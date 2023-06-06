@@ -14,5 +14,5 @@ DO_SLOW_DOWN = False
 SLOW_DOWN_S = 0.032
 
 
-DO_SAVE_FIXTURE_DEBUG = False
-SAVE_FIXTURE_DEBUG_DIR = "/home/ale/IITA/debug_imgs"
+DO_SAVE_FIXTURE_DEBUG = True
+SAVE_FIXTURE_DEBUG_DIR = "/home/iitaadmin/simulated_rescue_maze/debug_imgs"

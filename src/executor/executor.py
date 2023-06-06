@@ -181,7 +181,7 @@ class Executor:
         if self.letter_to_report is not None:
             self.report_orientation.normalize()
             self.seq_rotate_to_angle(self.report_orientation.degrees)
-            self.seq_move_wheels(0.3, 0.3)
+            self.seq_move_wheels(0.6, 0.6)
             self.seq_delay_seconds(0.2)
             self.seq_move_wheels(0, 0)
             self.seq_delay_seconds(2)
