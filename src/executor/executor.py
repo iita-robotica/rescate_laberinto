@@ -100,12 +100,7 @@ class Executor:
                                    self.robot.position,
                                    self.robot.orientation,
                                    self.robot.time)
-        else:
-            # Only position and rotation
-            self.mapper.update(robot_position=self.robot.position, 
-                               robot_orientation=self.robot.orientation,
-                               time=self.robot.time)
-            
+
     # STATES
     def state_init(self, change_state_function):
         """Initializes and calibrates the robot."""
