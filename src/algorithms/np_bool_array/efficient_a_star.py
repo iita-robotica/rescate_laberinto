@@ -11,6 +11,7 @@ class aStarNode:
         self.g = float('inf')
         self.p = 0
         self.f = 0
+        self.rank = 0
 
     def __gt__(self, other):  # make nodes comparable
         return self.f > other.f
@@ -21,7 +22,7 @@ class aStarNode:
 
 class aStarAlgorithm:
     def __init__(self):
-        self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], ]#[1, 1], [1, -1], [-1, -1], [-1, 1]]
+        self.adjacents = [[0, 1], [0, -1], [-1, 0], [1, 0], [1, 1], [1, -1], [-1, -1], [-1, 1]]
         #self.preference_weight = 5
         self.preference_weight = 2
     
@@ -37,9 +38,11 @@ class aStarAlgorithm:
     @staticmethod
     def heuristic(start, target):
         # optimistic score, assuming all cells are friendly
-        dy = abs(start[0] - target[0])
-        dx = abs(start[1] - target[1])
-        return min(dx, dy) * 15 + abs(dx - dy) * 10
+        #dy = abs(start[0] - target[0])
+        #dx = abs(start[1] - target[1])
+        #return min(dx, dy) * 15 + abs(dx - dy) * 10
+
+        return math.sqrt(((start[0] - target[0]) ** 2) + ((start[1] - target[1]) ** 2))
 
     @staticmethod
     def get_preference(preference_grid, position):
@@ -61,7 +64,7 @@ class aStarAlgorithm:
         
     # Returns a list of tuples as a path from the given start to the given end in the given maze
     def a_star(self, grid: np.ndarray, start, end, preference_grid=None, search_limit=float('inf')):
-        debug_grid = np.zeros((grid.shape[0], grid.shape[1], 3), dtype=np.uint8)
+        #debug_grid = np.zeros((grid.shape[0], grid.shape[1], 3), dtype=np.uint8)
 
         # Create start and end node
         start_node = aStarNode(tuple(start))
@@ -114,13 +117,15 @@ class aStarAlgorithm:
                 
                 new_child.f = new_child.g + new_child.h + new_child.p
 
+                new_child.rank = new_child.g + new_child.p
+
                 if child_location in best_cost_for_node_lookup.keys():
-                    if new_child.g + new_child.p < best_cost_for_node_lookup[child_location]:
-                        best_cost_for_node_lookup[child_location] = new_child.g + new_child.p
+                    if new_child.rank < best_cost_for_node_lookup[child_location]:
+                        best_cost_for_node_lookup[child_location] = new_child.rank
                         heappush(openList, new_child)
                         
                 else:
-                    best_cost_for_node_lookup[child_location] = new_child.g + new_child.p
+                    best_cost_for_node_lookup[child_location] = new_child.rank
                     heappush(openList, new_child)
 
             loop_n += 1

@@ -41,8 +41,8 @@ class Agent(AgentInterface):
     def __init__(self, mapper: Mapper) -> None:
         self.__mapper = mapper
 
-        self.__navigation_agent = SubagentPriorityCombiner([FollowWallsAgent(self.__mapper), 
-                                                            GoToNonDiscoveredAgent(self.__mapper)])
+        self.__navigation_agent = SubagentPriorityCombiner([FollowWallsAgent(self.__mapper),
+                                                            GoToNonDiscoveredAgent(self.__mapper),])
         
         self.__return_to_start_agent = ReturnToStartAgent(self.__mapper)
 
