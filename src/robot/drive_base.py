@@ -5,6 +5,8 @@ from data_structures.vectors import Position2D, Vector2D
 import math
 from flags import SHOW_DEBUG
 
+from robot.devices.wheel import Wheel
+
 class Criteria(Enum):
     LEFT = 1
     RIGHT = 2
@@ -85,6 +87,7 @@ class RotationManager:
         self.min_velocity = 0.2
 
         self.velocity_reduction_threshold = Angle(10, Angle.DEGREES)
+        self.velocity_reduction_factor = 0.5
 
         self.accuracy = Angle(2, Angle.DEGREES)
 
@@ -104,7 +107,7 @@ class RotationManager:
         velocity = mapVals(absolute_difference.degrees, self.accuracy.degrees, 90, self.min_velocity, self.max_velocity)
 
         if absolute_difference < self.velocity_reduction_threshold:
-            velocity *= 0.5
+            velocity *= self.velocity_reduction_factor
 
         velocity = min(velocity, self.max_velocity_cap)
         velocity = max(velocity, self.min_velocity_cap)
@@ -204,7 +207,7 @@ class MovementToCoordinatesManager:
 
 
 class SmoothMovementToCoordinatesManager:
-    def __init__(self, left_wheel, right_wheel) -> None:
+    def __init__(self, left_wheel: Wheel, right_wheel: Wheel) -> None:
         self.current_position = Position2D()
 
         self.left_wheel = left_wheel
@@ -219,13 +222,17 @@ class SmoothMovementToCoordinatesManager:
         self.distance_weight = 5
         self.angle_weight = 5
 
-        self.turning_speed_multiplier = 1.5
+        self.min_velocity_cap = 0
+
+        self.turning_speed_multiplier = 0.5
 
         self.finished_moving = False
 
-        self.angle_error_margin = Angle(2, Angle.DEGREES)
+        self.angle_error_margin = Angle(3, Angle.DEGREES)
 
         self.strong_rotation_start = Angle(45, Angle.DEGREES)
+
+        self.light_rotation_start = Angle(30, Angle.DEGREES)
 
     def move_to_position(self, target_position:Position2D):
         dist = abs(self.current_position.get_distance_to(target_position))
@@ -245,32 +252,52 @@ class SmoothMovementToCoordinatesManager:
             angle_diff = self.current_angle - angle_to_target
             absolute_angle_diff = self.current_angle.get_absolute_distance_to(angle_to_target)
 
-            #print("diff:", absolute_angle_diff)
             if absolute_angle_diff < self.angle_error_margin:
+                print("straight")
                 self.right_wheel.move(self.velocity)
                 self.left_wheel.move(self.velocity)
 
 
             elif absolute_angle_diff > self.strong_rotation_start:
+                print("strong")
                 if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
                     self.right_wheel.move(self.velocity)
                     self.left_wheel.move(self.velocity * -1)
                 else:
                     self.right_wheel.move(self.velocity * -1)
                     self.left_wheel.move(self.velocity)
+            
+            elif absolute_angle_diff < self.light_rotation_start:
+                print("light")
+                if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
+                    self.right_wheel.move(1)
+                    self.left_wheel.move(0.8)
+                else:
+                    self.right_wheel.move(0.8)
+                    self.left_wheel.move(1)
+
 
             else:
+                print("dynamic")
                 distance_speed = abs(dist * -self.distance_weight)
                 angle_speed = absolute_angle_diff.radians * self.angle_weight
 
                 speed = angle_speed * self.turning_speed_multiplier
 
+                speed = max(self.min_velocity_cap, speed)
+
+                speed2 = speed * distance_speed
+                speed2 = max(speed2, self.min_velocity_cap)
+
                 if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
                     self.right_wheel.move(speed)
-                    self.left_wheel.move(speed * distance_speed)
+                    self.left_wheel.move(speed2)
                 else:
-                    self.right_wheel.move(speed * distance_speed)
+                    self.right_wheel.move(speed2)
                     self.left_wheel.move(speed)
+
+
+            print("Wheel vel:", self.right_wheel.velocity / 6.28 , self.left_wheel.velocity / 6.28)
                 
                 
     
