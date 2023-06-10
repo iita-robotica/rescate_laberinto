@@ -120,8 +120,7 @@ class FixtureClasiffier:
     def find_fixtures(self, image) -> list:
         
         image = np.rot90(image, k=3)
-        if SHOW_FIXTURE_DEBUG:
-            cv.imshow("image", image)
+
         """
         Finds fixtures in the image.
         Returns a list of dictionaries containing fixture positions and images.
@@ -131,9 +130,6 @@ class FixtureClasiffier:
             binary_images.append(f.filter(image))
 
         binary_image = self.sum_images(binary_images)
-        #print(binary_image)
-        if SHOW_FIXTURE_DEBUG:
-            cv.imshow("binaryImage", binary_image)
         
         # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
         contours, _ = cv.findContours(binary_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
