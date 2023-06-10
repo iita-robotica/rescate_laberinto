@@ -34,10 +34,11 @@ class Executor:
 
         self.state_machine = StateMachine("init") # Manages states
         self.state_machine.create_state("init", self.state_init, {"explore",}) # This state initializes and calibrates the robot
-        self.state_machine.create_state("explore", self.state_explore, {"end", "report_fixture"}) # This state follows the position returned by the agent
+        self.state_machine.create_state("explore", self.state_explore, {"end", "report_fixture", "send_map"}) # This state follows the position returned by the agent
         self.state_machine.create_state("end", self.state_end)
         #self.state_machine.create_state("detect_fixtures", self.state_detect_fixtures, {"explore", "report_fixture"})
-        self.state_machine.create_state("report_fixture", self.state_report_fixture, {"explore"})
+        self.state_machine.create_state("report_fixture", self.state_report_fixture, {"explore", "send_map"})
+        self.state_machine.create_state("send_map", self.state_send_map, {"explore", "end"})
 
         self.sequencer = Sequencer(reset_function=self.delay_manager.reset_delay) # Allows for asynchronous programming
 
@@ -61,6 +62,8 @@ class Executor:
         self.letter_to_report = None
         self.report_orientation = Angle(0)
 
+        self.max_time_in_run = 8 * 60
+
     def run(self):
         """Advances the simulation, updates all components and executes the state machine."""
         
@@ -73,6 +76,8 @@ class Executor:
                                        self.robot.drive_base.get_wheel_direction())
             
             self.do_mapping()
+
+            self.check_map_sending()
 
             self.state_machine.run()
 
@@ -100,6 +105,10 @@ class Executor:
                                    self.robot.position,
                                    self.robot.orientation,
                                    self.robot.time)
+                
+    def check_map_sending(self):
+        if self.mapper.time > self.max_time_in_run - 2:
+            self.state_machine.change_state("send_map")
 
     # STATES
     def state_init(self, change_state_function):
@@ -169,6 +178,13 @@ class Executor:
         final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
         self.robot.comunicator.send_map(final_matrix)
         self.robot.comunicator.send_end_of_play()
+
+        
+
+    def state_send_map(self, change_state_function):
+        final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
+        self.robot.comunicator.send_map(final_matrix)
+        change_state_function("explore")
 
     def state_report_fixture(self, change_state_function):
         self.sequencer.start_sequence()

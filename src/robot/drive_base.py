@@ -253,13 +253,13 @@ class SmoothMovementToCoordinatesManager:
             absolute_angle_diff = self.current_angle.get_absolute_distance_to(angle_to_target)
 
             if absolute_angle_diff < self.angle_error_margin:
-                print("straight")
+                #print("straight")
                 self.right_wheel.move(self.velocity)
                 self.left_wheel.move(self.velocity)
 
 
             elif absolute_angle_diff > self.strong_rotation_start:
-                print("strong")
+                #print("strong")
                 if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
                     self.right_wheel.move(self.velocity)
                     self.left_wheel.move(self.velocity * -1)
@@ -268,7 +268,7 @@ class SmoothMovementToCoordinatesManager:
                     self.left_wheel.move(self.velocity)
             
             elif absolute_angle_diff < self.light_rotation_start:
-                print("light")
+                #print("light")
                 if 180 > angle_diff.degrees > 0 or angle_diff.degrees < -180:
                     self.right_wheel.move(1)
                     self.left_wheel.move(0.8)
@@ -278,7 +278,7 @@ class SmoothMovementToCoordinatesManager:
 
 
             else:
-                print("dynamic")
+                #print("dynamic")
                 distance_speed = abs(dist * -self.distance_weight)
                 angle_speed = absolute_angle_diff.radians * self.angle_weight
 
@@ -297,7 +297,7 @@ class SmoothMovementToCoordinatesManager:
                     self.left_wheel.move(speed)
 
 
-            print("Wheel vel:", self.right_wheel.velocity / 6.28 , self.left_wheel.velocity / 6.28)
+            #print("Wheel vel:", self.right_wheel.velocity / 6.28 , self.left_wheel.velocity / 6.28)
                 
                 
     
