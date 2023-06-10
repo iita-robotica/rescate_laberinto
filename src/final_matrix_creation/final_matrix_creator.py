@@ -157,9 +157,14 @@ class FloorMatrixCreator:
                         {
                             "range":((0, 182, 49), (0, 204, 232)),
                             "threshold":0.2},
+        
+
+                    "9": # Connection1-4
+                        {
+                            "range":((59, 210, 159), (61, 228, 226)),
+                            "threshold":0.2},
                     }
         
-                    #TODO Add Connection 1-4
                     
         self.final_image = np.zeros((700, 700, 3), np.uint8)
         

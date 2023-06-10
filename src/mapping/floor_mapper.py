@@ -24,7 +24,7 @@ class FloorMapper:
         self.tile_size = tile_size
         self.pixel_per_m = tile_resolution / tile_size
         self.pov_distance_from_center = round(0.079 * self.pixel_per_m) 
-        self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 30))
+        self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 27))
 
         tiles_up = 0
         tiles_down = 1
