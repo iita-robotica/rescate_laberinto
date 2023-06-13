@@ -3,6 +3,8 @@ import struct
 
 from robot.devices.sensor import Sensor
 
+from flags import SHOW_MAP_AT_END
+
 class Comunicator(Sensor):
     def __init__(self, emmiter, receiver, timeStep):
         self.receiver = receiver
@@ -36,7 +38,8 @@ class Comunicator(Sensor):
 
     def send_map(self, np_array):
         # Get shape
-        print(np_array)
+        if SHOW_MAP_AT_END:
+            print(np_array)
         s = np_array.shape
         # Get shape as bytes
         s_bytes = struct.pack('2i', *s)

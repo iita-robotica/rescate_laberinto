@@ -7,6 +7,8 @@ import skimage
 import numpy as np
 import cv2 as cv
 
+from flags import SHOW_MAP_AT_END
+
 class WallMatrixCreator:
     def __init__(self, square_size_px: int):
         self.threshold = 8
@@ -72,7 +74,8 @@ class WallMatrixCreator:
 
     def transform_wall_array_to_bool_node_array(self, wall_array: np.ndarray, offsets: np.ndarray) -> np.ndarray:
         grid = []
-        bool_array_copy = wall_array.astype(np.uint8) * 100
+        if SHOW_MAP_AT_END:
+            bool_array_copy = wall_array.astype(np.uint8) * 100
         for x in range(offsets[0], wall_array.shape[0] - self.__square_size_px, self.__square_size_px):
             row = []
             for y in range(offsets[1], wall_array.shape[1] - self.__square_size_px, self.__square_size_px):
@@ -81,15 +84,16 @@ class WallMatrixCreator:
                 max_x = x + self.__square_size_px
                 max_y = y + self.__square_size_px
                 #print(min_x, min_y, max_x, max_y)
-                
-                bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
+                if SHOW_MAP_AT_END:
+                    bool_array_copy = cv.rectangle(bool_array_copy, (min_y, min_x), (max_y, max_x), (255,), 1)
                 
                 val = self.__get_tile_status(min_x, min_y, max_x, max_y, wall_array)
                 
                 row.append(list(val))
             grid.append(row)
         
-        cv.imshow("point_cloud_with_squares", cv.resize(bool_array_copy, (0, 0), fx=1, fy=1, interpolation=cv.INTER_AREA))
+        if SHOW_MAP_AT_END:
+            cv.imshow("point_cloud_with_squares", cv.resize(bool_array_copy, (0, 0), fx=1, fy=1, interpolation=cv.INTER_AREA))
 
         grid = self.__orientation_grid_to_final_wall_grid(grid)
 
@@ -185,7 +189,8 @@ class FloorMatrixCreator:
 
     def get_floor_colors(self, floor_array: np.ndarray, offsets: np.ndarray) -> np.ndarray:
 
-        array_copy = copy.deepcopy(floor_array)
+        if SHOW_MAP_AT_END:
+            array_copy = copy.deepcopy(floor_array)
 
         grid = []
 
@@ -197,14 +202,16 @@ class FloorMatrixCreator:
                 max_x = x + self.__square_size_px
                 max_y = y + self.__square_size_px
                 
-                array_copy = cv.rectangle(array_copy, (min_y, min_x), (max_y, max_x), (255, 255, 255), 1)
+                if SHOW_MAP_AT_END:
+                    array_copy = cv.rectangle(array_copy, (min_y, min_x), (max_y, max_x), (255, 255, 255), 1)
                 
                 color_key = self.__get_square_color(min_x, min_y, max_x, max_y, floor_array)
 
                 row.append(color_key)
             grid.append(row)
 
-        cv.imshow("array copy", array_copy)
+        if SHOW_MAP_AT_END:
+            cv.imshow("array copy", array_copy)
 
         return grid
         
@@ -252,7 +259,8 @@ class FinalMatrixCreator:
         #color_array = self.offset_array(color_array, self.square_size_px, pixel_grid.offsets)
 
     def __get_final_text_grid(self, wall_node_array: np.ndarray, floor_type_array: np.ndarray, robot_node: np.ndarray) -> list:
-        cv.imshow("final_grid", cv.resize(wall_node_array.astype(np.uint8) * 255, (0, 0), fx=10, fy=10, interpolation=cv.INTER_AREA))
+        if SHOW_MAP_AT_END:
+            cv.imshow("final_grid", cv.resize(wall_node_array.astype(np.uint8) * 255, (0, 0), fx=10, fy=10, interpolation=cv.INTER_AREA))
         
         final_text_grid = []
 
