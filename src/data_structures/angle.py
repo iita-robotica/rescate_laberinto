@@ -1,15 +1,12 @@
-from enum import Enum
 import math
 from copy import copy
 
-class Unit(Enum):
+class Angle:
     RADIANS = 0
     DEGREES = 1
-
-class Angle:
-    def __init__(self, value, unit=Unit.RADIANS):
-        if unit == Unit.RADIANS:
-            self.__radians = value
+    def __init__(self, value, unit=RADIANS):
+        if unit == self.RADIANS:
+            self.__radians = float(value)
         else:
             self.degrees = value
 
@@ -19,11 +16,11 @@ class Angle:
 
     @radians.getter
     def radians(self):
-        return self.__radians
+        return float(self.__radians)
     
     @property
     def degrees(self):
-        return self.__radians * 180 / math.pi
+        return float(self.__radians * 180 / math.pi)
     
     @degrees.setter
     def degrees(self, value):
@@ -46,7 +43,22 @@ class Angle:
 
         return Angle(min(clockwise_distance, counterclockwise_distance))
     
+    def get_distance_to(self, angle):
+        val = self.get_absolute_distance_to(angle)
+
+        angle_difference = self - angle
+
+        if 180 > angle_difference.degrees > 0 or angle_difference.degrees < -180:
+            return val
+        else:
+            return val * -1
+            
+        
+    
     def __str__(self):
+        return str(self.degrees)
+    
+    def __repr__(self):
         return str(self.degrees)
     
     def __add__(self, other):
