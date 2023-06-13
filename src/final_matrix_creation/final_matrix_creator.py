@@ -7,7 +7,7 @@ import skimage
 import numpy as np
 import cv2 as cv
 
-from flags import SHOW_MAP_AT_END, DO_SAVE_FINAL_MAP, SAVE_FINAL_MAP_DIR
+from flags import SHOW_MAP_AT_END, DO_SAVE_FINAL_MAP, SAVE_FINAL_MAP_DIR, DO_SAVE_DEBUG_GRID, SAVE_DEBUG_GRID_DIR
 
 import time
 
@@ -234,6 +234,9 @@ class FinalMatrixCreator:
 
         if DO_SAVE_FINAL_MAP:
             cv.imwrite(f"{SAVE_FINAL_MAP_DIR}/WALL_PIXEL_GRID{str(time.time()).rjust(50)}.png", wall_array.astype(np.uint8) * 255)
+
+        if DO_SAVE_DEBUG_GRID:
+            cv.imwrite(f"{SAVE_DEBUG_GRID_DIR}/DEBUG_GRID{str(time.time()).rjust(50)}.png", (pixel_grid.get_colored_grid() * 255).astype(np.uint8))
 
         offsets = self.__get_offsets(self.__square_size_px, pixel_grid.offsets)
         

@@ -206,3 +206,7 @@ class Robot:
     def GYROSCOPE(self):
         return PoseManager.GYROSCOPE
     
+
+    def is_shaky(self):
+        return self.pose_manager.is_shaky()
+    

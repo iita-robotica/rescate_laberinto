@@ -101,14 +101,22 @@ class Executor:
         """Updates the mapper is mapping is enabled."""
 
         if self.mapping_enabled:
-                # Floor and lidar mapping
-                self.mapper.update(self.robot.get_point_cloud(), 
-                                   self.robot.get_out_of_bounds_point_cloud(),
-                                   self.robot.get_lidar_detections(),
-                                   self.robot.get_camera_images(), 
-                                   self.robot.position,
-                                   self.robot.orientation,
-                                   self.robot.time)
+                if not self.robot.is_shaky():
+                    # Floor and lidar mapping
+                    self.mapper.update(self.robot.get_point_cloud(), 
+                                    self.robot.get_out_of_bounds_point_cloud(),
+                                    self.robot.get_lidar_detections(),
+                                    self.robot.get_camera_images(), 
+                                    self.robot.position,
+                                    self.robot.orientation,
+                                    self.robot.time)
+                else:
+                    # Floor and lidar mapping
+                    self.mapper.update(camera_images=self.robot.get_camera_images(), 
+                                       robot_position= self.robot.position,
+                                       robot_orientation=self.robot.orientation,
+                                       time=self.robot.time)
+
                 
     def check_map_sending(self):
         if self.mapper.time > self.max_time_in_run - 2 and not self.map_sent:

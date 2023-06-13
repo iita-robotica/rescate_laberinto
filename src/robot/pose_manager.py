@@ -26,6 +26,8 @@ class PoseManager:
         self.automatically_decide_orientation_sensor = True
 
         self.position_offsets = position_offsets
+
+        self.shaky_threshold = Angle(2, unit=Angle.DEGREES)
     
     def update(self, wheel_direction):
         # Gyro and gps update
@@ -79,5 +81,8 @@ class PoseManager:
     @property
     def previous_position(self):
         return self.__previous_position + self.position_offsets
+    
+    def is_shaky(self) -> bool:
+        return self.gyroscope.angular_velocity > self.shaky_threshold or self.gyroscope.angular_velocity * self.gyroscope.previous_angular_velocity < 0
         
 
