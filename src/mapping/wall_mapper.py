@@ -88,6 +88,7 @@ class WallMapper:
         occupied_as_int = self.grid.arrays["occupied"].astype(np.uint8)
         diameter_template_as_int = self.robot_diameter_template.astype(np.uint8)
 
+        self.grid.arrays["traversable"] = np.zeros_like(self.grid.arrays["traversable"])
         self.grid.arrays["traversable"] = cv.filter2D(occupied_as_int, -1, diameter_template_as_int)
         self.grid.arrays["traversable"] = self.grid.arrays["traversable"].astype(np.bool_)
 

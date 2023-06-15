@@ -107,9 +107,11 @@ class Mapper:
         if camera_images is not None and lidar_detections is not None:
             self.fixture_detector.map_fixtures(camera_images, self.robot_position)
         
-        self.filterer.remove_isolated_points(self.pixel_grid.arrays["occupied"])
+        self.filterer.remove_isolated_points(self.pixel_grid)
 
-        self.filterer.smooth_edges(self.pixel_grid.arrays["occupied"])
+        self.pixel_grid.arrays["occupied"][self.pixel_grid.arrays["traversed"]] = False
+
+        #self.filterer.smooth_edges(self.pixel_grid.arrays["occupied"])
 
         #DEBUG
         if DO_WAIT_KEY:

@@ -1,7 +1,8 @@
 import numpy as np
+import cv2 as cv
 from data_structures.vectors import Position2D
 
-from algorithms.np_bool_array.bfs import NavigatingBFSAlgorithm
+from algorithms.np_bool_array.bfs import NavigatingLimitedBFSAlgorithm, NavigatingBFSAlgorithm
 
 from agent.agent_interface import PositionFinderInterface
 from mapping.mapper import Mapper
@@ -10,9 +11,14 @@ from mapping.mapper import Mapper
 class PositionFinder(PositionFinderInterface):
     def __init__(self, mapper: Mapper) -> None:
         self.__mapper = mapper
-        self.__next_position_finder = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
+        self.__next_position_finder = NavigatingLimitedBFSAlgorithm(lambda x: x, lambda x: not x, limit=500)
         self.__still_reachable_bfs = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.__target = None
+
+        circle_radius = round(self.__mapper.robot_diameter / 2 * self.__mapper.pixel_grid.resolution) + 1
+
+        self.circle_kernel = np.zeros((circle_radius * 2, circle_radius * 2), dtype=np.uint8)
+        self.circle_kernel = cv.circle(self.circle_kernel, (circle_radius, circle_radius), circle_radius, 1, -1)
 
 
     def update(self, force_calculation=False) -> None:
@@ -28,18 +34,21 @@ class PositionFinder(PositionFinderInterface):
             return self.__mapper.pixel_grid.grid_index_to_coordinates(self.__target)
     
     def target_position_exists(self) -> bool:
-        #print("victim_target_exists!")
         return self.__target is not None
 
     def __calculate_position(self):
-        possible_targets_array = self.__mapper.pixel_grid.arrays["fixture_distance_margin"]
-        self.__dither_array(possible_targets_array, dither_interval=2)
+        possible_targets_array = self.__get_fixtures_zone_of_influence()
         possible_targets_array[self.__mapper.pixel_grid.arrays["robot_center_traversed"]] = False
-
-        #cv.imshow("possible wall targets", possible_targets_array.astype(np.uint8) * 255)
+        
+        """
+        debug = self.__mapper.pixel_grid.get_colored_grid()
+        debug *= 0.5
+        debug[possible_targets_array] = (0, 255, 0)
+        cv.imshow("possible fixture targets", debug)
+        """
 
         if not np.any(possible_targets_array):
-            print("no tragets")
+            #print("no fixture targets")
             self.__target = None
             return
 
@@ -65,14 +74,8 @@ class PositionFinder(PositionFinderInterface):
 
         return self.__mapper.pixel_grid.arrays["robot_center_traversed"][array_index[0], array_index[1]]
     
+    
+    def __get_fixtures_zone_of_influence(self) -> np.ndarray:
+        zones = cv.filter2D(self.__mapper.pixel_grid.arrays["victims"].astype(np.uint8), -1, self.circle_kernel).astype(np.bool_)
 
-    def __dither_array(self, possible_targets_array: np.ndarray, dither_interval=2):
-        mask = np.ones_like(possible_targets_array)
-
-        mask[::dither_interval, ::dither_interval] = False
-
-        mask[dither_interval//2::dither_interval, dither_interval//2::dither_interval] = False
-
-        #cv.imshow("dither_mask", (mask == False).astype(np.uint8) * 255)
-
-        possible_targets_array[mask] = False
+        return np.bitwise_and(zones, self.__mapper.pixel_grid.arrays["fixture_distance_margin"])

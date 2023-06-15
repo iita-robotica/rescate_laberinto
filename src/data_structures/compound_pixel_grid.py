@@ -147,8 +147,8 @@ class CompoundExpandablePixelGrid:
         """
         Get graphical representation of the grid for debug.
         """
-        #color_grid = np.zeros((self.array_shape[0], self.array_shape[1], 3), dtype=np.float32)
-        color_grid = self.arrays["floor_color"].astype(np.float32) / 255
+        color_grid = np.zeros((self.array_shape[0], self.array_shape[1], 3), dtype=np.float32)
+        #color_grid = self.arrays["floor_color"].astype(np.float32) / 255
         
         #color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 200
         color_grid[self.arrays["traversable"]] = (1, 0, 0)
@@ -159,9 +159,9 @@ class CompoundExpandablePixelGrid:
         color_grid[self.arrays["fixture_distance_margin"]] = (0, 0, 1)
 
 
-        color_grid[self.arrays["walls"]] = (1, 1, 1)
+        color_grid[self.arrays["occupied"]] = (1, 1, 1)
 
-        color_grid[self.arrays["holes"].astype(np.bool_)] = (0, 1, 0)
+        #color_grid[self.arrays["holes"].astype(np.bool_)] = (1, 1, 0)
 
 
         #color_grid[self.arrays["walls_not_seen_by_camera"]] = (0, 0, 1)
@@ -170,7 +170,7 @@ class CompoundExpandablePixelGrid:
 
         #color_grid[self.arrays["victims"]] = (0, 1, 0)
 
-        color_grid[self.arrays["robot_center_traversed"]] = (.5, 0., .5)
+        #color_grid[self.arrays["robot_center_traversed"]] = (.5, 0., .5)
         
  
         return color_grid

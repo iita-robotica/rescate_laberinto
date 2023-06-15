@@ -8,6 +8,7 @@ from mapping.mapper import Mapper
 from agent.subagents.follow_walls.follow_walls_subagent import FollowWallsAgent
 from agent.subagents.go_to_non_discovered.go_to_non_discovered_subagent import GoToNonDiscoveredAgent
 from agent.subagents.return_to_start.return_to_start_subagent import ReturnToStartAgent
+from agent.subagents.go_to_fixtures.go_to_fixtures_subagent import GoToFixturesAgent
 
 from agent.pathfinding.path_time_calculator import PathTimeCalculator
 
@@ -45,7 +46,8 @@ class Agent(AgentInterface):
     def __init__(self, mapper: Mapper) -> None:
         self.__mapper = mapper
 
-        self.__navigation_agent = SubagentPriorityCombiner([FollowWallsAgent(self.__mapper), 
+        self.__navigation_agent = SubagentPriorityCombiner([GoToFixturesAgent(self.__mapper),
+                                                            FollowWallsAgent(self.__mapper), 
                                                             GoToNonDiscoveredAgent(self.__mapper)])
         
         self.__return_to_start_agent = ReturnToStartAgent(self.__mapper)
