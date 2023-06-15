@@ -11,7 +11,7 @@ from mapping.mapper import Mapper
 class PositionFinder(PositionFinderInterface):
     def __init__(self, mapper: Mapper) -> None:
         self.__mapper = mapper
-        self.__next_position_finder = NavigatingLimitedBFSAlgorithm(lambda x: x, lambda x: not x, limit=500)
+        self.__next_position_finder = NavigatingLimitedBFSAlgorithm(lambda x: x, lambda x: not x, limit=1000)
         self.__still_reachable_bfs = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.__target = None
 
@@ -42,7 +42,7 @@ class PositionFinder(PositionFinderInterface):
         
         """
         debug = self.__mapper.pixel_grid.get_colored_grid()
-        debug *= 0.5
+        debug *= 0.3
         debug[possible_targets_array] = (0, 255, 0)
         cv.imshow("possible fixture targets", debug)
         """
