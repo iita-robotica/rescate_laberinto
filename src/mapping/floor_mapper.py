@@ -24,7 +24,7 @@ class FloorMapper:
         self.tile_size = tile_size
         self.pixel_per_m = tile_resolution / tile_size
         self.pov_distance_from_center = round(0.079 * self.pixel_per_m) 
-        self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 30))
+        self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 106))
         self.swamp_color_filter = ColorFilter((19, 112, 32), (19, 141, 166))
 
         tiles_up = 0
@@ -180,6 +180,11 @@ class FloorMapper:
         #floor_color = deepcopy(self.pixel_grid.arrays["floor_color"])
 
         self.pixel_grid.arrays["holes"] = self.hole_color_filter.filter(self.pixel_grid.arrays["floor_color"]).astype(np.bool_)
+
+        contours, _ = cv.findContours(self.pixel_grid.arrays["holes"].astype(np.uint8) * 255, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        for c0 in contours:
+            x, y, w, h = cv.boundingRect(c0)
+            self.pixel_grid.arrays["holes"][y: y + h, x: x + w] = True
 
         #self.pixel_grid.arrays["occupied"] += self.pixel_grid.arrays["holes"].astype(np.bool_)
 

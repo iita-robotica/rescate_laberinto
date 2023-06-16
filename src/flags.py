@@ -20,5 +20,5 @@ SAVE_FIXTURE_DEBUG_DIR = "/home/iitaadmin/simulated_rescue_maze/debug_imgs"
 DO_SAVE_FINAL_MAP = 0
 SAVE_FINAL_MAP_DIR = "/home/iitaadmin/simulated_rescue_maze/final_maps"
 
-DO_SAVE_DEBUG_GRID = 1
+DO_SAVE_DEBUG_GRID = 0
 SAVE_DEBUG_GRID_DIR = "/home/iitaadmin/simulated_rescue_maze/final_maps"

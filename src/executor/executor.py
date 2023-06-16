@@ -81,6 +81,12 @@ class Executor:
             self.stuck_detector.update(self.robot.position,
                                        self.robot.previous_position,
                                        self.robot.drive_base.get_wheel_average_angular_velocity())
+            """
+            try:
+                self.fixture_detector.tune_filter(self.robot.get_camera_images()[2].image)
+            except:
+                pass
+            """
             
             self.do_mapping()
 
