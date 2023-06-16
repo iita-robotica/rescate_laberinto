@@ -26,12 +26,13 @@ class FixtureMapper:
         self.detected_from_radius = round(0.02 * self.grid.resolution)
     
     def generate_detection_zone(self):
-        occupied_as_int = self.grid.arrays["occupied"].astype(np.int8)
+        occupied_as_int = self.grid.arrays["walls"].astype(np.int8)
 
         #self.grid.arrays["fixture_detection_zone"] = cv.filter2D(occupied_as_int, -1, self.fixture_detection_zone_template)> 0
 
         self.grid.arrays["fixture_distance_margin"] = cv.filter2D(occupied_as_int, -1, self.fixture_distance_margin_template) > 0
 
+        self.grid.arrays["fixture_distance_margin"][self.grid.arrays["traversable"]] = False
         #cv.imshow("detection_template", self.fixture_detection_zone_template)
 
     def clean_up_fixtures(self):

@@ -129,7 +129,7 @@ class WallMapper:
             if self.grid.arrays["detected_points"][point_array_index[0], point_array_index[1]] > self.to_boolean_threshold:
                 if not self.grid.arrays["traversed"][point_array_index[0], point_array_index[1]]:
                     self.grid.arrays["walls"][point_array_index[0], point_array_index[1]] = True
-                    self.grid.arrays["occupied"][point_array_index[0], point_array_index[1]] = True
+                    #self.grid.arrays["occupied"][point_array_index[0], point_array_index[1]] = True
                     
 
     def mark_point_as_seen_by_lidar(self, robot_array_index, point_array_index):

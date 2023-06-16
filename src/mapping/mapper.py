@@ -11,6 +11,7 @@ from data_structures.tile_color_grid import TileColorExpandableGrid
 
 from mapping.wall_mapper import WallMapper
 from mapping.floor_mapper import FloorMapper
+from mapping.occupied_mapping import OccupiedMapper
 
 from mapping.array_filtering import ArrayFilterer
 
@@ -50,6 +51,8 @@ class Mapper:
                                         tile_resolution=pixels_per_tile * 2,
                                         tile_size=self.tile_size,
                                         camera_distance_from_center=camera_distance_from_center)
+        
+        self.occupied_mapper = OccupiedMapper(self.pixel_grid)
         
         self.filterer = ArrayFilterer()
         
@@ -106,10 +109,12 @@ class Mapper:
 
         if camera_images is not None and lidar_detections is not None:
             self.fixture_detector.map_fixtures(camera_images, self.robot_position)
+
+        self.occupied_mapper.map_occupied()
         
         self.filterer.remove_isolated_points(self.pixel_grid)
 
-        self.pixel_grid.arrays["occupied"][self.pixel_grid.arrays["traversed"]] = False
+        
 
         #self.filterer.smooth_edges(self.pixel_grid.arrays["occupied"])
 
@@ -152,3 +157,23 @@ class Mapper:
     def has_detected_victim_from_position(self):
         robot_array_index = self.pixel_grid.grid_index_to_array_index(self.robot_grid_index)
         return self.pixel_grid.arrays["robot_detected_fixture_from"][robot_array_index[0], robot_array_index[1]]
+    
+    def is_close_to_swamp(self):
+        if self.robot_grid_index is None:
+            return False
+        
+        swamp_check_area = 0.06
+
+        swamp_check_area_px = round(swamp_check_area * self.pixel_grid.resolution)
+
+        robot_array_index = self.pixel_grid.grid_index_to_array_index(self.robot_grid_index)
+
+        min_x = max(robot_array_index[0] - swamp_check_area_px, 0)
+        max_x = min(robot_array_index[0] + swamp_check_area_px, self.pixel_grid.array_shape[0])
+        min_y = max(robot_array_index[1] - swamp_check_area_px, 0)
+        max_y = min(robot_array_index[1] + swamp_check_area_px, self.pixel_grid.array_shape[1])
+
+        return np.any(self.pixel_grid.arrays["swamps"][min_x:max_x, min_y:max_y])
+
+
+        

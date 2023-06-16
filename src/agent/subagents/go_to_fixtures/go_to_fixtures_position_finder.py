@@ -15,7 +15,7 @@ class PositionFinder(PositionFinderInterface):
         self.__still_reachable_bfs = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.__target = None
 
-        circle_radius = round(self.__mapper.robot_diameter / 2 * self.__mapper.pixel_grid.resolution) + 1
+        circle_radius = round(self.__mapper.robot_diameter / 2 * self.__mapper.pixel_grid.resolution) + 3
 
         self.circle_kernel = np.zeros((circle_radius * 2, circle_radius * 2), dtype=np.uint8)
         self.circle_kernel = cv.circle(self.circle_kernel, (circle_radius, circle_radius), circle_radius, 1, -1)
@@ -46,6 +46,7 @@ class PositionFinder(PositionFinderInterface):
         debug[possible_targets_array] = (0, 255, 0)
         cv.imshow("possible fixture targets", debug)
         """
+        
 
         if not np.any(possible_targets_array):
             #print("no fixture targets")

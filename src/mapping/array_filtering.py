@@ -26,7 +26,7 @@ class ArrayFilterer:
             isolated_points_mask = cv.filter2D(pixel_grid.arrays["occupied"].astype(np.uint8), -1, self.isolated_point_remover_kernel) > 0
             pixel_grid.arrays["occupied"][isolated_points_mask] = False
             pixel_grid.arrays["walls"][isolated_points_mask] = False
-            pixel_grid.arrays["holes"][isolated_points_mask] = 0
+            pixel_grid.arrays["holes"][isolated_points_mask] = False
             pixel_grid.arrays["detected_points"][isolated_points_mask] = 0
         self.isolated_point_step_counter.increase()
 

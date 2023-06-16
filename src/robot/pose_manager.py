@@ -11,7 +11,8 @@ class PoseManager:
     GYROSCOPE = 1
 
     def __init__(self, gps: Gps, gyroscope: Gyroscope, position_offsets=Position2D(0, 0)) -> None:
-        self.maximum_angular_velocity_for_gps = 0.00001
+        self.maximum_angular_velocity_for_gps = Angle(1, Angle.DEGREES)
+        self.maximum_angular_velocity_change_for_shaky = Angle(1, Angle.DEGREES)
 
         self.gps = gps
         self.gyroscope = gyroscope
@@ -23,13 +24,14 @@ class PoseManager:
         self.__previous_position = Position2D(0, 0)
 
         self.orientation_sensor = self.GYROSCOPE
+        self.previous_orientation_sensor = self.GYROSCOPE
         self.automatically_decide_orientation_sensor = True
 
         self.position_offsets = position_offsets
 
-        self.shaky_threshold = Angle(2, unit=Angle.DEGREES)
+        self.shaky_threshold = Angle(5, unit=Angle.DEGREES)
     
-    def update(self, wheel_direction):
+    def update(self, average_wheel_velocity, wheel_velocity_difference):
         # Gyro and gps update
         self.gps.update()
         self.gyroscope.update()
@@ -40,22 +42,25 @@ class PoseManager:
 
         # Decides wich sensor to use for orientation detection
         if self.automatically_decide_orientation_sensor:
-            self.decide_orientation_sensor(wheel_direction)
+            self.decide_orientation_sensor(average_wheel_velocity, wheel_velocity_difference)
 
         # Remembers the corrent rotation for the next timestep
         self.previous_orientation = self.orientation
 
         self.calculate_orientation()
 
-    def decide_orientation_sensor(self, wheel_direction):
+    def decide_orientation_sensor(self, average_wheel_velocity, wheel_velocity_difference):
         """if the robot is going srtaight it tuses the gps. If not it uses the gyro."""
-        if self.robot_is_going_straight(wheel_direction):
+        if self.robot_is_going_straight(average_wheel_velocity, wheel_velocity_difference):
                 self.orientation_sensor = self.GPS
         else:
             self.orientation_sensor = self.GYROSCOPE
 
-    def robot_is_going_straight(self, wheel_direction):
-        return self.gyroscope.get_angular_velocity() < self.maximum_angular_velocity_for_gps and wheel_direction >= 0
+    def robot_is_going_straight(self, average_wheel_velocity, wheel_velocity_difference) -> bool:
+        return self.gyroscope.get_angular_velocity() < self.maximum_angular_velocity_for_gps and \
+               average_wheel_velocity >= 1 and \
+               wheel_velocity_difference < 3
+               
 
     def calculate_orientation(self):
         
@@ -83,6 +88,14 @@ class PoseManager:
         return self.__previous_position + self.position_offsets
     
     def is_shaky(self) -> bool:
-        return self.gyroscope.angular_velocity > self.shaky_threshold or self.gyroscope.angular_velocity * self.gyroscope.previous_angular_velocity < 0
+        high_orient_diff = self.orientation.get_absolute_distance_to(self.previous_orientation) > self.shaky_threshold
+        changed_direction = self.gyroscope.angular_velocity * self.gyroscope.previous_angular_velocity < 0
+        high_angular_velocity_difference = self.gyroscope.previous_angular_velocity.get_absolute_distance_to(self.gyroscope.angular_velocity) > self.maximum_angular_velocity_change_for_shaky
+
+        #print(high_orient_diff, changed_direction, high_angular_velocity_difference)
+
+        return  high_orient_diff or \
+                changed_direction or \
+                high_angular_velocity_difference
         
 

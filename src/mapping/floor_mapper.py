@@ -25,6 +25,7 @@ class FloorMapper:
         self.pixel_per_m = tile_resolution / tile_size
         self.pov_distance_from_center = round(0.079 * self.pixel_per_m) 
         self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 30))
+        self.swamp_color_filter = ColorFilter((19, 112, 32), (19, 141, 166))
 
         tiles_up = 0
         tiles_down = 1
@@ -137,8 +138,7 @@ class FloorMapper:
         self.pixel_grid.arrays["floor_color"][start[0]:end[0], start[1]:end[1]][final_mask] = povs[:,:,:3][final_mask]
 
         self.detect_holes()
-
-        #self.load_average_tile_color()
+        self.detect_swamps()
         
     
     def __get_distance_to_center_gradient(self, shape):
@@ -171,14 +171,17 @@ class FloorMapper:
 
         return kernel
     
+    def detect_swamps(self):
+        self.pixel_grid.arrays["swamps"] = self.swamp_color_filter.filter(self.pixel_grid.arrays["floor_color"]).astype(np.bool_)
+    
     def detect_holes(self):
-        tile_size = self.tile_size * self.pixel_per_m
-        offsets = self.__get_offsets(tile_size)
-        floor_color = deepcopy(self.pixel_grid.arrays["floor_color"])
+        #tile_size = self.tile_size * self.pixel_per_m
+        #offsets = self.__get_offsets(tile_size)
+        #floor_color = deepcopy(self.pixel_grid.arrays["floor_color"])
 
-        self.pixel_grid.arrays["holes"] = self.hole_color_filter.filter(self.pixel_grid.arrays["floor_color"])
+        self.pixel_grid.arrays["holes"] = self.hole_color_filter.filter(self.pixel_grid.arrays["floor_color"]).astype(np.bool_)
 
-        self.pixel_grid.arrays["occupied"] += self.pixel_grid.arrays["holes"].astype(np.bool_)
+        #self.pixel_grid.arrays["occupied"] += self.pixel_grid.arrays["holes"].astype(np.bool_)
 
         """
         for x in range(round(offsets[0] + tile_size / 2), floor_color.shape[0], round(tile_size)):

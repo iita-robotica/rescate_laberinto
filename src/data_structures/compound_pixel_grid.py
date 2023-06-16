@@ -29,6 +29,7 @@ class CompoundExpandablePixelGrid:
             "floor_color_detection_distance": np.zeros(self.array_shape, np.uint8),
             "average_floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8),
             "holes": np.zeros(self.array_shape, np.bool_),
+            "swamps": np.zeros(self.array_shape, np.bool_),
             "victims": np.zeros(self.array_shape, np.bool_),
             "victim_angles": np.zeros(self.array_shape, np.float32),
             "fixture_detection": np.zeros(self.array_shape, np.bool_),
