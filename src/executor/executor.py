@@ -64,6 +64,8 @@ class Executor:
 
         self.max_time_in_run = 8 * 60
 
+        self.map_sent = False
+
         self.robot.set_start_time()
 
     def run(self):
@@ -109,8 +111,7 @@ class Executor:
                                    self.robot.time)
                 
     def check_map_sending(self):
-        if self.robot.time > self.max_time_in_run - 2:
-            print(self.robot.time / 60)
+        if self.mapper.time > self.max_time_in_run - 2 and not self.map_sent:
             self.state_machine.change_state("send_map")
 
     # STATES
@@ -182,11 +183,10 @@ class Executor:
         self.robot.comunicator.send_map(final_matrix)
         self.robot.comunicator.send_end_of_play()
 
-        
-
     def state_send_map(self, change_state_function):
         final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
         self.robot.comunicator.send_map(final_matrix)
+        self.map_sent = True
         change_state_function("explore")
 
     def state_report_fixture(self, change_state_function):

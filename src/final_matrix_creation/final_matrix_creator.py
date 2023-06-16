@@ -7,11 +7,13 @@ import skimage
 import numpy as np
 import cv2 as cv
 
-from flags import SHOW_MAP_AT_END
+from flags import SHOW_MAP_AT_END, DO_SAVE_FINAL_MAP, SAVE_FINAL_MAP_DIR
+
+import time
 
 class WallMatrixCreator:
     def __init__(self, square_size_px: int):
-        self.threshold = 8
+        self.threshold = 10
         self.__square_size_px = square_size_px
 
         straight = [
@@ -54,6 +56,7 @@ class WallMatrixCreator:
         
         for i, name in enumerate([(-1,-1), (1, -1), (1, 1), (-1, 1)]):
            self.templates[name] = np.rot90(self.vortex_template, i)
+        
 
     def __get_tile_status(self, min_x, min_y, max_x, max_y, wall_array: np.ndarray) -> list:
         counts = {name: 0 for name in self.templates}
@@ -229,6 +232,9 @@ class FinalMatrixCreator:
         wall_array = pixel_grid.arrays["walls"]
         color_array = pixel_grid.arrays["floor_color"]
 
+        if DO_SAVE_FINAL_MAP:
+            cv.imwrite(f"{SAVE_FINAL_MAP_DIR}/WALL_PIXEL_GRID{str(time.time()).rjust(50)}.png", wall_array.astype(np.uint8) * 255)
+
         offsets = self.__get_offsets(self.__square_size_px, pixel_grid.offsets)
         
         # Walls
@@ -261,6 +267,11 @@ class FinalMatrixCreator:
     def __get_final_text_grid(self, wall_node_array: np.ndarray, floor_type_array: np.ndarray, robot_node: np.ndarray) -> list:
         if SHOW_MAP_AT_END:
             cv.imshow("final_grid", cv.resize(wall_node_array.astype(np.uint8) * 255, (0, 0), fx=10, fy=10, interpolation=cv.INTER_AREA))
+
+
+        if DO_SAVE_FINAL_MAP:
+            cv.imwrite(f"{SAVE_FINAL_MAP_DIR}/WALL_GRID{str(time.time()).rjust(50)}.png", wall_node_array.astype(np.uint8) * 255)
+
         
         final_text_grid = []
 
