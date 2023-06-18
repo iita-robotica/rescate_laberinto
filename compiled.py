@@ -1,8 +1,6 @@
-# This is a file that contains all of our code compiled using the stickytape module. This was done not to obfuscate the code,
-# but to get around the limitation of erebus of loading only one controller file, since our code has a large directory structure 
-# and many files. If you want to examine our code more closely, please visit our github repository: https://github.com/iita-robotica/rescate_laberinto
-# There you can find the code as it was developed, in the /src directory.
-
+#This file contains all of our code compiled using the stickytape module. 
+#This was done not to obfuscate the code, but to get around the limitation of erebus of loading only one controller file, since our code has a large directory structure and many files. 
+#If you want to examine our code and test it, please visit our github repository: https://github.com/iita-robotica/rescate_laberinto. There you will find all the individual files under the directory '/src'.
 
 import contextlib as __stickytape_contextlib
 
