@@ -2,7 +2,17 @@
 
 ## Running the code
 
-### 1. Install dependencies
+### 1. Clone the repo
+
+``` bash
+git clone https://github.com/iita-robotica/rescate_laberinto.git
+```
+
+### 2. Install dependencies
+
+Latest Erebus version at the time of uploading: 23.0.5
+
+Python version: 3.10
 
 Dependencies:
 
@@ -16,13 +26,15 @@ stickytape==0.2.1
 
 Install them all with:
 
-``` pip install numpy==1.23.5 opencv-python==4.7.0.72 scikit-image==0.20.0 imutils==0.5.4 stickytape==0.2.1 ```
+``` bash
+pip install numpy==1.23.5 opencv-python==4.7.0.72 scikit-image==0.20.0 imutils==0.5.4 stickytape==0.2.1
+```
 
-### 2. Load the robot
+### 3. Load the robot
 
 Go to the directory ```robot_jsons``` and pick the one with the highest number.
 
-### 3. Run the code
+### 4. Run the code
 
 To run our code you can load the ```compiled.py``` python file. This is a file compiled with the python module ```stickytape```, to run the code easily.
 
