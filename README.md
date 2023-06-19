@@ -44,3 +44,6 @@ In the ```flags.py``` file you can turn on and off the debug information, so you
 ## Old code from previous competitions
 
 If you want to look at our old code, you can go to the directory ```/previous_competitions/Competencias```. Be aware that some parts might be in Spanish.
+
+## License
+Our code is free and open-source under the MIT license! That means you can do whatever you want with it. We encourage you to see our code, take inspiration and copy it. You can also make your own fork of this repsitory and share your innovations upon it. We are exited to share and innovate together, and in this spirit we would like to encourage you to do the same, so we can all grow together.
