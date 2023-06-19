@@ -3,6 +3,7 @@
 #If you want to examine our code and test it, please visit our github repository: https://github.com/iita-robotica/rescate_laberinto. There you will find all the individual files under the directory '/src'.
 # Our code is free and open-source. We strongly encourage the sharing and distribution of this file and our github repository.
 
+
 import contextlib as __stickytape_contextlib
 
 @__stickytape_contextlib.contextmanager
