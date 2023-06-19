@@ -3,6 +3,7 @@ from data_structures.angle import Angle
 from flow_control.sequencer import Sequencer
 from flow_control.state_machine import StateMachine
 from flow_control.delay import DelayManager
+from flow_control.step_counter import StepCounter
 
 from executor.stuck_detector import StuckDetector
 
@@ -64,7 +65,11 @@ class Executor:
 
         self.max_time_in_run = 8 * 60
 
+        self.map_sent = False
+
         self.robot.set_start_time()
+
+        self.mini_calibrate_step_counter = StepCounter(20)
 
     def run(self):
         """Advances the simulation, updates all components and executes the state machine."""
@@ -75,9 +80,17 @@ class Executor:
             self.delay_manager.update(self.robot.time)
             self.stuck_detector.update(self.robot.position,
                                        self.robot.previous_position,
-                                       self.robot.drive_base.get_wheel_direction())
+                                       self.robot.drive_base.get_wheel_average_angular_velocity())
+            """
+            try:
+                self.fixture_detector.tune_filter(self.robot.get_camera_images()[2].image)
+            except:
+                pass
+            """
             
             self.do_mapping()
+
+            self.check_swamp_proximity()
 
             self.check_map_sending()
 
@@ -99,18 +112,34 @@ class Executor:
         """Updates the mapper is mapping is enabled."""
 
         if self.mapping_enabled:
-                # Floor and lidar mapping
-                self.mapper.update(self.robot.get_point_cloud(), 
-                                   self.robot.get_out_of_bounds_point_cloud(),
-                                   self.robot.get_lidar_detections(),
-                                   self.robot.get_camera_images(), 
-                                   self.robot.position,
-                                   self.robot.orientation,
-                                   self.robot.time)
-                
+                if not self.robot.is_shaky():
+                    #print("robot is not shaky")
+                    # Floor and lidar mapping
+                    self.mapper.update(self.robot.get_point_cloud(), 
+                                    self.robot.get_out_of_bounds_point_cloud(),
+                                    self.robot.get_lidar_detections(),
+                                    self.robot.get_camera_images(), 
+                                    self.robot.position,
+                                    self.robot.orientation,
+                                    self.robot.time)
+                else:
+                    #print("robot is shaky")
+                    # Floor and lidar mapping
+                    self.mapper.update(camera_images=self.robot.get_camera_images(), 
+                                       robot_position= self.robot.position,
+                                       robot_orientation=self.robot.orientation,
+                                       time=self.robot.time)
+
+    def check_swamp_proximity(self):
+        if self.mapper.is_close_to_swamp():
+            #print("WARNING: CLOSE TO SWAMP")
+            self.robot.auto_decide_orientation_sensor = False
+            self.robot.orientation_sensor = self.robot.GYROSCOPE
+        else: 
+            self.robot.auto_decide_orientation_sensor = True
+
     def check_map_sending(self):
-        if self.robot.time > self.max_time_in_run - 2:
-            print(self.robot.time / 60)
+        if self.mapper.time > self.max_time_in_run - 2 and not self.map_sent:
             self.state_machine.change_state("send_map")
 
     # STATES
@@ -136,7 +165,6 @@ class Executor:
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.seq_delay_seconds(0.5)
 
-
         self.sequencer.simple_event(change_state_function, "explore") # Changes state
         self.sequencer.seq_reset_sequence() # Resets the sequence
 
@@ -150,8 +178,12 @@ class Executor:
             print("CHANGING AGENT")
 
         self.agent.update()
+        
+        self.mini_calibrate()
 
         self.seq_move_to_coords(self.agent.get_target_position())
+
+        
       
         self.sequencer.seq_reset_sequence() # Resets the sequence but doesn't change state, so it starts all over again.
 
@@ -177,17 +209,28 @@ class Executor:
                     self.sequencer.reset_sequence() # Resets the sequence
                     break
 
+        
+
+    def mini_calibrate(self):
+        if self.mini_calibrate_step_counter.check():
+            #print("pup! calibrating")
+            self.seq_move_wheels(1, 1)
+            self.seq_delay_seconds(0.1)
+        
+        self.mini_calibrate_step_counter.increase()
+
+
     def state_end(self, change_state_function):
         final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
         self.robot.comunicator.send_map(final_matrix)
         self.robot.comunicator.send_end_of_play()
 
-        
-
     def state_send_map(self, change_state_function):
         final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
         self.robot.comunicator.send_map(final_matrix)
+        self.map_sent = True
         change_state_function("explore")
+        self.sequencer.seq_reset_sequence() # Resets the sequence
 
     def state_report_fixture(self, change_state_function):
         self.sequencer.start_sequence()
@@ -195,6 +238,9 @@ class Executor:
         self.seq_move_wheels(0, 0)
 
         if self.letter_to_report is not None:
+            if self.sequencer.simple_event():
+                self.mapping_enabled = False
+
             self.report_orientation.normalize()
             self.seq_rotate_to_angle(self.report_orientation.degrees)
             self.seq_move_wheels(0.6, 0.6)
@@ -202,14 +248,24 @@ class Executor:
             self.seq_move_wheels(0, 0)
             self.seq_delay_seconds(2)
 
-        if self.sequencer.simple_event():
-            if self.letter_to_report is not None:
+            if self.sequencer.simple_event():
                 print("sending letter:", self.letter_to_report)
                 self.robot.comunicator.send_victim(self.robot.raw_position, self.letter_to_report)
         
-        if self.sequencer.simple_event():
-            self.letter_to_report = None
-            self.mapper.fixture_mapper.map_detected_fixture(self.robot.position)
+            self.seq_delay_seconds(0.1)
+        
+            if self.sequencer.simple_event():
+                self.mapper.fixture_mapper.map_detected_fixture(self.robot.position)
+
+            self.seq_move_wheels(-0.6, -0.6)
+            self.seq_delay_seconds(0.2)
+            self.seq_move_wheels(0, 0)
+
+            if self.sequencer.simple_event():
+                self.letter_to_report = None
+            
+            if self.sequencer.simple_event():
+                self.mapping_enabled = True
 
         self.sequencer.simple_event(change_state_function, "explore")
         self.sequencer.seq_reset_sequence() # Resets the sequence

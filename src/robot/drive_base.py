@@ -61,10 +61,13 @@ class DriveBase:
         self.slow_rotation_manager.current_angle = value
 
 
-    def get_wheel_direction(self):
+    def get_wheel_average_angular_velocity(self):
         if self.right_wheel.velocity + self.left_wheel.velocity == 0:
             return 0
         return (self.right_wheel.velocity + self.left_wheel.velocity) / 2
+    
+    def get_wheel_velocity_difference(self):
+        return self.right_wheel.velocity - self.left_wheel.velocity
 
 
 class RotationManager:
@@ -224,7 +227,7 @@ class SmoothMovementToCoordinatesManager:
 
         self.min_velocity_cap = 0
 
-        self.turning_speed_multiplier = 0.5
+        self.turning_speed_multiplier = 0.8
 
         self.finished_moving = False
 

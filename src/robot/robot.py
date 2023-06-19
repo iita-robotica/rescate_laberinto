@@ -82,7 +82,8 @@ class Robot:
         self.__time = self.robot.getTime()
 
         # Update pose manager (Position and rotation)
-        self.pose_manager.update(wheel_direction=self.drive_base.get_wheel_direction())
+        self.pose_manager.update(self.drive_base.get_wheel_average_angular_velocity(), 
+                                 self.drive_base.get_wheel_velocity_difference())
 
         # Update drive base
         self.drive_base.orientation = self.orientation
@@ -205,4 +206,8 @@ class Robot:
     @property
     def GYROSCOPE(self):
         return PoseManager.GYROSCOPE
+    
+
+    def is_shaky(self):
+        return self.pose_manager.is_shaky()
     
