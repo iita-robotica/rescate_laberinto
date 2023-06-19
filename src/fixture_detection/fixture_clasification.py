@@ -40,8 +40,8 @@ class FixtureClasiffier:
         #self.min_fixture_width = 19
 
 
-        self.min_fixture_height = 15
-        self.min_fixture_width = 15
+        self.min_fixture_height = 16
+        self.min_fixture_width_factor = 0.8
     
         # Fixture classification
         self.possible_fixture_letters = ["P", "O", "F", "C", "S", "H", "U"]
@@ -112,7 +112,7 @@ class FixtureClasiffier:
             if SHOW_FIXTURE_DEBUG:
                 print("victim:", vic["position"], vic["image"].shape)
 
-            if vic["image"].shape[0] > self.min_fixture_height and vic["image"].shape[1] > self.min_fixture_width:
+            if vic["image"].shape[0] > self.min_fixture_height and vic["image"].shape[1] > self.min_fixture_height * self.min_fixture_width_factor:
                 final_victims.append(vic)
 
         return final_victims

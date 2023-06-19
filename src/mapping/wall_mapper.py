@@ -88,6 +88,7 @@ class WallMapper:
         occupied_as_int = self.grid.arrays["occupied"].astype(np.uint8)
         diameter_template_as_int = self.robot_diameter_template.astype(np.uint8)
 
+        self.grid.arrays["traversable"] = np.zeros_like(self.grid.arrays["traversable"])
         self.grid.arrays["traversable"] = cv.filter2D(occupied_as_int, -1, diameter_template_as_int)
         self.grid.arrays["traversable"] = self.grid.arrays["traversable"].astype(np.bool_)
 
@@ -128,7 +129,7 @@ class WallMapper:
             if self.grid.arrays["detected_points"][point_array_index[0], point_array_index[1]] > self.to_boolean_threshold:
                 if not self.grid.arrays["traversed"][point_array_index[0], point_array_index[1]]:
                     self.grid.arrays["walls"][point_array_index[0], point_array_index[1]] = True
-                    self.grid.arrays["occupied"][point_array_index[0], point_array_index[1]] = True
+                    #self.grid.arrays["occupied"][point_array_index[0], point_array_index[1]] = True
                     
 
     def mark_point_as_seen_by_lidar(self, robot_array_index, point_array_index):
