@@ -64,6 +64,8 @@ class Executor:
 
         self.max_time_in_run = 8 * 60
 
+        self.robot.set_start_time()
+
     def run(self):
         """Advances the simulation, updates all components and executes the state machine."""
         
@@ -107,7 +109,8 @@ class Executor:
                                    self.robot.time)
                 
     def check_map_sending(self):
-        if self.mapper.time > self.max_time_in_run - 2:
+        if self.robot.time > self.max_time_in_run - 2:
+            print(self.robot.time / 60)
             self.state_machine.change_state("send_map")
 
     # STATES
