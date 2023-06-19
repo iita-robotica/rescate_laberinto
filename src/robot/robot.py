@@ -26,7 +26,8 @@ class Robot:
     """
     def __init__(self, time_step):
         self.time_step = time_step
-        self.time = 0
+        self.__start_time = 0
+        self.__time = 0
 
         self.diameter = 0.074 # Robot diameter in meters
         
@@ -78,7 +79,7 @@ class Robot:
     def update(self):
         """Must run every TimeStep"""
         # Update current time
-        self.time = self.robot.getTime()
+        self.__time = self.robot.getTime()
 
         # Update pose manager (Position and rotation)
         self.pose_manager.update(wheel_direction=self.drive_base.get_wheel_direction())
@@ -99,6 +100,13 @@ class Robot:
     def do_loop(self):
         """Advances the simulation by one step and returns True if the simulation is running."""
         return self.robot.step(self.time_step) != -1
+    
+    def set_start_time(self):
+        self.__start_time = self.robot.getTime()
+
+    @property
+    def time(self):
+        return self.__time - self.__start_time
 
     # Wrappers for DriveBase
     @property
