@@ -38,6 +38,7 @@ class PositionFinder(PositionFinderInterface):
 
     def __calculate_position(self):
         possible_targets_array = self.__get_fixtures_zone_of_influence()
+        #possible_targets_array += self.__mapper.pixel_grid.arrays["checkpoints"]
         possible_targets_array[self.__mapper.pixel_grid.arrays["robot_center_traversed"]] = False
         
         """

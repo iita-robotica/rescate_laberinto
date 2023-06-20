@@ -58,24 +58,43 @@ class VictimClassifier:
     
     def isolate_victim(self, image):
         binary = self.victim_letter_filter.filter(image)
-        letter = self.crop_white(binary)
+        letter = self.get_biggest_blob(binary)
 
+        '''
         letter = letter[self.top_image_reduction:, self.horizontal_image_reduction:letter.shape[1] - self.horizontal_image_reduction]
         letter = self.crop_white(letter)
+        '''
         
         if SHOW_FIXTURE_DEBUG:
             cv.imshow("thresh", binary)
 
         return letter
+    
+    def get_biggest_blob(self, binary_image: np.ndarray) -> np.ndarray:
+        contours, _ = cv.findContours(binary_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        max_size = 0
+        biggest_blob = None
+        for c0 in contours:
+            x, y, w, h = cv.boundingRect(c0)
+
+            if w*h > max_size:
+                biggest_blob = binary_image[y:y + h, x:x + w]
+                max_size = w*h
+        
+        return biggest_blob
 
     def classify_victim(self, victim):
         letter = self.isolate_victim(victim["image"])
 
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
 
-        # Calculat centroid of letter and reverse it
+        # Calculate centroid of letter and reverse it
         moments = cv.moments(letter)
-        center = int(letter.shape[1] - moments["m10"] / moments["m00"])
+        center = letter.shape[1] / 2
+        offset = (moments["m10"] / moments["m00"] - center) * 1
+
+        center -= offset
+        center = round(center)
       
         if SHOW_FIXTURE_DEBUG:
             cv.imshow("letra", letter)

@@ -1,4 +1,5 @@
 from data_structures.angle import Angle
+from data_structures.vectors import Position2D
 
 from flow_control.sequencer import Sequencer
 from flow_control.state_machine import StateMachine
@@ -22,6 +23,7 @@ from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S, DO_SAVE_FIXTURE_DEBUG, 
 
 import time
 
+import numpy as np
 import cv2 as cv
 
 class Executor:
@@ -59,6 +61,8 @@ class Executor:
         self.seq_rotate_slowly_to_angle = self.sequencer.make_complex_event(self.robot.rotate_slowly_to_angle)
         self.seq_move_to_coords =  self.sequencer.make_complex_event(self.robot.move_to_coords)
         self.seq_delay_seconds =   self.sequencer.make_complex_event(self.delay_manager.delay_seconds)
+
+        self.seq_align_with_fixture = self.sequencer.make_complex_event(self.align_with_fixture)
 
         self.letter_to_report = None
         self.report_orientation = Angle(0)
@@ -219,6 +223,39 @@ class Executor:
         
         self.mini_calibrate_step_counter.increase()
 
+    def align_with_fixture(self):
+        center_image = self.robot.center_camera.image.image
+        fixtures = self.fixture_detector.find_fixtures(center_image)
+        
+        if len(fixtures) == 0:
+            return True
+        
+        fixture = fixtures[0]
+
+        fixture_shape = Position2D(fixture["image"].shape)
+        fixture_position = Position2D(fixture["position"])
+
+        fixture_center = fixture_shape / 2 + fixture_position
+
+        image_center = Position2D(center_image.shape) / 2
+
+        diff = image_center - fixture_center
+
+        print(diff)
+        
+        if abs(diff.x) > 6:
+            sign = np.sign(diff.x)
+            vel = 0.2
+            self.robot.move_wheels(vel * sign, vel * -sign)
+            return False
+        
+        if abs(diff.y) > 4:
+            vel = diff.y * 0.2
+            self.robot.move_wheels(vel, vel)
+            return False
+
+        return True
+
 
     def state_end(self, change_state_function):
         final_matrix = self.final_matrix_creator.pixel_grid_to_final_grid(self.mapper.pixel_grid, self.mapper.start_position)
@@ -241,8 +278,38 @@ class Executor:
             if self.sequencer.simple_event():
                 self.mapping_enabled = False
 
-            self.report_orientation.normalize()
+            if self.sequencer.simple_event():
+                self.report_orientation.normalize()
+
+            self.seq_print("rotating to angle:", self.report_orientation)
             self.seq_rotate_to_angle(self.report_orientation.degrees)
+            self.seq_print("rotated to angle")
+
+            self.seq_align_with_fixture()
+
+            self.seq_print("aligned with fixture")
+
+            self.seq_move_wheels(0, 0)
+            self.seq_delay_seconds(2)
+
+            if self.sequencer.simple_event():
+                center_image = self.robot.center_camera.image.image
+                fixtures = self.fixture_detector.find_fixtures(center_image)
+            
+                if len(fixtures) == 0:
+                    change_state_function("explore")
+                    self.sequencer.reset_sequence()
+                    return
+            
+                self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
+
+                if self.letter_to_report is None:
+                    change_state_function("explore")
+                    self.sequencer.reset_sequence()
+                    return
+
+                print("letter_to_report:", self.letter_to_report)
+
             self.seq_move_wheels(0.6, 0.6)
             self.seq_delay_seconds(0.2)
             self.seq_move_wheels(0, 0)
