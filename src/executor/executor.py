@@ -178,6 +178,9 @@ class Executor:
 
         self.sequencer.start_sequence() # Starts the sequence
 
+        if self.sequencer.simple_event():
+            self.mapping_enabled = True
+
         if SHOW_DEBUG and self.agent_changed():
             print("CHANGING AGENT")
 
@@ -299,6 +302,7 @@ class Executor:
                 if len(fixtures) == 0:
                     change_state_function("explore")
                     self.sequencer.reset_sequence()
+                    self.mapping_enabled = True
                     return
             
                 self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
@@ -306,6 +310,7 @@ class Executor:
                 if self.letter_to_report is None:
                     change_state_function("explore")
                     self.sequencer.reset_sequence()
+                    self.mapping_enabled = True
                     return
 
                 print("letter_to_report:", self.letter_to_report)
@@ -333,6 +338,9 @@ class Executor:
             
             if self.sequencer.simple_event():
                 self.mapping_enabled = True
+
+        if self.sequencer.simple_event():
+            self.mapping_enabled = True
 
         self.sequencer.simple_event(change_state_function, "explore")
         self.sequencer.seq_reset_sequence() # Resets the sequence
