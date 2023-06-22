@@ -96,7 +96,7 @@ class Executor:
             
             self.do_mapping()
 
-            self.check_swamp_proximity()
+            #self.check_swamp_proximity()
 
             self.check_map_sending()
 
