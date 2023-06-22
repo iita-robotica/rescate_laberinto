@@ -1,0 +1,48 @@
+In this .zip there are two files:
+
+* The file talos_team_robot.json contains our robot and should be loaded as such in the Erebus window.
+
+* The file compiled.py contains all of our code compiled using the stickytape module. This file can be used as-is as the robot controller (after installing the dependencies listed below). This was done not to obfuscate the code, but to get around the limitation of erebus of loading only one controller file, since our code has a large directory structure and many files. What's more, our code is free and open-source, and we strongly encourage the sharing and distibuting of this file and our github repository.
+
+If you want to examine our code and test it, please visit our github repository: https://github.com/iita-robotica/rescate_laberinto. There you will find all the individual files under the directory '/src'. 
+
+Roles of the different files:
+    The controller is run by loading the 'run.py' file.
+    The logic starts from the 'main.py' file.
+    The main control flow can be found on the 'executor/executor.py' file.
+    The role of the 'agent' directory can be understood from the TDP. 
+    The file 'flags.py' contains boolean flags and information to activate or deactivate debug information.
+    The rest of the directories and files are self-explanatory.
+
+In the README of the repository you will find all the instructions for installation and running, but we also provide them here just in case:
+
+1. Clone the repo
+
+    git clone https://github.com/iita-robotica/rescate_laberinto.git
+
+2. Install dependencies
+
+    Latest Erebus version at the time of uploading: 23.0.5
+    Python version: 3.10
+
+    Dependencies:
+        numpy==1.23.5
+        opencv-python==4.7.0.72
+        scikit-image==0.20.0
+        imutils==0.5.4
+        stickytape==0.2.1
+
+    Install them all with:
+        pip install numpy==1.23.5 opencv-python==4.7.0.72 scikit-image==0.20.0 imutils==0.5.4 stickytape==0.2.1
+    
+3. Load the robot
+
+    Go to the directory 'robot_jsons' and pick the one with the highest number.
+
+4. Run the code
+
+    To run our code you can load the 'compiled.py' python file. This is a file compiled with the python module 'stickytape', to run the code easily.
+
+    If you want to exepriment with the code and modify it, first run 'python ./scripts/update_path.py'. Then go to the '/src' directory. There you can load the 'run.py' file as the erebus controller.
+    In the 'flags.py' file you can turn on and off the debug information, so you can see how everything works under the hood. If you activate any debug, set the 'DO_WAIT_KEY' flag to True also.
+

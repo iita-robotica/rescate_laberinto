@@ -6,7 +6,7 @@ class StuckDetector:
         self.stuck_counter = 0
 
         self.stuck_threshold = 50
-        self.minimum_distance_traveled = 0.00001
+        self.minimum_distance_traveled = 0.001
 
         self.__position = Position2D(0, 0)
         self.__previous_position = Position2D(0, 0)

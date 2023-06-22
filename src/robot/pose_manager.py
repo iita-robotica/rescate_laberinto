@@ -37,7 +37,7 @@ class PoseManager:
         self.gyroscope.update()
         
         # Get global position
-        self.__previous_position = self.position
+        self.__previous_position = self.__position
         self.__position = self.gps.get_position()
 
         # Decides wich sensor to use for orientation detection

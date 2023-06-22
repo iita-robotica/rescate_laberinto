@@ -37,11 +37,12 @@ class Executor:
 
         self.state_machine = StateMachine("init") # Manages states
         self.state_machine.create_state("init", self.state_init, {"explore",}) # This state initializes and calibrates the robot
-        self.state_machine.create_state("explore", self.state_explore, {"end", "report_fixture", "send_map"}) # This state follows the position returned by the agent
+        self.state_machine.create_state("explore", self.state_explore, {"end", "report_fixture", "send_map", "stuck"}) # This state follows the position returned by the agent
         self.state_machine.create_state("end", self.state_end)
         #self.state_machine.create_state("detect_fixtures", self.state_detect_fixtures, {"explore", "report_fixture"})
         self.state_machine.create_state("report_fixture", self.state_report_fixture, {"explore", "send_map"})
         self.state_machine.create_state("send_map", self.state_send_map, {"explore", "end"})
+        self.state_machine.create_state("stuck", self.state_stuck, {"explore", "send_map", "end"})
 
         self.sequencer = Sequencer(reset_function=self.delay_manager.reset_delay) # Allows for asynchronous programming
 
@@ -84,13 +85,14 @@ class Executor:
             self.delay_manager.update(self.robot.time)
             self.stuck_detector.update(self.robot.position,
                                        self.robot.previous_position,
-                                       self.robot.drive_base.get_wheel_average_angular_velocity())
+                                   self.robot.drive_base.get_wheel_average_angular_velocity())
             """
             try:
                 self.fixture_detector.tune_filter(self.robot.get_camera_images()[2].image)
             except:
                 pass
             """
+            
             
             self.do_mapping()
 
@@ -145,6 +147,7 @@ class Executor:
     def check_map_sending(self):
         if self.mapper.time > self.max_time_in_run - 2 and not self.map_sent:
             self.state_machine.change_state("send_map")
+            self.sequencer.reset_sequence()
 
     # STATES
     def state_init(self, change_state_function):
@@ -168,7 +171,7 @@ class Executor:
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(90, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.seq_delay_seconds(0.5)
-
+        #self.seq_move_wheels(0, 0)
         self.sequencer.simple_event(change_state_function, "explore") # Changes state
         self.sequencer.seq_reset_sequence() # Resets the sequence
 
@@ -215,7 +218,12 @@ class Executor:
                     change_state_function("report_fixture")
                     self.sequencer.reset_sequence() # Resets the sequence
                     break
-
+                
+        """
+        if self.stuck_detector.is_stuck():
+            change_state_function("stuck")
+        """
+        
         
 
     def mini_calibrate(self):
@@ -245,7 +253,7 @@ class Executor:
         diff = image_center - fixture_center
 
         print(diff)
-        
+
         if abs(diff.x) > 6:
             sign = np.sign(diff.x)
             vel = 0.2
@@ -293,8 +301,6 @@ class Executor:
             self.seq_print("aligned with fixture")
 
             self.seq_move_wheels(0, 0)
-            self.seq_delay_seconds(2)
-
             if self.sequencer.simple_event():
                 center_image = self.robot.center_camera.image.image
                 fixtures = self.fixture_detector.find_fixtures(center_image)
@@ -318,7 +324,7 @@ class Executor:
             self.seq_move_wheels(0.6, 0.6)
             self.seq_delay_seconds(0.2)
             self.seq_move_wheels(0, 0)
-            self.seq_delay_seconds(2)
+            self.seq_delay_seconds(1.5)
 
             if self.sequencer.simple_event():
                 print("sending letter:", self.letter_to_report)
@@ -341,6 +347,17 @@ class Executor:
 
         if self.sequencer.simple_event():
             self.mapping_enabled = True
+
+        self.sequencer.simple_event(change_state_function, "explore")
+        self.sequencer.seq_reset_sequence() # Resets the sequence
+
+    def state_stuck(self, change_state_function):
+        print("GOT STUCK, TRYING TO GET OUT")
+        self.sequencer.start_sequence()
+        self.seq_move_wheels(-0.6, -0.6)
+        self.seq_delay_seconds(0.2)
+        self.seq_move_wheels(0.6, -0.6)
+        self.seq_delay_seconds(1)
 
         self.sequencer.simple_event(change_state_function, "explore")
         self.sequencer.seq_reset_sequence() # Resets the sequence
