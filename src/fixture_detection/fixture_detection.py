@@ -22,10 +22,10 @@ class FixtureDetector:
         # Color filtering
         self.colors = ("black", "white", "yellow", "red")
         self.color_filters = {
-            "black": ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 0)),
-            "white": ColorFilter(lower_hsv=(0, 0, 207), upper_hsv=(0, 0, 207)),
-            "yellow": ColorFilter(lower_hsv=(25, 157, 82), upper_hsv=(30, 255, 255)),
-            "red": ColorFilter(lower_hsv=(160, 170, 127), upper_hsv=(170, 255, 255))
+            "black": ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 9)),
+            "white": ColorFilter(lower_hsv=(0, 0, 193), upper_hsv=(255, 110, 208)),
+            "yellow": ColorFilter(lower_hsv=(25, 170, 82), upper_hsv=(30, 255, 255)),
+            "red": ColorFilter(lower_hsv=(134, 91, 185), upper_hsv=(175, 255, 204))           
         }
 
         self.max_detection_distance = 0.12 * 5

@@ -19,7 +19,7 @@ from fixture_detection.fixture_clasification import FixtureClasiffier
 
 from final_matrix_creation.final_matrix_creator import FinalMatrixCreator
 
-from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S, DO_SAVE_FIXTURE_DEBUG, SAVE_FIXTURE_DEBUG_DIR
+from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S, DO_SAVE_FIXTURE_DEBUG, SAVE_FIXTURE_DEBUG_DIR, TUNE_FILTER
 
 import time
 
@@ -86,15 +86,18 @@ class Executor:
             self.stuck_detector.update(self.robot.position,
                                        self.robot.previous_position,
                                    self.robot.drive_base.get_wheel_average_angular_velocity())
-            """
-            try:
-                self.fixture_detector.tune_filter(self.robot.get_camera_images()[2].image)
-            except:
-                pass
-            """
+            
+            if TUNE_FILTER:
+                try:
+                    self.fixture_detector.tune_filter(self.robot.get_camera_images()[2].image)
+                except:
+                    pass
+            
             
             
             self.do_mapping()
+            if self.robot.center_camera.image.image is not None:
+                self.fixture_detector.get_outside_of_wall_mask(self.robot.center_camera.image.image)
 
             #self.check_swamp_proximity()
 
@@ -250,6 +253,8 @@ class Executor:
 
         image_center = Position2D(center_image.shape) / 2
 
+        image_center.y += 10
+
         diff = image_center - fixture_center
 
         print(diff)
@@ -301,6 +306,7 @@ class Executor:
             self.seq_print("aligned with fixture")
 
             self.seq_move_wheels(0, 0)
+
             if self.sequencer.simple_event():
                 center_image = self.robot.center_camera.image.image
                 fixtures = self.fixture_detector.find_fixtures(center_image)
@@ -322,7 +328,7 @@ class Executor:
                 print("letter_to_report:", self.letter_to_report)
 
             self.seq_move_wheels(0.6, 0.6)
-            self.seq_delay_seconds(0.2)
+            self.seq_delay_seconds(0.1)
             self.seq_move_wheels(0, 0)
             self.seq_delay_seconds(1.5)
 
@@ -336,7 +342,7 @@ class Executor:
                 self.mapper.fixture_mapper.map_detected_fixture(self.robot.position)
 
             self.seq_move_wheels(-0.6, -0.6)
-            self.seq_delay_seconds(0.2)
+            self.seq_delay_seconds(0.1)
             self.seq_move_wheels(0, 0)
 
             if self.sequencer.simple_event():
