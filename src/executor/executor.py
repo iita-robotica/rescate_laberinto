@@ -96,9 +96,12 @@ class Executor:
             
             
             self.do_mapping()
+            
+
+            """
             if self.robot.center_camera.image.image is not None:
                 self.fixture_detector.get_outside_of_wall_mask(self.robot.center_camera.image.image)
-
+            """
             #self.check_swamp_proximity()
 
             self.check_map_sending()
@@ -174,9 +177,9 @@ class Executor:
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(90, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.seq_delay_seconds(0.5)
-        #self.seq_move_wheels(0, 0)
-        self.sequencer.simple_event(change_state_function, "explore") # Changes state
-        self.sequencer.seq_reset_sequence() # Resets the sequence
+        self.seq_move_wheels(0, 0)
+        #self.sequencer.simple_event(change_state_function, "explore") # Changes state
+        #self.sequencer.seq_reset_sequence() # Resets the sequence
 
 
     def state_explore(self, change_state_function):
@@ -194,6 +197,7 @@ class Executor:
         
         self.mini_calibrate()
 
+        #self.seq_move_wheels(0, 0)
         self.seq_move_to_coords(self.agent.get_target_position())
 
         
@@ -210,6 +214,7 @@ class Executor:
         cam_images = self.robot.get_camera_images()
         if self.victim_reporting_enabled and cam_images is not None and not self.mapper.has_detected_victim_from_position():
             for cam_image in cam_images:
+                self.robot.lidar.get_detections()
                 fixtures = self.fixture_detector.find_fixtures(cam_image.image)   
                 if len(fixtures):
                     self.letter_to_report = self.fixture_detector.classify_fixture(fixtures[0])
@@ -261,12 +266,12 @@ class Executor:
 
         if abs(diff.x) > 6:
             sign = np.sign(diff.x)
-            vel = 0.2
+            vel = 0.1
             self.robot.move_wheels(vel * sign, vel * -sign)
             return False
         
         if abs(diff.y) > 4:
-            vel = diff.y * 0.2
+            vel = diff.y * 0.1
             self.robot.move_wheels(vel, vel)
             return False
 
