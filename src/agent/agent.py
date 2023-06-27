@@ -24,6 +24,9 @@ class SubagentPriorityCombiner(SubagentInterface):
         self.__previous_agent_index = 0
 
     def update(self, force_calculation=False) -> None:
+        if self.__agent_changed():
+            print("changed_nav_agent_to:", self.__current_agent_index)
+
         agent: SubagentInterface
         for index, agent in enumerate(self.__agent_list):
             agent.update(force_calculation=self.__agent_changed() or force_calculation)
