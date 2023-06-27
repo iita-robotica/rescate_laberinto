@@ -3,6 +3,7 @@ import cv2 as cv
 import numpy as np
 import os
 from functools import wraps
+from fixture_detection.color_filter import ColorFilter
 
 script_dir = os.path.dirname(__file__)
 image_dir = os.path.join(script_dir, "images")
@@ -165,3 +166,34 @@ def divide_into_chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
+
+
+class ColorFilterTuner:
+    def __init__(self, color_filter: ColorFilter, activate=False) -> None:
+        self.filter_for_tuning = color_filter
+
+        self.activate = activate
+
+        if self.activate:
+            cv.namedWindow("filter_tuner")
+
+            cv.createTrackbar("min_h", "filter_tuner", self.filter_for_tuning.lower[0], 255, lambda x: None)
+            cv.createTrackbar("max_h", "filter_tuner", self.filter_for_tuning.upper[0], 255, lambda x: None)
+
+            cv.createTrackbar("min_s", "filter_tuner", self.filter_for_tuning.lower[1], 255, lambda x: None)
+            cv.createTrackbar("max_s", "filter_tuner", self.filter_for_tuning.upper[1], 255, lambda x: None)
+
+            cv.createTrackbar("min_v", "filter_tuner", self.filter_for_tuning.lower[2], 255, lambda x: None)
+            cv.createTrackbar("max_v", "filter_tuner", self.filter_for_tuning.upper[2], 255, lambda x: None)
+
+    def tune(self, image):
+        if self.activate and image is not None:
+            min_h = cv.getTrackbarPos("min_h", "filter_tuner")
+            max_h = cv.getTrackbarPos("max_h", "filter_tuner")
+            min_s = cv.getTrackbarPos("min_s", "filter_tuner")
+            max_s = cv.getTrackbarPos("max_s", "filter_tuner")
+            min_v = cv.getTrackbarPos("min_v", "filter_tuner")
+            max_v = cv.getTrackbarPos("max_v", "filter_tuner")
+            self.filter_for_tuning = ColorFilter((min_h, min_s, min_v), (max_h, max_s, max_v))
+            print(tuple(self.filter_for_tuning.lower), tuple(self.filter_for_tuning.upper))
+            cv.imshow("filter_tuner", self.filter_for_tuning.filter(image))

@@ -22,13 +22,40 @@ class FixtureDetector:
         # Color filtering
         self.colors = ("black", "white", "yellow", "red")
         self.color_filters = {
-            "black": ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 0)),
-            "white": ColorFilter(lower_hsv=(0, 0, 207), upper_hsv=(0, 0, 207)),
-            "yellow": ColorFilter(lower_hsv=(25, 157, 82), upper_hsv=(30, 255, 255)),
-            "red": ColorFilter(lower_hsv=(160, 170, 127), upper_hsv=(170, 255, 255))
+            "black": ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 9)),
+            "white": ColorFilter(lower_hsv=(0, 0, 193), upper_hsv=(255, 110, 208)),
+            "yellow": ColorFilter(lower_hsv=(25, 170, 82), upper_hsv=(30, 255, 255)),
+            "red": ColorFilter(lower_hsv=(134, 91, 185), upper_hsv=(175, 255, 204))           
         }
 
+        self.wall_color_filter = ColorFilter((90, 44,  0), (95, 213, 158))
+
         self.max_detection_distance = 0.12 * 5
+
+    def get_wall_mask(self, image: np.ndarray):
+        margin = 1
+        raw_wall = self.wall_color_filter.filter(image)
+
+        wall = np.ones(shape=(raw_wall.shape[0], raw_wall.shape[1] + margin * 2), dtype=np.uint8) * 255
+
+        wall[:, margin: -margin] = raw_wall
+        
+        #cv.imshow("pre_wall", wall)
+
+        conts, _ = cv.findContours(wall, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+        debug = np.copy(image)
+
+        filled_wall = np.zeros_like(wall, dtype=np.bool_)
+
+        for c in conts:
+            this_cont = np.zeros_like(wall, dtype=np.uint8)
+            cv.fillPoly(this_cont, [c,], 255)
+            filled_wall += this_cont > 0
+
+        filled_wall = filled_wall[:, margin:-margin]
+
+        return filled_wall
 
     def get_fixture_positions_and_angles(self, robot_position: Position2D, camera_image: CameraImage) -> list:
         positions_in_image = self.get_fixture_positions_in_image(np.flip(camera_image.image, axis=1))
@@ -82,6 +109,10 @@ class FixtureDetector:
             image_sum += filter.filter(image) > 0
 
         image_sum = image_sum.astype(np.uint8) * 255
+
+        wall_mask = self.get_wall_mask(image)
+
+        image_sum *= wall_mask
 
         if SHOW_FIXTURE_DEBUG:
             cv.imshow("fixtures", image_sum)

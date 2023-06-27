@@ -162,7 +162,7 @@ class Mapper:
         if self.robot_grid_index is None:
             return False
         
-        swamp_check_area = 0.06
+        swamp_check_area = 0.02
 
         swamp_check_area_px = round(swamp_check_area * self.pixel_grid.resolution)
 

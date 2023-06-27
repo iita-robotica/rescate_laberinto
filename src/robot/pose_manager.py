@@ -12,6 +12,7 @@ class PoseManager:
 
     def __init__(self, gps: Gps, gyroscope: Gyroscope, position_offsets=Position2D(0, 0)) -> None:
         self.maximum_angular_velocity_for_gps = Angle(1, Angle.DEGREES)
+        #self.maximum_angular_velocity_change_for_shaky = Angle(3, Angle.DEGREES)
         self.maximum_angular_velocity_change_for_shaky = Angle(1, Angle.DEGREES)
 
         self.gps = gps
@@ -37,7 +38,7 @@ class PoseManager:
         self.gyroscope.update()
         
         # Get global position
-        self.__previous_position = self.position
+        self.__previous_position = self.__position
         self.__position = self.gps.get_position()
 
         # Decides wich sensor to use for orientation detection

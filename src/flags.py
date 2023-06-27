@@ -13,6 +13,8 @@ DO_WAIT_KEY = 0
 DO_SLOW_DOWN = 0
 SLOW_DOWN_S = 0.032
 
+TUNE_FILTER = 0
+
 
 DO_SAVE_FIXTURE_DEBUG = 0
 SAVE_FIXTURE_DEBUG_DIR = "/home/iitaadmin/simulated_rescue_maze/debug_imgs"

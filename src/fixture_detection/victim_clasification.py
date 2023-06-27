@@ -10,7 +10,7 @@ class VictimClassifier:
     def __init__(self):
         self.white = 255
 
-        self.victim_letter_filter = ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
+        self.victim_letter_filter = ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 130))
 
         self.top_image_reduction = 0
         self.horizontal_image_reduction = 1
@@ -18,7 +18,7 @@ class VictimClassifier:
         
         self.area_width = 10#20
         self.area_height = 30
-        self.min_count_in_area = int(self.area_height * self.area_width * 0.3)
+        self.min_count_in_area = int(self.area_height * self.area_width * 0.2)
 
         """
         self.areas = {
@@ -58,24 +58,43 @@ class VictimClassifier:
     
     def isolate_victim(self, image):
         binary = self.victim_letter_filter.filter(image)
-        letter = self.crop_white(binary)
+        letter = self.get_biggest_blob(binary)
 
+        '''
         letter = letter[self.top_image_reduction:, self.horizontal_image_reduction:letter.shape[1] - self.horizontal_image_reduction]
         letter = self.crop_white(letter)
+        '''
         
         if SHOW_FIXTURE_DEBUG:
             cv.imshow("thresh", binary)
 
         return letter
+    
+    def get_biggest_blob(self, binary_image: np.ndarray) -> np.ndarray:
+        contours, _ = cv.findContours(binary_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        max_size = 0
+        biggest_blob = None
+        for c0 in contours:
+            x, y, w, h = cv.boundingRect(c0)
+
+            if w*h > max_size:
+                biggest_blob = binary_image[y:y + h, x:x + w]
+                max_size = w*h
+        
+        return biggest_blob
 
     def classify_victim(self, victim):
         letter = self.isolate_victim(victim["image"])
 
         letter = cv.resize(letter, (100, 100), interpolation=cv.INTER_AREA)
 
-        # Calculat centroid of letter and reverse it
+        # Calculate centroid of letter and reverse it
         moments = cv.moments(letter)
-        center = int(letter.shape[1] - moments["m10"] / moments["m00"])
+        center = letter.shape[1] / 2
+        offset = (moments["m10"] / moments["m00"] - center) * 1
+
+        center -= offset
+        center = round(center)
       
         if SHOW_FIXTURE_DEBUG:
             cv.imshow("letra", letter)

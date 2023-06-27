@@ -45,5 +45,10 @@ In the ```flags.py``` file you can turn on and off the debug information, so you
 
 If you want to look at our old code, you can go to the directory ```/previous_competitions/Competencias```. Be aware that some parts might be in Spanish.
 
+## Testing Environment
+
+We developed a system to autamatically do massive tests on our code and give statistics about it's performance in different maps. You can find that in this repository: https://github.com/iita-robotica/testing_simulator
+
 ## License
-Our code is free and open-source under the MIT license! That means you can do whatever you want with it. We encourage you to see our code, take inspiration and copy it. You can also make your own fork of this repsitory and share your innovations upon it. We are exited to share and innovate together, and in this spirit we would like to encourage you to do the same, so we can all grow together.
+Our code is free and open-source under the MIT license! That means you can do whatever you want with it. We encourage you to see our code, take inspiration and copy it. You can also make your own fork of this repsitory and share your innovations upon it. We are exited to share and innovate together, and in this spirit we would like to encourage you to do the same, so we can all grow together. Only one thing: if you end up copyign entire modules as-is, it would be nice if you gave us some credit ;).
+
