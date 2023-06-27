@@ -19,6 +19,10 @@ from fixture_detection.fixture_clasification import FixtureClasiffier
 
 from final_matrix_creation.final_matrix_creator import FinalMatrixCreator
 
+from utilities import ColorFilterTuner
+from fixture_detection.color_filter import ColorFilter
+from fixture_detection.non_fixture_filterer import NonFixtureFilter
+
 from flags import SHOW_DEBUG, DO_SLOW_DOWN, SLOW_DOWN_S, DO_SAVE_FIXTURE_DEBUG, SAVE_FIXTURE_DEBUG_DIR, TUNE_FILTER
 
 import time
@@ -76,6 +80,8 @@ class Executor:
 
         self.mini_calibrate_step_counter = StepCounter(20)
 
+        self.color_filter_tuner = ColorFilterTuner(ColorFilter((0, 0, 29), (0, 0, 137)), TUNE_FILTER)
+
     def run(self):
         """Advances the simulation, updates all components and executes the state machine."""
         
@@ -87,11 +93,17 @@ class Executor:
                                        self.robot.previous_position,
                                    self.robot.drive_base.get_wheel_average_angular_velocity())
             
-            if TUNE_FILTER:
-                try:
-                    self.fixture_detector.tune_filter(self.robot.get_camera_images()[2].image)
-                except:
-                    pass
+            
+            self.color_filter_tuner.tune(self.robot.center_camera.image.image)
+
+            """
+            nf = NonFixtureFilter()
+
+            if self.robot.center_camera.image.image is not None:
+                mask = nf.filter(self.robot.center_camera.image.image).astype(np.uint8) * 255
+
+                cv.imshow("non_fixture", mask)
+            """
             
             
             
@@ -177,9 +189,9 @@ class Executor:
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(90, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.sequencer.complex_event(self.robot.rotate_to_angle, angle=Angle(180, Angle.DEGREES), direction=RotationCriteria.LEFT)
         self.seq_delay_seconds(0.5)
-        self.seq_move_wheels(0, 0)
-        #self.sequencer.simple_event(change_state_function, "explore") # Changes state
-        #self.sequencer.seq_reset_sequence() # Resets the sequence
+        #self.seq_move_wheels(0, 0)
+        self.sequencer.simple_event(change_state_function, "explore") # Changes state
+        self.sequencer.seq_reset_sequence() # Resets the sequence
 
 
     def state_explore(self, change_state_function):
@@ -258,21 +270,21 @@ class Executor:
 
         image_center = Position2D(center_image.shape) / 2
 
-        image_center.y += 10
+        #image_center.y += 10
 
         diff = image_center - fixture_center
 
         print(diff)
 
+        if abs(diff.y) > 4:
+            vel = diff.y * 0.1
+            self.robot.move_wheels(vel, vel)
+            return False
+
         if abs(diff.x) > 6:
             sign = np.sign(diff.x)
             vel = 0.1
             self.robot.move_wheels(vel * sign, vel * -sign)
-            return False
-        
-        if abs(diff.y) > 4:
-            vel = diff.y * 0.1
-            self.robot.move_wheels(vel, vel)
             return False
 
         return True

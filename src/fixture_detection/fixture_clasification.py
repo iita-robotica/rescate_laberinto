@@ -6,6 +6,7 @@ import cv2 as cv
 
 from fixture_detection.victim_clasification import VictimClassifier
 from fixture_detection.color_filter import ColorFilter
+from fixture_detection.non_fixture_filterer import NonFixtureFilter
 
 from flags import SHOW_DEBUG, SHOW_FIXTURE_DEBUG, TUNE_FILTER
     
@@ -65,52 +66,18 @@ class FixtureClasiffier:
             FixtureType("flammable", "F",        {"white": (1,    math.inf), 
                                                   "red":   (1,    math.inf),}),
 
-            FixtureType("victim",    "H",        {"white": (4000, math.inf), 
-                                                  "black": (800,  4000),}),
+            FixtureType("victim",    "H",        {"white": (4500, math.inf), 
+                                                  "black": (1000,  4000),}),
 
-            FixtureType("corrosive", "C",        {"white": (700,  4000), 
-                                                  "black": (900, 2500),}),
+            FixtureType("corrosive", "C",        {"white": (700,  4500), 
+                                                  "black": (900, 3000),}),
 
             FixtureType("poison",    "P",        {"white": (2000,  5000), 
-                                                  "black": (0,    800),}),
-        )                    
+                                                  "black": (100,    1000),}),
+        )
 
-
-        # For tuning color filters
-        self.do_color_filter_tuning = TUNE_FILTER
-        self.filter_for_tuning = self.color_filters["red"]                       
-
-        if self.do_color_filter_tuning:
-            cv.namedWindow("trackbars")
-
-            cv.createTrackbar("min_h", "trackbars", self.filter_for_tuning.lower[0], 255, lambda x: None)
-            cv.createTrackbar("max_h", "trackbars", self.filter_for_tuning.upper[0], 255, lambda x: None)
-
-            cv.createTrackbar("min_s", "trackbars", self.filter_for_tuning.lower[1], 255, lambda x: None)
-            cv.createTrackbar("max_s", "trackbars", self.filter_for_tuning.upper[1], 255, lambda x: None)
-
-            cv.createTrackbar("min_v", "trackbars", self.filter_for_tuning.lower[2], 255, lambda x: None)
-            cv.createTrackbar("max_v", "trackbars", self.filter_for_tuning.upper[2], 255, lambda x: None)
+        self.non_fixture_filter =  NonFixtureFilter()         
         
-    def tune_filter(self, image):
-        min_h = cv.getTrackbarPos("min_h", "trackbars")
-        max_h = cv.getTrackbarPos("max_h", "trackbars")
-        min_s = cv.getTrackbarPos("min_s", "trackbars")
-        max_s = cv.getTrackbarPos("max_s", "trackbars")
-        min_v = cv.getTrackbarPos("min_v", "trackbars")
-        max_v = cv.getTrackbarPos("max_v", "trackbars")
-        self.filter_for_tuning = ColorFilter((min_h, min_s, min_v), (max_h, max_s, max_v))
-        print(self.filter_for_tuning.lower, self.filter_for_tuning.upper)
-        cv.imshow("trackbars", self.filter_for_tuning.filter(image))
-
-        binary_images = []
-        for f in self.color_filters.values():
-            binary_images.append(f.filter(image))
-
-        binary_image = self.sum_images(binary_images)
-
-        cv.imshow("binaryImage", binary_image)
-
     
     def get_wall_mask(self, image: np.ndarray):
         margin = 1
@@ -148,8 +115,8 @@ class FixtureClasiffier:
     def filter_fixtures(self, victims) -> list:
         final_victims = []
         for vic in victims:
-            if SHOW_FIXTURE_DEBUG:
-                print("victim:", vic["position"], vic["image"].shape)
+            #if SHOW_FIXTURE_DEBUG:
+                #print("victim:", vic["position"], vic["image"].shape)
 
             if vic["image"].shape[0] > self.min_fixture_height and vic["image"].shape[1] > self.min_fixture_height * self.min_fixture_width_factor:
                 final_victims.append(vic)
@@ -173,9 +140,11 @@ class FixtureClasiffier:
 
         walls_mask = self.get_wall_mask(image)
 
+        non_fixture_by_color = self.non_fixture_filter.filter(image)
+
         #cv.imshow("wall", (walls_mask).astype(np.uint8) * 255)
         
-        binary_image *= walls_mask 
+        binary_image *= (walls_mask + (non_fixture_by_color == 0))
 
         #print(binary_image)
         if SHOW_FIXTURE_DEBUG:
