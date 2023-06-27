@@ -24,9 +24,11 @@ class FloorMapper:
         self.tile_size = tile_size
         self.pixel_per_m = tile_resolution / tile_size
         self.pov_distance_from_center = round(0.079 * self.pixel_per_m) 
-        self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 106))
+        #self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 106))
+        self.hole_color_filter = ColorFilter((0, 0, 10), (0, 0, 27))
         self.swamp_color_filter = ColorFilter((19, 112, 32), (19, 141, 166))
         self.checkpoint_color_filter = ColorFilter((95, 0, 65), (128, 122, 198))
+        self.wall_color_filter = ColorFilter((90, 61,  0), (100, 150, 255))
 
         tiles_up = 0
         tiles_down = 1
@@ -131,7 +133,9 @@ class FloorMapper:
 
         seen_by_camera_mask = self.pixel_grid.arrays["seen_by_camera"][start[0]:end[0], start[1]:end[1]]
 
-        final_mask = seen_by_camera_mask * detection_distance_mask
+        not_walls_mask = self.wall_color_filter.filter(povs) == False
+
+        final_mask = seen_by_camera_mask * detection_distance_mask * not_walls_mask
 
         self.pixel_grid.arrays["floor_color_detection_distance"][start[0]:end[0], start[1]:end[1]][final_mask] = povs_gradient[final_mask]
 
@@ -176,15 +180,15 @@ class FloorMapper:
     def detect_swamps(self):
         swamp_array = self.swamp_color_filter.filter(self.pixel_grid.arrays["floor_color"]).astype(np.bool_)
 
-        self.pixel_grid.arrays["swamps"] = self.get_squares_from_raw_array(swamp_array, self.pixel_grid.offsets - self.tile_resolution // 2, self.tile_resolution)
-    
+        self.pixel_grid.arrays["swamps"] = self.get_squares_from_raw_array(swamp_array, self.pixel_grid.offsets - self.tile_resolution // 2, self.tile_resolution, margin=3, detection_proportion=0.3)
+
     def detect_holes(self):
         #tile_size = self.tile_size * self.pixel_per_m
         #offsets = self.__get_offsets(tile_size)
 
-        hole_array = self.hole_color_filter.filter(self.pixel_grid.arrays["floor_color"]).astype(np.bool_)
-
-        self.pixel_grid.arrays["holes"] = self.get_squares_from_raw_array(hole_array, self.pixel_grid.offsets - self.tile_resolution // 2, self.tile_resolution)
+        self.pixel_grid.arrays["hole_detections"] += self.hole_color_filter.filter(self.pixel_grid.arrays["floor_color"]).astype(np.bool_)
+        #cv.imshow("holes", self.pixel_grid.arrays["hole_detections"].astype(np.uint8) * 255)
+        self.pixel_grid.arrays["holes"] = self.get_squares_from_raw_array(self.pixel_grid.arrays["hole_detections"], self.pixel_grid.offsets - self.tile_resolution // 2, self.tile_resolution, detection_proportion=0.2)
 
     def detect_checkpoints(self):
         checkpoint_array = self.checkpoint_color_filter.filter(self.pixel_grid.arrays["floor_color"]).astype(np.bool_)
@@ -192,7 +196,7 @@ class FloorMapper:
         self.pixel_grid.arrays["checkpoints"] = self.get_tile_centers_from_raw_array(checkpoint_array, self.pixel_grid.offsets - self.tile_resolution // 2, self.tile_resolution)
 
 
-    def get_squares_from_raw_array(self, hole_array: np.ndarray, raw_offsets: np.ndarray, square_size) -> np.ndarray:
+    def get_squares_from_raw_array(self, hole_array: np.ndarray, raw_offsets: np.ndarray, square_size, margin=0, detection_proportion=0.5) -> np.ndarray:
 
         offsets = np.round(raw_offsets % square_size).astype(int)
 
@@ -209,8 +213,8 @@ class FloorMapper:
 
                 count = np.count_nonzero(square)
 
-                if count / (np.max(square.shape) ** 2) > 0.3:
-                    final_hole_array[min_x:max_x, min_y:max_y] = True
+                if count / (np.max(square.shape) ** 2) > detection_proportion:
+                    final_hole_array[min_x - margin:max_x + margin, min_y -margin:max_y+margin] = True
 
         
         return final_hole_array

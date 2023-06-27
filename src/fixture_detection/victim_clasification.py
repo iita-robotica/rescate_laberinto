@@ -10,7 +10,7 @@ class VictimClassifier:
     def __init__(self):
         self.white = 255
 
-        self.victim_letter_filter = ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(5, 255, 100))
+        self.victim_letter_filter = ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 130))
 
         self.top_image_reduction = 0
         self.horizontal_image_reduction = 1
@@ -18,7 +18,7 @@ class VictimClassifier:
         
         self.area_width = 10#20
         self.area_height = 30
-        self.min_count_in_area = int(self.area_height * self.area_width * 0.3)
+        self.min_count_in_area = int(self.area_height * self.area_width * 0.2)
 
         """
         self.areas = {

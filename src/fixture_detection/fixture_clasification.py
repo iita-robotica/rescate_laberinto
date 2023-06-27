@@ -6,8 +6,9 @@ import cv2 as cv
 
 from fixture_detection.victim_clasification import VictimClassifier
 from fixture_detection.color_filter import ColorFilter
+from fixture_detection.non_fixture_filterer import NonFixtureFilter
 
-from flags import SHOW_DEBUG, SHOW_FIXTURE_DEBUG
+from flags import SHOW_DEBUG, SHOW_FIXTURE_DEBUG, TUNE_FILTER
     
 class FixtureType:
     def __init__(self, fixture_type, default_letter, ranges=None):
@@ -29,11 +30,12 @@ class FixtureClasiffier:
         # Color filtering
         self.colors = ("black", "white", "yellow", "red")
         self.color_filters = {
-            "black": ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 0)),
-            "white": ColorFilter(lower_hsv=(0, 0, 207), upper_hsv=(0, 0, 207)),
-            "yellow": ColorFilter(lower_hsv=(25, 157, 82), upper_hsv=(30, 255, 255)),
-            "red": ColorFilter(lower_hsv=(160, 170, 127), upper_hsv=(170, 255, 255))
+            "black": ColorFilter(lower_hsv=(0, 0, 0), upper_hsv=(0, 0, 160)),
+            "white": ColorFilter(lower_hsv=(0, 0, 170), upper_hsv=(255, 110, 208)),
+            "yellow": ColorFilter(lower_hsv=(25, 170, 82), upper_hsv=(30, 255, 255)),
+            "red": ColorFilter(lower_hsv=(134, 91, 155), upper_hsv=(175, 255, 204))           
         }
+        self.wall_color_filter = ColorFilter((90, 44,  0), (95, 213, 158))
 
         # Fixture filtering
         #self.min_fixture_height = 10
@@ -48,55 +50,59 @@ class FixtureClasiffier:
 
         # In order of priority
         self.fixture_types = (
-            FixtureType("already_detected", "",  {"white": (1,    math.inf), 
+            FixtureType("already_detected", "",  {"white": (5000,    math.inf), 
+                                                  "black": (0,    0),
+                                                  "red":   (0,    0), 
+                                                  "yellow":(0,    0),}),
+            
+            FixtureType("already_detected", "",  {"white": (0,    2000), 
                                                   "black": (0,    0),
                                                   "red":   (0,    0), 
                                                   "yellow":(0,    0),}),
 
-            FixtureType("flammable", "F",        {"white": (1,    math.inf), 
-                                                  "red":   (1,    math.inf),}),
-
             FixtureType("organic_peroxide", "O", {"red":   (1,    math.inf), 
                                                   "yellow":(1,    math.inf),}),
 
-            FixtureType("victim",    "H",        {"white": (3500, math.inf), 
-                                                  "black": (100,  4000),}),
+            FixtureType("flammable", "F",        {"white": (1,    math.inf), 
+                                                  "red":   (1,    math.inf),}),
 
-            FixtureType("corrosive", "C",        {"white": (700,  2500), 
-                                                  "black": (1000, 2500),}),
+            FixtureType("victim",    "H",        {"white": (4500, math.inf), 
+                                                  "black": (1000,  4000),}),
 
-            FixtureType("poison",    "P",        {"white": (700,  4000), 
-                                                  "black": (0,    600),}),
-        )                    
+            FixtureType("corrosive", "C",        {"white": (700,  4500), 
+                                                  "black": (900, 3000),}),
 
+            FixtureType("poison",    "P",        {"white": (2000,  5000), 
+                                                  "black": (100,    1000),}),
+        )
 
-        # For tuning color filters
-        self.do_color_filter_tuning = False
-        self.filter_for_tuning = self.color_filters["white"]                       
-
-        if self.do_color_filter_tuning:
-            cv.namedWindow("trackbars")
-
-            cv.createTrackbar("min_h", "trackbars", self.filter_for_tuning.lower[0], 255, lambda x: None)
-            cv.createTrackbar("max_h", "trackbars", self.filter_for_tuning.upper[0], 255, lambda x: None)
-
-            cv.createTrackbar("min_s", "trackbars", self.filter_for_tuning.lower[1], 255, lambda x: None)
-            cv.createTrackbar("max_s", "trackbars", self.filter_for_tuning.upper[1], 255, lambda x: None)
-
-            cv.createTrackbar("min_v", "trackbars", self.filter_for_tuning.lower[2], 255, lambda x: None)
-            cv.createTrackbar("max_v", "trackbars", self.filter_for_tuning.upper[2], 255, lambda x: None)
+        self.non_fixture_filter =  NonFixtureFilter()         
         
-    def tune_filter(self, image):
-        min_h = cv.getTrackbarPos("min_h", "trackbars")
-        max_h = cv.getTrackbarPos("max_h", "trackbars")
-        min_s = cv.getTrackbarPos("min_s", "trackbars")
-        max_s = cv.getTrackbarPos("max_s", "trackbars")
-        min_v = cv.getTrackbarPos("min_v", "trackbars")
-        max_v = cv.getTrackbarPos("max_v", "trackbars")
-        self.filter_for_tuning = ColorFilter((min_h, min_s, min_v), (max_h, max_s, max_v))
-        print(self.filter_for_tuning.lower, self.filter_for_tuning.upper)
-        cv.imshow("tunedImage", self.filter_for_tuning.filter(image))
+    
+    def get_wall_mask(self, image: np.ndarray):
+        margin = 1
+        raw_wall = self.wall_color_filter.filter(image)
 
+        wall = np.ones(shape=(raw_wall.shape[0], raw_wall.shape[1] + margin * 2), dtype=np.uint8) * 255
+
+        wall[:, margin: -margin] = raw_wall
+        
+        #cv.imshow("pre_wall", wall)
+
+        conts, _ = cv.findContours(wall, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+        debug = np.copy(image)
+
+        filled_wall = np.zeros_like(wall, dtype=np.bool_)
+
+        for c in conts:
+            this_cont = np.zeros_like(wall, dtype=np.uint8)
+            cv.fillPoly(this_cont, [c,], 255)
+            filled_wall += this_cont > 0
+
+        filled_wall = filled_wall[:, margin:-margin]
+
+        return filled_wall
 
     def sum_images(self, images):
         final_img = images[0]
@@ -109,8 +115,8 @@ class FixtureClasiffier:
     def filter_fixtures(self, victims) -> list:
         final_victims = []
         for vic in victims:
-            if SHOW_FIXTURE_DEBUG:
-                print("victim:", vic["position"], vic["image"].shape)
+            #if SHOW_FIXTURE_DEBUG:
+                #print("victim:", vic["position"], vic["image"].shape)
 
             if vic["image"].shape[0] > self.min_fixture_height and vic["image"].shape[1] > self.min_fixture_height * self.min_fixture_width_factor:
                 final_victims.append(vic)
@@ -131,6 +137,15 @@ class FixtureClasiffier:
             binary_images.append(f.filter(image))
 
         binary_image = self.sum_images(binary_images)
+
+        walls_mask = self.get_wall_mask(image)
+
+        non_fixture_by_color = self.non_fixture_filter.filter(image)
+
+        #cv.imshow("wall", (walls_mask).astype(np.uint8) * 255)
+        
+        binary_image *= (walls_mask + (non_fixture_by_color == 0))
+
         #print(binary_image)
         if SHOW_FIXTURE_DEBUG:
             cv.imshow("binaryImage", binary_image)
@@ -138,20 +153,39 @@ class FixtureClasiffier:
         # Encuentra los contornos, aunque se puede confundir con el contorno de la letra
         contours, _ = cv.findContours(binary_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         # Pra evitar la confusion dibuja rectangulos blancos donde estan los contornos en la imagen y despues vuelve a
-        # sacar los contornos para obtener solo los del rectangulo, no los de las letras.
-        for c0 in contours:
-            x, y, w, h = cv.boundingRect(c0)
-            cv.rectangle(binary_image, (x, y), (x + w, y + h), (225, 255, 255), -1)
+        # sacar los contornos para obtener solo los del rectangulo, no los de las letras
+
+        final_victims = []
         contours, _ = cv.findContours(binary_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         # saca las medidas y la posicion de los contornos y agrega a la lista de imagenes la parte esa de la imagen original
         # Tambien anade la posicion de cada recuadro en la imagen original
-        final_victims = []
+        
         for c in contours:
             x, y, w, h = cv.boundingRect(c)
             final_victims.append({"image":image[y:y + h, x:x + w], "position":(x, y)})
 
         #print("unfiltered", len(final_victims))
         return self.filter_fixtures(final_victims)
+    
+    def get_bounding_rect_of_contours(self, contours):
+        
+        min_x = 0
+        min_y = 0
+        max_x = math.inf
+        max_y = math.inf
+
+        for c in contours:
+            x, y, w, h = cv.boundingRect(c)
+            min_x = min(x, min_x)
+            min_y = min(y, min_y)
+            max_x = max(x + w, max_x)
+            max_y = max(y + h, max_y)
+
+        return min_x, min_y, max_x, max_y
+
+
+
+
             
     def count_colors(self, image) -> dict:
         color_point_counts = {}

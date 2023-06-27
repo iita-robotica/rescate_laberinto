@@ -32,6 +32,7 @@ class StateMachine:
             self.change_state_function()
             self.state = new_state
             self.current_function = self.state_functions[self.state]
+            print("changed to state", new_state)
 
         else:
             print(f"WARNING: Can't change to state {new_state}. New state is not in the possible changes for {self.state}.")

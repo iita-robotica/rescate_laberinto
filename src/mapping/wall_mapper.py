@@ -94,6 +94,7 @@ class WallMapper:
 
         # Areas that the robot prefers to navigate through
         self.grid.arrays["navigation_preference"] = cv.filter2D(occupied_as_int, -1, self.preference_template)
+        self.grid.arrays["navigation_preference"][self.grid.arrays["swamps"]] = 150
 
     def filter_out_noise(self):
         """

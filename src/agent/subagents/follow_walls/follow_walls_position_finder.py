@@ -1,4 +1,6 @@
 import numpy as np
+import cv2 as cv
+import math
 from data_structures.vectors import Position2D
 
 from algorithms.np_bool_array.bfs import NavigatingBFSAlgorithm
@@ -13,6 +15,16 @@ class PositionFinder(PositionFinderInterface):
         self.__next_position_finder = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.__still_reachable_bfs = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.__target = None
+
+        smoother_template_radious = int(0.03 * self.__mapper.pixel_grid.resolution)
+        smoother_template_diameter = math.ceil(smoother_template_radious * 2 + 1)
+
+        self.min_number_to_be_valid = 10
+
+        # Solid disk to smooth margins
+        self.smoother_template = np.zeros((smoother_template_diameter, smoother_template_diameter), dtype=np.int8)
+        self.smoother_template = cv.circle(self.smoother_template, (smoother_template_radious, smoother_template_radious), smoother_template_radious, 1, -1)
+        self.smoother_template[smoother_template_radious, smoother_template_radious] = 0
 
 
     def update(self, force_calculation=False) -> None:
@@ -33,8 +45,15 @@ class PositionFinder(PositionFinderInterface):
 
     def __calculate_position(self):
         possible_targets_array = self.__mapper.pixel_grid.arrays["fixture_distance_margin"]
+        isolated = cv.filter2D(self.__mapper.pixel_grid.arrays["fixture_distance_margin"].astype(np.uint8), -1, self.smoother_template) < self.min_number_to_be_valid
+        #cv.imshow("isolated", isolated.astype(np.uint8) * 255)
+        possible_targets_array[isolated] = False
         self.__dither_array(possible_targets_array, dither_interval=2)
         possible_targets_array[self.__mapper.pixel_grid.arrays["robot_center_traversed"]] = False
+        self.__mapper.pixel_grid.arrays["fixture_distance_margin"][self.__mapper.pixel_grid.arrays["traversable"]] = False
+        self.__mapper.pixel_grid.arrays["fixture_distance_margin"][self.__mapper.pixel_grid.arrays["swamps"]] = False
+
+        
 
         #cv.imshow("possible wall targets", possible_targets_array.astype(np.uint8) * 255)
 

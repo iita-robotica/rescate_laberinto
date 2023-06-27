@@ -29,6 +29,7 @@ class CompoundExpandablePixelGrid:
             "floor_color_detection_distance": np.zeros(self.array_shape, np.uint8),
             "average_floor_color": np.zeros((self.array_shape[0], self.array_shape[1], 3), np.uint8),
             "holes": np.zeros(self.array_shape, np.bool_),
+            "hole_detections":np.zeros(self.array_shape, np.bool_),
             "swamps": np.zeros(self.array_shape, np.bool_),
             "victims": np.zeros(self.array_shape, np.bool_),
             "checkpoints": np.zeros(self.array_shape, np.bool_),
@@ -153,7 +154,7 @@ class CompoundExpandablePixelGrid:
         #color_grid = self.arrays["floor_color"].astype(np.float32) / 255
         
         #color_grid[:, :, 1] = self.arrays["navigation_preference"][:, :] / 200
-        color_grid[self.arrays["traversable"]] = (1, 0, 0)
+        #color_grid[self.arrays["traversable"]] = (1, 0, 0)
         
         #color_grid[self.arrays["discovered"]] = (0, 1, 1)
         #color_grid[self.arrays["seen_by_camera"]] += (0.5, 0, 0)
@@ -163,16 +164,16 @@ class CompoundExpandablePixelGrid:
 
         color_grid[self.arrays["occupied"]] = (1, 1, 1)
 
-        color_grid[self.arrays["checkpoints"].astype(np.bool_)] = (0, 1, 1)
+        #color_grid[self.arrays["checkpoints"].astype(np.bool_)] = (0, 1, 1)
 
 
         #color_grid[self.arrays["walls_not_seen_by_camera"]] = (0, 0, 1)
 
-        #color_grid *= 0.3
+        color_grid *= 0.3
 
         color_grid[self.arrays["victims"]] = (0, 1, 0)
 
-        color_grid[self.arrays["robot_center_traversed"]] = (.5, 0., .5)
+        #color_grid[self.arrays["robot_center_traversed"]] = (.5, 0., .5)
         
  
         return color_grid
