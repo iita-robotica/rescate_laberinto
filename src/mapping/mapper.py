@@ -31,6 +31,7 @@ class Mapper:
         self.robot_diameter = robot_diameter
 
         self.robot_position = None
+        self.robot_previous_position = None
         self.robot_orientation = None
         self.start_position = None
 
@@ -77,7 +78,8 @@ class Mapper:
                out_of_bounds_point_cloud: list = None,
                lidar_detections: list = None,
                camera_images: list = None, 
-               robot_position: Position2D = None, 
+               robot_position: Position2D = None,
+               robot_previous_position: Position2D = None,
                robot_orientation: Angle = None,
                time = None):
         
@@ -88,6 +90,7 @@ class Mapper:
             return
         
         self.robot_position = robot_position
+        self.robot_previous_position = robot_previous_position
         self.robot_orientation = robot_orientation
 
         self.robot_grid_index = self.pixel_grid.coordinates_to_grid_index(self.robot_position)

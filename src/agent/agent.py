@@ -24,6 +24,9 @@ class SubagentPriorityCombiner(SubagentInterface):
         self.__previous_agent_index = 0
 
     def update(self, force_calculation=False) -> None:
+        if self.__agent_changed():
+            print("changed_nav_agent_to:", self.__current_agent_index)
+
         agent: SubagentInterface
         for index, agent in enumerate(self.__agent_list):
             agent.update(force_calculation=self.__agent_changed() or force_calculation)
@@ -77,7 +80,7 @@ class Agent(AgentInterface):
     
 
     def __stage_explore(self, change_state_function):
-        self.__navigation_agent.update(force_calculation=self.do_force_calculation)
+        self.__navigation_agent.update(force_calculation=self.do_force_calculation or self.__has_teleported())
         self.do_force_calculation = False
 
         if not self.__navigation_agent.target_position_exists():
@@ -96,3 +99,6 @@ class Agent(AgentInterface):
     
     def __set_force_calculation(self):
         self.do_force_calculation = True
+
+    def __has_teleported(self) -> bool:
+        return abs(self.__mapper.robot_previous_position.get_distance_to(self.__mapper.robot_position)) > self.__mapper.tile_size * 0.9

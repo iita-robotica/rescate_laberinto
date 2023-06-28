@@ -3,7 +3,7 @@ import cv2 as cv
 import math
 from data_structures.vectors import Position2D
 
-from algorithms.np_bool_array.bfs import NavigatingBFSAlgorithm
+from algorithms.np_bool_array.bfs import NavigatingBFSAlgorithm, BFSAlgorithm
 
 from agent.agent_interface import PositionFinderInterface
 from mapping.mapper import Mapper
@@ -14,6 +14,7 @@ class PositionFinder(PositionFinderInterface):
         self.__mapper = mapper
         self.__next_position_finder = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
         self.__still_reachable_bfs = NavigatingBFSAlgorithm(lambda x: x, lambda x: not x)
+        self.__closest_free_point_finder = BFSAlgorithm(lambda x : x == 0)
         self.__target = None
 
         smoother_template_radious = int(0.03 * self.__mapper.pixel_grid.resolution)
@@ -63,6 +64,7 @@ class PositionFinder(PositionFinderInterface):
             return
 
         robot_array_index = self.__mapper.pixel_grid.grid_index_to_array_index(self.__mapper.robot_grid_index)
+        robot_array_index = self.__get_closest_traversable_array_index(robot_array_index)
 
         results = self.__next_position_finder.bfs(possible_targets_array, self.__mapper.pixel_grid.arrays["traversable"], robot_array_index)
 
@@ -95,3 +97,11 @@ class PositionFinder(PositionFinderInterface):
         #cv.imshow("dither_mask", (mask == False).astype(np.uint8) * 255)
 
         possible_targets_array[mask] = False
+
+    
+    def __get_closest_traversable_array_index(self, array_index):
+        if self.__mapper.pixel_grid.arrays["traversable"][array_index[0], array_index[1]]:
+            return  self.__closest_free_point_finder.bfs(array=self.__mapper.pixel_grid.arrays["traversable"],
+                                                       start_node=array_index)
+        else:
+            return array_index

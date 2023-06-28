@@ -144,6 +144,7 @@ class Executor:
                                     self.robot.get_lidar_detections(),
                                     self.robot.get_camera_images(), 
                                     self.robot.position,
+                                    self.robot.previous_position,
                                     self.robot.orientation,
                                     self.robot.time)
                 else:
@@ -151,6 +152,7 @@ class Executor:
                     # Floor and lidar mapping
                     self.mapper.update(camera_images=self.robot.get_camera_images(), 
                                        robot_position= self.robot.position,
+                                       robot_previous_position= self.robot.previous_position,
                                        robot_orientation=self.robot.orientation,
                                        time=self.robot.time)
 
