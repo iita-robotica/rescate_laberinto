@@ -216,7 +216,7 @@ class FixtureClasiffier:
         
         # If nothing matches return random letter
         if final_fixture_filter is None:
-            letter = random.choice(self.possible_fixture_letters)
+            letter = None #random.choice(self.possible_fixture_letters)
 
         # If it's a victim classify it
         elif final_fixture_filter.fixture_type == "victim":

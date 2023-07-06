@@ -2,8 +2,9 @@ from copy import copy, deepcopy
 
 import numpy as np
 import cv2 as cv
+import skimage.draw
 
-from data_structures.vectors import Position2D
+from data_structures.vectors import Position2D, Vector2D
 from data_structures.angle import Angle
 
 from data_structures.compound_pixel_grid import CompoundExpandablePixelGrid
@@ -174,6 +175,20 @@ class Mapper:
         max_y = min(robot_array_index[1] + swamp_check_area_px, self.pixel_grid.array_shape[1])
 
         return np.any(self.pixel_grid.arrays["swamps"][min_x:max_x, min_y:max_y])
+    
+    def register_occupied_in_front_of_robot(self):
+        print("REGISTERING OCCUPIED")
+        front = Vector2D(self.robot_orientation, 0.05).to_position()
+
+        front += self.robot_position
+
+        front_array_index = self.pixel_grid.coordinates_to_array_index(front)
+
+        disk = skimage.draw.disk(tuple(front_array_index), 4, shape=tuple(self.pixel_grid.array_shape))
+
+        self.pixel_grid.arrays["walls"][disk] = True
+
+
 
 
         

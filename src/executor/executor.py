@@ -239,10 +239,11 @@ class Executor:
                     self.sequencer.reset_sequence() # Resets the sequence
                     break
                 
-        """
+        
         if self.stuck_detector.is_stuck():
             change_state_function("stuck")
-        """
+            self.sequencer.reset_sequence()
+        
         
         
 
@@ -377,10 +378,14 @@ class Executor:
     def state_stuck(self, change_state_function):
         print("GOT STUCK, TRYING TO GET OUT")
         self.sequencer.start_sequence()
+        if self.sequencer.simple_event():
+            self.mapper.register_occupied_in_front_of_robot()
         self.seq_move_wheels(-0.6, -0.6)
         self.seq_delay_seconds(0.2)
         self.seq_move_wheels(0.6, -0.6)
         self.seq_delay_seconds(1)
+
+        self.stuck_detector.stuck_counter = 0
 
         self.sequencer.simple_event(change_state_function, "explore")
         self.sequencer.seq_reset_sequence() # Resets the sequence

@@ -32,7 +32,7 @@ class PoseManager:
 
         self.shaky_threshold = Angle(5, unit=Angle.DEGREES)
     
-    def update(self, average_wheel_velocity, wheel_velocity_difference):
+    def update(self, average_wheel_velocity, wheel_velocity_difference, point_is_close):
         # Gyro and gps update
         self.gps.update()
         self.gyroscope.update()
@@ -43,16 +43,16 @@ class PoseManager:
 
         # Decides wich sensor to use for orientation detection
         if self.automatically_decide_orientation_sensor:
-            self.decide_orientation_sensor(average_wheel_velocity, wheel_velocity_difference)
+            self.decide_orientation_sensor(average_wheel_velocity, wheel_velocity_difference, point_is_close)
 
         # Remembers the corrent rotation for the next timestep
         self.previous_orientation = self.orientation
 
         self.calculate_orientation()
 
-    def decide_orientation_sensor(self, average_wheel_velocity, wheel_velocity_difference):
+    def decide_orientation_sensor(self, average_wheel_velocity, wheel_velocity_difference, point_is_close):
         """if the robot is going srtaight it tuses the gps. If not it uses the gyro."""
-        if self.robot_is_going_straight(average_wheel_velocity, wheel_velocity_difference):
+        if self.robot_is_going_straight(average_wheel_velocity, wheel_velocity_difference) and not point_is_close:
                 self.orientation_sensor = self.GPS
         else:
             self.orientation_sensor = self.GYROSCOPE

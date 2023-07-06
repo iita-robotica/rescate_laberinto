@@ -5,7 +5,7 @@ class StuckDetector:
     def __init__(self) -> None:
         self.stuck_counter = 0
 
-        self.stuck_threshold = 50
+        self.stuck_threshold = 100
         self.minimum_distance_traveled = 0.001
 
         self.__position = Position2D(0, 0)
@@ -28,8 +28,7 @@ class StuckDetector:
     
     def __is_stuck_this_step(self):
         distance_traveled = self.__position.get_distance_to(self.__previous_position)
-        is_rotating_wheels = self.__wheel_direction > 0
-        return is_rotating_wheels and distance_traveled < self.minimum_distance_traveled
+        return distance_traveled < self.minimum_distance_traveled
 
 
    

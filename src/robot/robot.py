@@ -43,7 +43,7 @@ class Robot:
         self.lidar = Lidar(webots_device = self.robot.getDevice("lidar"), 
                            time_step = self.time_step * lidar_interval, 
                            step_counter = StepCounter(lidar_interval),
-                           layers_used=(2,))
+                           layers_used=(2, 3, 4))
         
         # Cameras
         self.camera_distance_from_center = 0.0310
@@ -83,7 +83,8 @@ class Robot:
 
         # Update pose manager (Position and rotation)
         self.pose_manager.update(self.drive_base.get_wheel_average_angular_velocity(), 
-                                 self.drive_base.get_wheel_velocity_difference())
+                                 self.drive_base.get_wheel_velocity_difference(),
+                                 self.lidar.is_point_close)
 
         # Update drive base
         self.drive_base.orientation = self.orientation
@@ -92,7 +93,6 @@ class Robot:
         # Lidar update
         self.lidar.set_orientation(self.orientation)
         self.lidar.update()
-
         # Camera update
         self.right_camera.update(self.orientation)
         self.left_camera.update(self.orientation)
